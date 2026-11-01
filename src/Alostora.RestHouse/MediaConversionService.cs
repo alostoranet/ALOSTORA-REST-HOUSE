@@ -9,7 +9,7 @@ namespace Alostora.RestHouse;
 
 public sealed record AudioTrackInfo(int Index, string Language, string Title, string Codec, bool IsDefault);
 public sealed record MediaProbeResult(bool Available, bool Success, string Message, bool NeedsConversion,
-    IReadOnlyList<AudioTrackInfo> AudioTracks, string? VideoCodec);
+    IReadOnlyList<AudioTrackInfo> AudioTracks, string? VideoCodec, string? VideoPixelFormat);
 public sealed record MediaToolStatus(bool Available, string FfmpegPath, string FfprobePath, string Message);
 public sealed record ConversionJobStatus(string JobId, string State, string Message, string? Url);
 
@@ -57,11 +57,11 @@ public sealed class MediaConversionService
     {
         var video = _library.Resolve(videoId);
         if (video is null)
-            return new(false, false, "ملف الفيديو غير موجود في المكتبة.", false, Array.Empty<AudioTrackInfo>(), null);
+            return new(false, false, "ملف الفيديو غير موجود في المكتبة.", false, Array.Empty<AudioTrackInfo>(), null, null);
 
         var tools = GetToolStatus();
         if (!tools.Available)
-            return new(false, false, tools.Message, NeedsConversion(video.FullPath), Array.Empty<AudioTrackInfo>(), null);
+            return new(false, false, tools.Message, NeedsConversion(video.FullPath), Array.Empty<AudioTrackInfo>(), null, null);
 
         try
         {
@@ -74,13 +74,13 @@ public sealed class MediaConversionService
                 CreateNoWindow = true
             };
             foreach (var arg in new[] { "-v", "error", "-show_entries",
-                "stream=index,codec_type,codec_name:stream_tags=language,title:stream_disposition=default",
+                "stream=index,codec_type,codec_name,pix_fmt:stream_tags=language,title:stream_disposition=default",
                 "-of", "json", video.FullPath })
                 start.ArgumentList.Add(arg);
 
             using var process = Process.Start(start);
             if (process is null)
-                return new(true, false, "تعذر تشغيل FFprobe.", NeedsConversion(video.FullPath), Array.Empty<AudioTrackInfo>(), null);
+                return new(true, false, "تعذر تشغيل FFprobe.", NeedsConversion(video.FullPath), Array.Empty<AudioTrackInfo>(), null, null);
 
             var outputTask = process.StandardOutput.ReadToEndAsync();
             var errorTask = process.StandardError.ReadToEndAsync();
@@ -89,18 +89,18 @@ public sealed class MediaConversionService
             catch (OperationCanceledException)
             {
                 try { process.Kill(true); } catch { }
-                return new(true, false, "انتهت مهلة فحص ملف الفيديو.", NeedsConversion(video.FullPath), Array.Empty<AudioTrackInfo>(), null);
+                return new(true, false, "انتهت مهلة فحص ملف الفيديو.", NeedsConversion(video.FullPath), Array.Empty<AudioTrackInfo>(), null, null);
             }
 
             var output = await outputTask;
             var error = await errorTask;
             if (process.ExitCode != 0)
                 return new(true, false, string.IsNullOrWhiteSpace(error) ? "تعذر قراءة مسارات الفيديو." : error.Trim(),
-                    NeedsConversion(video.FullPath), Array.Empty<AudioTrackInfo>(), null);
+                    NeedsConversion(video.FullPath), Array.Empty<AudioTrackInfo>(), null, null);
 
             using var document = JsonDocument.Parse(output);
             var tracks = new List<AudioTrackInfo>();
-            string? videoCodec = null;
+            string? videoCodec = null;\n            string? videoPixelFormat = null;
             if (document.RootElement.TryGetProperty("streams", out var streams))
             {
                 foreach (var stream in streams.EnumerateArray())
@@ -108,7 +108,7 @@ public sealed class MediaConversionService
                     var type = GetString(stream, "codec_type");
                     var index = stream.TryGetProperty("index", out var indexValue) && indexValue.TryGetInt32(out var parsedIndex) ? parsedIndex : -1;
                     var codec = GetString(stream, "codec_name") ?? "unknown";
-                    if (type == "video" && videoCodec is null) videoCodec = codec;
+                    if (type == "video" && videoCodec is null)\n                    {\n                        videoCodec = codec;\n                        videoPixelFormat = GetString(stream, "pix_fmt");\n                    }
                     if (type != "audio" || index < 0) continue;
 
                     var language = "und";
@@ -125,12 +125,12 @@ public sealed class MediaConversionService
                 }
             }
 
-            return new(true, true, "تم فحص مسارات الملف.", NeedsConversion(video.FullPath), tracks, videoCodec);
+            return new(true, true, "تم فحص مسارات الملف.", NeedsConversion(video.FullPath), tracks, videoCodec, videoPixelFormat);
         }
         catch (Exception ex)
         {
             return new(true, false, "فشل فحص الفيديو: " + ex.Message, NeedsConversion(video.FullPath),
-                Array.Empty<AudioTrackInfo>(), null);
+                Array.Empty<AudioTrackInfo>(), null, null);
         }
     }
 
@@ -199,7 +199,7 @@ public sealed class MediaConversionService
         return File.Exists(path) ? path : null;
     }
 
-    private async Task RunConversionAsync(string jobId, string input, string output, string? videoCodec, AudioTrackInfo? audio)
+    private async Task RunConversionAsync(string jobId, string input, string output, string? videoCodec, string? videoPixelFormat, AudioTrackInfo? audio)
     {
         var job = _jobs[jobId];
         var tools = GetToolStatus();
@@ -229,7 +229,7 @@ public sealed class MediaConversionService
                 args.AddRange(new[] { "-map", "0:" + audio.Index });
             args.AddRange(new[] { "-map_metadata", "0" });
 
-            if (string.Equals(videoCodec, "h264", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(videoCodec, "h264", StringComparison.OrdinalIgnoreCase) &&\n                string.Equals(videoPixelFormat, "yuv420p", StringComparison.OrdinalIgnoreCase))
                 args.AddRange(new[] { "-c:v", "copy" });
             else
                 args.AddRange(new[] { "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p" });
