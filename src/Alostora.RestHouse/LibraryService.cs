@@ -1,6 +1,7 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Data.Sqlite;
 
 namespace Alostora.RestHouse;
@@ -135,7 +136,9 @@ public sealed class LibraryService : IDisposable
         {
             var extension = Path.GetExtension(path);
             if (!extension.Equals(".srt", StringComparison.OrdinalIgnoreCase) &&
-                !extension.Equals(".vtt", StringComparison.OrdinalIgnoreCase))
+                !extension.Equals(".vtt", StringComparison.OrdinalIgnoreCase) &&
+                !extension.Equals(".ass", StringComparison.OrdinalIgnoreCase) &&
+                !extension.Equals(".ssa", StringComparison.OrdinalIgnoreCase))
                 continue;
             var name = Path.GetFileNameWithoutExtension(path);
             if (!name.Equals(stem, StringComparison.OrdinalIgnoreCase) &&
@@ -201,9 +204,12 @@ public sealed class LibraryService : IDisposable
                 content = Encoding.GetEncoding(1256).GetString(bytes);
             }
         }
-        return extension.Equals(".srt", StringComparison.OrdinalIgnoreCase)
-            ? ConvertSrtToVtt(content)
-            : EnsureVttHeader(content);
+        if (extension.Equals(".srt", StringComparison.OrdinalIgnoreCase))
+            return ConvertSrtToVtt(content);
+        if (extension.Equals(".ass", StringComparison.OrdinalIgnoreCase) ||
+            extension.Equals(".ssa", StringComparison.OrdinalIgnoreCase))
+            return ConvertAssToVtt(content);
+        return EnsureVttHeader(content);
     }
 
     private static bool IsKnownLanguage(string value) => value.ToLowerInvariant() is
@@ -240,6 +246,66 @@ public sealed class LibraryService : IDisposable
         if (forced) label += " — إجباري";
         if (sdh) label += " — للصم وضعاف السمع";
         return label;
+    }
+
+    private static string ConvertAssToVtt(string text)
+    {
+        var lines = text.TrimStart('\uFEFF').Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        var format = new[] { "layer", "start", "end", "style", "name", "marginl", "marginr", "marginv", "effect", "text" };
+        var output = new StringBuilder("WEBVTT\n\n");
+        var inEvents = false;
+
+        foreach (var rawLine in lines)
+        {
+            var line = rawLine.Trim();
+            if (line.StartsWith("[", StringComparison.Ordinal) && line.EndsWith("]", StringComparison.Ordinal))
+            {
+                inEvents = line.Equals("[Events]", StringComparison.OrdinalIgnoreCase);
+                continue;
+            }
+            if (!inEvents) continue;
+
+            if (line.StartsWith("Format:", StringComparison.OrdinalIgnoreCase))
+            {
+                format = line["Format:".Length..].Split(',').Select(x => x.Trim().ToLowerInvariant()).ToArray();
+                continue;
+            }
+            if (!line.StartsWith("Dialogue:", StringComparison.OrdinalIgnoreCase)) continue;
+
+            var values = line["Dialogue:".Length..].TrimStart().Split(',', format.Length);
+            if (values.Length < format.Length) continue;
+            var startIndex = Array.IndexOf(format, "start");
+            var endIndex = Array.IndexOf(format, "end");
+            var textIndex = Array.IndexOf(format, "text");
+            if (startIndex < 0 || endIndex < 0 || textIndex < 0) continue;
+            if (!TryAssTimestamp(values[startIndex], out var start) ||
+                !TryAssTimestamp(values[endIndex], out var end)) continue;
+
+            var caption = values[textIndex]
+                .Replace(@"\N", "\n", StringComparison.OrdinalIgnoreCase)
+                .Replace(@"\n", "\n", StringComparison.OrdinalIgnoreCase)
+                .Replace(@"\h", " ", StringComparison.OrdinalIgnoreCase);
+            caption = Regex.Replace(caption, @"\{[^}]*\}", "");
+            caption = caption.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
+            if (string.IsNullOrWhiteSpace(caption)) continue;
+            output.Append(start).Append(" --> ").Append(end).Append('\n');
+            output.Append(caption).Append("\n\n");
+        }
+        return output.ToString();
+    }
+
+    private static bool TryAssTimestamp(string value, out string timestamp)
+    {
+        timestamp = "";
+        var match = Regex.Match(value.Trim(), @"^(\d+):(\d{1,2}):(\d{1,2})[.](\d{1,2})$");
+        if (!match.Success ||
+            !int.TryParse(match.Groups[1].Value, out var hours) ||
+            !int.TryParse(match.Groups[2].Value, out var minutes) ||
+            !int.TryParse(match.Groups[3].Value, out var seconds) ||
+            !int.TryParse(match.Groups[4].Value, out var centiseconds) ||
+            minutes > 59 || seconds > 59) return false;
+        timestamp = $"{hours:00}:{minutes:00}:{seconds:00}.{centiseconds * 10:000}";
+        return true;
     }
 
     private static string EnsureVttHeader(string text)
