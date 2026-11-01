@@ -40,7 +40,7 @@
 <WrapPanel HorizontalAlignment="Right" Margin="0,0,0,6"><Button Content="إضافة الموسم" Click="AddSeason_Click" Padding="12,8" Margin="0,0,6,0"/><Button Content="حفظ مسار الموسم المحدد وفحص ملفاته" Click="SaveSeasonFolder_Click" Padding="12,8"/></WrapPanel>
 <DataGrid x:Name="SeasonsGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="SeasonsGrid_SelectionChanged" CanUserAddRows="False" Height="135" Margin="0,8,0,12">
 <DataGrid.Columns><DataGridTextColumn Header="رقم الموسم" Binding="{Binding SeasonNumber}" Width="95"/><DataGridTextColumn Header="اسم الموسم" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="المعرّف" Binding="{Binding SeasonId}" Width="75"/></DataGrid.Columns></DataGrid>
-<Button Content="اكتشاف حلقات الموسم" Click="PreviewSeasonFolder_Click" Padding="10,7" Margin="0,8"/>
+<WrapPanel Margin="0,8"><Button Content="اكتشاف حلقات الموسم" Click="PreviewSeasonFolder_Click" Padding="10,7" Margin="0,0,6,0"/><Button Content="اعتماد ربط الحلقات المحددة" Click="LinkDetectedEpisodes_Click" Padding="10,7"/></WrapPanel>
 <DataGrid x:Name="EpisodeCandidatesGrid" AutoGenerateColumns="True" CanUserAddRows="False" Height="150" Margin="0,0,0,12"/>
 <Separator/>
 <TextBlock Text="إضافة حلقة إلى الموسم المحدد" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,12,0,8"/>
