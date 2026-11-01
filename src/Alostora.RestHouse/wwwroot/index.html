@@ -64,6 +64,7 @@ async function startTranscodedPlayback(item,audioIndex,generation,saved){
 async function play(item){
  if(!item||!item.id||!item.url)return;
  const generation=++playbackGeneration,previous=activeVideo;
+ player.dataset.transcodeAttempted='0';player.onerror=null;
  player.pause();if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
  if(previous)await saveProgress(previous,false);
  if(generation!==playbackGeneration)return;
@@ -92,6 +93,7 @@ async function play(item){
  }
  hint.textContent=tracks.length>1?'يمكنك اختيار مسار صوتي آخر ثم الضغط على «تشغيل بالصوت المحدد».':'تشغيل مباشر دون تحويل.';
  player.onloadedmetadata=()=>{if(generation!==playbackGeneration)return;loadedVideoId=item.id;activeVideo={id:item.id};if(saved&&Number.isFinite(saved.positionSeconds)&&saved.positionSeconds>5&&Number.isFinite(player.duration)&&player.duration>0&&saved.positionSeconds<player.duration-10)player.currentTime=saved.positionSeconds;player.play().catch(()=>{});};
+ player.onerror=async()=>{if(generation!==playbackGeneration||player.dataset.transcodeAttempted==='1'||!probe?.available||!probe?.success)return;player.dataset.transcodeAttempted='1';try{hint.textContent='المتصفح لا يدعم ترميز هذا الملف مباشرة. جارٍ تحويله تلقائياً...';await startTranscodedPlayback(item,selectedDefault?.index??null,generation,saved);}catch(ex){hint.textContent='تعذر تشغيل ترميز الفيديو: '+ex.message;}};
  player.src=item.url;player.load();player.scrollIntoView({behavior:'smooth'});
 }
 document.querySelector('#applyAudio').addEventListener('click',async()=>{
