@@ -20,7 +20,7 @@ public partial class App : Application
    var webRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
    var builder=WebApplication.CreateBuilder(new WebApplicationOptions { ContentRootPath = AppContext.BaseDirectory, WebRootPath = Directory.Exists(webRoot) ? webRoot : null });
    builder.WebHost.UseUrls("http://0.0.0.0:8096");
-   builder.Services.AddSingleton(new LibraryService(library));
+   builder.Services.AddSingleton(new LibraryService(library,Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new WatchProgressService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new VideoMetadataService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new SeriesCatalogService(Path.Combine(root,"resthouse.db")));
