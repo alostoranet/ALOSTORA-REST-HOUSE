@@ -146,7 +146,7 @@ public sealed class LibraryService : IDisposable
                 var titleTokens = tokens.Where(token => !IsKnownLanguage(token) &&
                     token is not ("default" or "forced" or "foreign" or "sdh" or "cc" or "hi"));
                 var customTitle = string.Join(" ", titleTokens);
-                var label = LanguageLabel(language, customTitle, extension, isForced, isSdh);
+                var label = LanguageLabel(language, customTitle, isForced, isSdh);
                 tracks.Add(new SubtitleTrack(Path.GetFileName(path), label, language,
                     "/api/subtitles/" + videoId + "/" + Uri.EscapeDataString(Path.GetFileName(path)),
                     isDefault, isForced, isSdh));
@@ -201,7 +201,7 @@ public sealed class LibraryService : IDisposable
         "ru" or "rus" or "ja" or "jpn" or "ko" or "kor" or "zh" or "zho" or "chi" or
         "hi" or "hin" or "nl" or "nld" or "dut" or "pl" or "pol" or "sv" or "swe";
 
-    private static string LanguageLabel(string language, string customTitle, string extension, bool forced, bool sdh)
+    private static string LanguageLabel(string language, string customTitle, bool forced, bool sdh)
     {
         var known = language.ToLowerInvariant() switch
         {
