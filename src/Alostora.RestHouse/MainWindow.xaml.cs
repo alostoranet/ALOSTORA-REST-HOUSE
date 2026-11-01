@@ -38,8 +38,8 @@ public partial class MainWindow : Window
         const string ruleName = "ALOSTORA REST HOUSE TCP 8096";
         var startInfo = new ProcessStartInfo
         {
-            FileName = "netsh.exe",
-            Arguments = "advfirewall firewall add rule name=\"" + ruleName + "\" dir=in action=allow protocol=TCP localport=8096 profile=private",
+            FileName = "powershell.exe",
+            Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='Stop'; try { Get-NetFirewallRule -DisplayName '" + ruleName + "' -ErrorAction SilentlyContinue | Remove-NetFirewallRule; New-NetFirewallRule -DisplayName '" + ruleName + "' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8096 -Profile Private | Out-Null; exit 0 } catch { Write-Error $_; exit 1 }\"",
             UseShellExecute = true,
             Verb = "runas",
             WindowStyle = ProcessWindowStyle.Hidden
