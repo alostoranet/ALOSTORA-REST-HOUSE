@@ -663,9 +663,10 @@ public partial class MainWindow : Window
             SeriesPicker.SelectedItem = null;
             SeriesIdBox.Clear(); SeriesTitleBox.Clear(); SeriesDescriptionBox.Clear(); SeriesYearBox.Clear();
             SeriesGenreBox.Clear(); SeriesPosterPathBox.Clear(); SeriesFolderPathBox.Clear();
-            SeasonsGrid.ItemsSource = null; MissingEpisodesGrid.ItemsSource = null;
+            SeasonsGrid.ItemsSource = null;
             await LoadSeriesAsync();
             await LoadVideosAsync();
+            await LoadMissingEpisodesAsync();
             SeriesStatusText.Text = "تم حذف بيانات المسلسل ومواسمه، وملفات الفيديو الأصلية ما زالت محفوظة.";
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر حذف المسلسل: " + ex.Message; }
