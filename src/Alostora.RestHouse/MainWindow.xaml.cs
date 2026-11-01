@@ -19,17 +19,17 @@ public partial class MainWindow : Window
 {
     private readonly string _root;
     private string _library;
-    private string _posters;
+    private string _posters;\n    private string? _ffmpegPath;
     private readonly HttpClient _http = new() { BaseAddress = new Uri("http://127.0.0.1:8096") };
     private readonly ObservableCollection<AdminVideo> _videos = new();
     private readonly ObservableCollection<EpisodeCandidate> _episodeCandidates = new();
 
-    public MainWindow(string root, string library, string posters)
+    public MainWindow(string root, string library, string posters, string? ffmpegPath)
     {
         InitializeComponent();
         _root = root;
         _library = library;
-        _posters = posters;
+        _posters = posters;\n        _ffmpegPath = ffmpegPath;\n        FfmpegPathBox.Text = ffmpegPath ?? \"\";
         LibraryBox.Text = library;
         MediaFolderBox.Text = library;
         PostersFolderBox.Text = posters;
@@ -106,6 +106,49 @@ public partial class MainWindow : Window
         var initial = Directory.Exists(SeasonFolderPathBox.Text) ? SeasonFolderPathBox.Text : (Directory.Exists(SeriesFolderPathBox.Text) ? SeriesFolderPathBox.Text : _library);
         var dialog = new OpenFolderDialog { Title = "اختر المجلد الذي يحتوي حلقات هذا الموسم", InitialDirectory = Directory.Exists(initial) ? initial : Environment.GetFolderPath(Environment.SpecialFolder.MyVideos) };
         if (dialog.ShowDialog(this) == true) SeasonFolderPathBox.Text = Path.GetFullPath(dialog.FolderName);
+    }
+
+    private void ChooseFfmpeg_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختر ملف ffmpeg.exe",
+            Filter = "FFmpeg executable|ffmpeg.exe|All executable files|*.exe",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) == true)
+            FfmpegPathBox.Text = Path.GetFullPath(dialog.FileName);
+    }
+
+    private void SaveFfmpeg_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = FfmpegPathBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(selected))
+        {
+            MessageBox.Show("اختر ملف ffmpeg.exe أولاً.", "إعداد محرك الفيديو", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        selected = Path.GetFullPath(selected);
+        if (!File.Exists(selected) || !string.Equals(Path.GetFileName(selected), "ffmpeg.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            MessageBox.Show("المسار يجب أن يشير إلى ملف ffmpeg.exe موجود.", "إعداد محرك الفيديو", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var ffprobe = Path.Combine(Path.GetDirectoryName(selected)!, "ffprobe.exe");
+        try
+        {
+            AppSettings.SaveFfmpegPath(_root, selected);
+            _ffmpegPath = selected;
+            FfmpegStatusText.Text = File.Exists(ffprobe)
+                ? "تم حفظ المسار. وجدنا ffprobe.exe أيضاً. أعد تشغيل البرنامج لتفعيل تحويل الفيديو واختيار الصوت."
+                : "تم حفظ المسار، لكن لم نجد ffprobe.exe بجانب FFmpeg. ضع الملفين في المجلد نفسه ثم أعد تشغيل البرنامج.";
+            MessageBox.Show(FfmpegStatusText.Text, "إعداد محرك الفيديو", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("تعذر حفظ إعداد FFmpeg: " + ex.Message, "إعداد محرك الفيديو", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void SaveFolderSettings()
