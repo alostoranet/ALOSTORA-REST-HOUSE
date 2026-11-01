@@ -71,9 +71,9 @@ public partial class App : Application
    {
     foreach(var seriesRow in catalog.ListSeries())
     {
-     if(!string.IsNullOrWhiteSpace(seriesRow.FolderPath)&&Directory.Exists(seriesRow.FolderPath)) svc.RegisterFolder(seriesRow.FolderPath);
+     if(!string.IsNullOrWhiteSpace(seriesRow.FolderPath)&&Directory.Exists(seriesRow.FolderPath)) svc.EnsureFolderRegistered(seriesRow.FolderPath);
      foreach(var seasonRow in catalog.ListSeasons(seriesRow.SeriesId))
-      if(!string.IsNullOrWhiteSpace(seasonRow.FolderPath)&&Directory.Exists(seasonRow.FolderPath)) svc.RegisterFolder(seasonRow.FolderPath);
+      if(!string.IsNullOrWhiteSpace(seasonRow.FolderPath)&&Directory.Exists(seasonRow.FolderPath)) svc.EnsureFolderRegistered(seasonRow.FolderPath);
     }
     var metadataById=meta.List().ToDictionary(x=>x.VideoId);
     var result=svc.List().Select(v=>
@@ -98,7 +98,7 @@ public partial class App : Application
     return Results.Ok(result);
    });
    _server.MapGet("/api/series",(SeriesCatalogService series,LibraryService files,VideoMetadataService meta)=>Results.Ok(series.GetCatalog(files,meta)));
-   _server.MapGet("/api/admin/series",(HttpContext c,SeriesCatalogService series,LibraryService files)=>{ if(!IsLocal(c)) return Results.NotFound(); var rows=series.ListSeries(); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.RegisterFolder(row.FolderPath); return Results.Ok(rows); });
+   _server.MapGet("/api/admin/series",(HttpContext c,SeriesCatalogService series,LibraryService files)=>{ if(!IsLocal(c)) return Results.NotFound(); var rows=series.ListSeries(); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.EnsureFolderRegistered(row.FolderPath); return Results.Ok(rows); });
    _server.MapPost("/api/admin/series",(HttpContext c,SaveSeriesRequest request,SeriesCatalogService series,LibraryService files)=>{
     if(!IsLocal(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeriesId.Length>80||string.IsNullOrWhiteSpace(request.Title)||request.Title.Length>160||(request.Description?.Length??0)>2000||(request.Genre?.Length??0)>80||(request.Year is not null&&(request.Year<1888||request.Year>DateTime.UtcNow.Year+5))||(request.PosterPath?.Length??0)>200||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="تحقق من بيانات المسلسل"});
@@ -121,7 +121,7 @@ public partial class App : Application
     var season=series.GetSeason(seasonId);
     if(season is null) return Results.NotFound(new{error="الموسم غير موجود"});
     if(string.IsNullOrWhiteSpace(season.FolderPath)||!Directory.Exists(season.FolderPath)) return Results.BadRequest(new{error="حدد مجلد الموسم واحفظ مساره أولاً"});
-    files.RegisterFolder(season.FolderPath);
+    files.EnsureFolderRegistered(season.FolderPath);
     var linked=series.ListEpisodes(seasonId);
     var linkedIds=linked.Select(x=>x.VideoId).ToHashSet(StringComparer.OrdinalIgnoreCase);
     var usedNumbers=linked.Select(x=>x.EpisodeNumber).ToHashSet();
