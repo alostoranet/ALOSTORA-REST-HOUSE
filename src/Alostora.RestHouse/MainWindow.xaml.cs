@@ -6,10 +6,9 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Net.Sockets;
-using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
-using System.Diagnostics;
+using Microsoft.Win32;
 
 namespace Alostora.RestHouse;
 
@@ -54,6 +53,34 @@ public partial class MainWindow : Window
         YearBox.Text = v.Year?.ToString() ?? "";
         GenreBox.Text = v.Genre ?? "";
         KindBox.SelectedIndex = string.Equals(v.Kind, "Series", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        PosterStatusText.Text = string.IsNullOrWhiteSpace(v.PosterPath) ? "لا يوجد غلاف لهذا العمل حالياً." : "يوجد غلاف محفوظ لهذا العمل.";
+    }
+
+    private async void UploadPoster_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(IdBox.Text)) { StatusText.Text = "اختر فيديو أولاً."; return; }
+        var dialog = new OpenFileDialog { Title = "اختر غلاف الفيلم أو المسلسل", Filter = "صور مدعومة|*.jpg;*.jpeg;*.png;*.webp", CheckFileExists = true };
+        if (dialog.ShowDialog(this) != true) return;
+        var ext = Path.GetExtension(dialog.FileName).ToLowerInvariant();
+        var contentType = ext switch { ".jpg" or ".jpeg" => "image/jpeg", ".png" => "image/png", ".webp" => "image/webp", _ => "" };
+        var info = new FileInfo(dialog.FileName);
+        if (contentType.Length == 0 || info.Length == 0 || info.Length > 5_242_880)
+        { StatusText.Text = "اختر صورة JPG أو PNG أو WEBP لا يتجاوز حجمها 5 ميجابايت."; return; }
+        try
+        {
+            StatusText.Text = "جارٍ رفع الغلاف...";
+            using var bytes = new ByteArrayContent(await File.ReadAllBytesAsync(dialog.FileName));
+            bytes.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            var response = await _http.PostAsync("/api/admin/poster/" + Uri.EscapeDataString(IdBox.Text), bytes);
+            if (!response.IsSuccessStatusCode)
+            { StatusText.Text = "تعذر رفع الغلاف. تأكد من صيغة الصورة وحجمها."; return; }
+            var result = await response.Content.ReadFromJsonAsync<PosterUploadResult>();
+            PosterStatusText.Text = "تم رفع الغلاف وحفظه: " + (result?.PosterPath ?? "");
+            StatusText.Text = "تم رفع الغلاف بنجاح.";
+            await LoadVideosAsync();
+            VideosGrid.SelectedItem = _videos.FirstOrDefault(v => v.Id == IdBox.Text);
+        }
+        catch (Exception ex) { StatusText.Text = "تعذر رفع الغلاف: " + ex.Message; }
     }
 
     private async void SaveMetadata_Click(object sender, RoutedEventArgs e)
@@ -92,6 +119,7 @@ public partial class MainWindow : Window
             .FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(x))?.ToString()
             ?? "عنوان الشبكة غير معروف";
 
+    private sealed class PosterUploadResult { public string? PosterPath { get; set; } }
     private sealed class AdminVideo
     {
         public string Id { get; set; } = "";
@@ -100,5 +128,6 @@ public partial class MainWindow : Window
         public int? Year { get; set; }
         public string? Genre { get; set; }
         public string? Kind { get; set; }
+        public string? PosterPath { get; set; }
     }
 }
