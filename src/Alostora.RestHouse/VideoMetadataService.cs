@@ -13,7 +13,7 @@ public sealed class VideoMetadataService
     public VideoMetadataService(string databasePath)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
-        _connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath }.ToString();
+        _connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath, DefaultTimeout = 10, Pooling = true }.ToString();
         using var c = new SqliteConnection(_connectionString);
         c.Open();
         using var cmd = c.CreateCommand();
