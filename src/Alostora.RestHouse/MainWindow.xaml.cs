@@ -300,6 +300,45 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void DeleteVideo_Click(object sender, RoutedEventArgs e)
+    {
+        if (VideosGrid.SelectedItem is not AdminVideo video)
+        {
+            StatusText.Text = "حدد ملف فيديو من القائمة أولاً.";
+            return;
+        }
+
+        var confirm = MessageBox.Show(
+            $"تحذير: سيتم حذف ملف الفيديو الأصلي نهائياً من القرص ولا يمكن التراجع عن ذلك.\\n\\nالملف: {video.Title}\\n\\nسيتم حذف بياناته وسجل المشاهدة أيضاً. إذا كان مربوطاً بحلقة مسلسل فستبقى الحلقة مسجلة كملف مفقود ويمكن إعادة ربطها لاحقاً.\\n\\nهل أنت متأكد؟",
+            "تأكيد حذف ملف الفيديو نهائياً",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes) return;
+
+        try
+        {
+            StatusText.Text = "جارٍ حذف ملف الفيديو من الجهاز...";
+            var response = await _http.DeleteAsync("/api/admin/library/" + Uri.EscapeDataString(video.Id));
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = await response.Content.ReadAsStringAsync();
+                StatusText.Text = "تعذر حذف الفيديو: " + detail;
+                return;
+            }
+
+            VideosGrid.SelectedItem = null;
+            IdBox.Clear(); TitleBox.Clear(); DescriptionBox.Clear(); YearBox.Clear(); GenreBox.Clear();
+            DirectorBox.Clear(); CastBox.Clear(); RatingBox.Clear(); RuntimeBox.Clear(); ReleaseDateBox.Clear(); TagsBox.Clear();
+            await LoadVideosAsync();
+            await LoadMissingEpisodesAsync();
+            StatusText.Text = "تم حذف ملف الفيديو نهائياً من القرص وتحديث المكتبة.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "تعذر حذف الفيديو: " + ex.Message;
+        }
+    }
+
     private async System.Threading.Tasks.Task LoadVideosAsync()
     {
         try
