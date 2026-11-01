@@ -17,21 +17,74 @@ namespace Alostora.RestHouse;
 
 public partial class MainWindow : Window
 {
-    private readonly string _library;
+    private readonly string _root;
+    private string _library;
+    private string _posters;
     private readonly HttpClient _http = new() { BaseAddress = new Uri("http://127.0.0.1:8096") };
     private readonly ObservableCollection<AdminVideo> _videos = new();
 
-    public MainWindow(string library)
+    public MainWindow(string root, string library, string posters)
     {
         InitializeComponent();
+        _root = root;
         _library = library;
+        _posters = posters;
         LibraryBox.Text = library;
+        MediaFolderBox.Text = library;
+        PostersFolderBox.Text = posters;
         AddressBox.Text = $"رابط المشاهدة: http://{GetLanAddress()}:8096";
         VideosGrid.ItemsSource = _videos;
         Loaded += async (_, _) => { await LoadVideosAsync(); await LoadSeriesAsync(); };
     }
 
     private async void RefreshLibrary_Click(object sender, RoutedEventArgs e) => await LoadVideosAsync();
+
+    private void ChooseMediaFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "اختر المجلد الرئيسي الذي يحتوي ملفات الأفلام والمسلسلات",
+            InitialDirectory = Directory.Exists(_library) ? _library : Environment.GetFolderPath(Environment.SpecialFolder.MyVideos)
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        _library = Path.GetFullPath(dialog.FolderName);
+        SaveFolderSettings();
+    }
+
+    private void ChoosePostersFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "اختر المجلد الذي يحتوي صور أغلفة الأفلام والمسلسلات",
+            InitialDirectory = Directory.Exists(_posters) ? _posters : Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        _posters = Path.GetFullPath(dialog.FolderName);
+        SaveFolderSettings();
+    }
+
+    private void SaveFolderSettings()
+    {
+        try
+        {
+            if (!Directory.Exists(_library) || !Directory.Exists(_posters))
+                throw new DirectoryNotFoundException("تأكد أن مجلدي الفيديو والأغلفة موجودان ويمكن الوصول إليهما.");
+            AppSettings.Save(_root, _library, _posters);
+            MediaFolderBox.Text = _library;
+            PostersFolderBox.Text = _posters;
+            LibraryBox.Text = _library;
+            MessageBox.Show(
+                "تم حفظ مسارات المجلدات. لكي يبدأ البرنامج باستخدامها، أغلق ALOSTORA REST HOUSE وافتحه مرة أخرى.\n\nملاحظة: لا يتم نقل ملفات الفيديو أو الصور؛ البرنامج يقرأها من المجلدات التي اخترتها.",
+                "تحديث مسارات المكتبة",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("تعذر حفظ مسارات المجلدات: " + ex.Message,
+                "مسارات المكتبة", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 
     private async void EnableFirewall_Click(object sender, RoutedEventArgs e)
     {
@@ -71,9 +124,8 @@ public partial class MainWindow : Window
 
     private async void CreateBackup_Click(object sender, RoutedEventArgs e)
     {
-        var root = Path.GetDirectoryName(_library)!;
-        var databasePath = Path.Combine(root, "resthouse.db");
-        var postersPath = Path.Combine(root, "posters");
+        var databasePath = Path.Combine(_root, "resthouse.db");
+        var postersPath = _posters;
         var dialog = new SaveFileDialog
         {
             Title = "حفظ نسخة احتياطية من استراحة الأسطورة",
