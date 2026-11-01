@@ -64,8 +64,14 @@ public partial class App : Application
     return IPAddress.IsLoopback(address);
    }
    _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
-   _server.MapGet("/api/library",(LibraryService svc,VideoMetadataService meta)=>
+   _server.MapGet("/api/library",(LibraryService svc,VideoMetadataService meta,SeriesCatalogService catalog)=>
    {
+    foreach(var seriesRow in catalog.ListSeries())
+    {
+     if(!string.IsNullOrWhiteSpace(seriesRow.FolderPath)&&Directory.Exists(seriesRow.FolderPath)) svc.RegisterFolder(seriesRow.FolderPath);
+     foreach(var seasonRow in catalog.ListSeasons(seriesRow.SeriesId))
+      if(!string.IsNullOrWhiteSpace(seasonRow.FolderPath)&&Directory.Exists(seasonRow.FolderPath)) svc.RegisterFolder(seasonRow.FolderPath);
+    }
     var metadataById=meta.List().ToDictionary(x=>x.VideoId);
     var result=svc.List().Select(v=>
     {
