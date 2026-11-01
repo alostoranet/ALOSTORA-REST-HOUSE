@@ -166,11 +166,11 @@ public partial class App : Application
    });
    _server.MapGet("/api/admin/missing-episodes",(HttpContext c,SeriesCatalogService series,LibraryService files)=>
     IsLocal(c)?Results.Ok(series.ListMissingEpisodes(files)):Results.NotFound());
-   _server.MapPost("/api/admin/episodes/{episodeId:long}/relink",(HttpContext c,long episodeId,RelinkEpisodeRequest request,SeriesCatalogService series,LibraryService files)=>{
+   _server.MapPost("/api/admin/episodes/{episodeId:long}/relink",(HttpContext c,long episodeId,RelinkEpisodeRequest request,SeriesCatalogService series,LibraryService files,WatchProgressService progress)=>{
     if(!IsLocal(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.VideoId)||request.VideoId.Length!=24||!request.VideoId.All(Uri.IsHexDigit)||files.Resolve(request.VideoId) is null)
      return Results.BadRequest(new{error="ملف الفيديو الجديد غير موجود في المكتبة"});
-    try { series.UpdateEpisodeVideo(episodeId,request.VideoId); return Results.Ok(new{relinked=true}); }
+    try { var oldVideoId=series.UpdateEpisodeVideo(episodeId,request.VideoId); progress.MoveVideoProgress(oldVideoId,request.VideoId); return Results.Ok(new{relinked=true,progressPreserved=true}); }
     catch(KeyNotFoundException) { return Results.NotFound(new{error="الحلقة غير موجودة"}); }
     catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="هذا الملف مربوط بحلقة أخرى بالفعل"}); }
    });
