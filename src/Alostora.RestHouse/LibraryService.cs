@@ -23,7 +23,18 @@ public sealed class LibraryService : IDisposable
     {
         [".mp4"] = "video/mp4",
         [".m4v"] = "video/mp4",
-        [".webm"] = "video/webm"
+        [".webm"] = "video/webm",
+        [".mkv"] = "video/x-matroska",
+        [".avi"] = "video/x-msvideo",
+        [".mov"] = "video/quicktime",
+        [".ts"] = "video/mp2t",
+        [".m2ts"] = "video/mp2t",
+        [".mts"] = "video/mp2t",
+        [".flv"] = "video/x-flv",
+        [".wmv"] = "video/x-ms-wmv",
+        [".mpg"] = "video/mpeg",
+        [".mpeg"] = "video/mpeg",
+        [".3gp"] = "video/3gpp"
     };
 
     public LibraryService(string root, string databasePath)
