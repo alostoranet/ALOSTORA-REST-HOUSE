@@ -94,6 +94,17 @@ public partial class App : Application
       if(!string.IsNullOrWhiteSpace(seasonRow.FolderPath)&&Directory.Exists(seasonRow.FolderPath)) svc.EnsureFolderRegistered(seasonRow.FolderPath);
     }
     var metadataById=meta.List().ToDictionary(x=>x.VideoId);
+    var posterLookup=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
+    try
+    {
+     foreach(var posterFile in Directory.EnumerateFiles(posters,"*",SearchOption.AllDirectories))
+     {
+      if(Path.GetExtension(posterFile).ToLowerInvariant() is not (".jpg" or ".jpeg" or ".png" or ".webp")) continue;
+      var key=Path.GetFileNameWithoutExtension(posterFile);
+      if(!posterLookup.ContainsKey(key)) posterLookup[key]=posterFile;
+     }
+    }
+    catch { }
     var result=svc.List().Select(v=>
     {
      metadataById.TryGetValue(v.Id,out var m);
@@ -101,14 +112,10 @@ public partial class App : Application
      if(string.IsNullOrWhiteSpace(posterPath))
      {
       var baseName=Path.GetFileNameWithoutExtension(v.FileName);
-      foreach(var extension in new[]{".jpg",".jpeg",".png",".webp"})
+      if(posterLookup.TryGetValue(baseName,out var posterFile))
       {
-       var candidate=baseName+extension;
-       if(File.Exists(Path.Combine(posters,candidate)))
-       {
-        posterPath="/posters/"+Uri.EscapeDataString(candidate);
-        break;
-       }
+       var relative=Path.GetRelativePath(posters,posterFile).Replace('\\','/');
+       posterPath="/posters/"+string.Join("/",relative.Split('/').Select(Uri.EscapeDataString));
       }
      }
      return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags};
@@ -248,17 +255,20 @@ public partial class App : Application
     catch { File.Delete(fullPath); throw; }
     return Results.Ok(new{posterPath="/posters/"+fileName});
    });
-   _server.MapGet("/posters/{fileName}",(string fileName)=>{
-    if(fileName!=Path.GetFileName(fileName)||fileName.Length>120) return Results.NotFound();
-    var full=Path.Combine(posters,fileName);
-    if(!File.Exists(full))
+   _server.MapGet("/posters/{**fileName}",(string fileName)=>{
+    if(string.IsNullOrWhiteSpace(fileName)||fileName.Length>500) return Results.NotFound();
+    var rootPath=Path.GetFullPath(posters).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar)+Path.DirectorySeparatorChar;
+    var relative=fileName.Replace('/',Path.DirectorySeparatorChar).Replace('\\',Path.DirectorySeparatorChar);
+    var full=Path.GetFullPath(Path.Combine(posters,relative));
+    if(!full.StartsWith(rootPath,StringComparison.OrdinalIgnoreCase)) return Results.NotFound();
+    if(!File.Exists(full)&&!fileName.Contains('/'))
     {
      var previousPosters=Path.Combine(root,"posters");
      var previousFile=Path.Combine(previousPosters,fileName);
      if(File.Exists(previousFile)) full=previousFile;
      else return Results.NotFound();
     }
-    var type=Path.GetExtension(fileName).ToLowerInvariant() switch {".jpg"=>"image/jpeg",".png"=>"image/png",".webp"=>"image/webp",_=>null};
+    var type=Path.GetExtension(full).ToLowerInvariant() switch {".jpg" or ".jpeg"=>"image/jpeg",".png"=>"image/png",".webp"=>"image/webp",_=>null};
     return type is null?Results.NotFound():Results.File(full,type);
    });
    _server.MapGet("/api/progress/{viewerId}",(string viewerId,WatchProgressService db)=>viewerId.Length<=80?Results.Ok(db.Get(viewerId)):Results.BadRequest());
