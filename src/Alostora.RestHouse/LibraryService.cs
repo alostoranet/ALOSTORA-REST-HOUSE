@@ -723,6 +723,13 @@ public sealed class LibraryService : IDisposable
                 update.Parameters.AddWithValue("$updated", DateTime.UtcNow.ToString("O"));
                 update.Parameters.AddWithValue("$old", mapping.Path);
                 update.ExecuteNonQuery();
+
+                using var selectedPath = connection.CreateCommand();
+                selectedPath.Transaction = transaction;
+                selectedPath.CommandText = "UPDATE SelectedLibraryFiles SET FullPath=$new WHERE FullPath=$old";
+                selectedPath.Parameters.AddWithValue("$new", Path.GetFullPath(Path.Combine(_root, target.Replace('/', Path.DirectorySeparatorChar))));
+                selectedPath.Parameters.AddWithValue("$old", Path.GetFullPath(Path.Combine(_root, mapping.Path.Replace('/', Path.DirectorySeparatorChar))));
+                selectedPath.ExecuteNonQuery();
             }
             transaction.Commit();
         }
@@ -771,6 +778,13 @@ public sealed class LibraryService : IDisposable
                 update.Parameters.AddWithValue("$old", mapping.Path);
                 update.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
                 update.ExecuteNonQuery();
+
+                using var selectedPath = connection.CreateCommand();
+                selectedPath.Transaction = transaction;
+                selectedPath.CommandText = "UPDATE SelectedLibraryFiles SET FullPath=$new WHERE FullPath=$old";
+                selectedPath.Parameters.AddWithValue("$new", target);
+                selectedPath.Parameters.AddWithValue("$old", mapping.Path);
+                selectedPath.ExecuteNonQuery();
             }
             transaction.Commit();
         }
