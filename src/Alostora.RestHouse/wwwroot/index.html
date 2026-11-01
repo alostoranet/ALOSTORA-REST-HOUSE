@@ -119,9 +119,11 @@ document.querySelector('#applyAudio').addEventListener('click',async()=>{
  const generation=++playbackGeneration,previous=activeVideo;
  player.pause();if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
  if(previous)await saveProgress(previous,false);
+ if(generation!==playbackGeneration)return;
  activeVideo=null;loadedVideoId=null;
  let saved=null;try{const r=await fetch('/api/progress/'+encodeURIComponent(viewerId));if(r.ok){const rows=await r.json();saved=rows.find(x=>x.videoId===item.id)||null;}}catch{}
- try{await startTranscodedPlayback(item,selected,generation,saved);}catch(ex){document.querySelector('#playbackHint').textContent='تعذر تغيير المسار الصوتي: '+ex.message;}
+ if(generation!==playbackGeneration)return;
+ try{await startTranscodedPlayback(item,selected,generation,saved);}catch(ex){if(generation===playbackGeneration)document.querySelector('#playbackHint').textContent='تعذر تغيير المسار الصوتي: '+ex.message;}
 });
 async function load(){try{const [libraryResponse,seriesResponse]=await Promise.all([fetch('/api/library'),fetch('/api/series')]);if(!libraryResponse.ok||!seriesResponse.ok)throw Error();items=await libraryResponse.json();seriesItems=await seriesResponse.json();const genres=[...new Set([...items,...seriesItems].map(x=>x.genre).filter(Boolean))].sort();const select=document.querySelector('#genre');for(const g of genres){const o=document.createElement('option');o.value=g;o.textContent=g;select.append(o);}render();await loadProgress();}catch{document.querySelector('#message').textContent='تعذر الاتصال بالسيرفر أو تحميل بيانات المسلسلات.';document.querySelector('#continueEmpty').textContent='تعذر تحميل سجل المشاهدة.';}}
 for(const id of ['search','kind','genre','collection'])document.getElementById(id).addEventListener(id==='search'?'input':'change',render);load();
