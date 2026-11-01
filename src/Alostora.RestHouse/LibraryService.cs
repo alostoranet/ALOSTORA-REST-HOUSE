@@ -5,7 +5,6 @@ using Microsoft.Data.Sqlite;
 
 namespace Alostora.RestHouse;
 
-// لا نرسل المسارات الفعلية من القرص إلى أجهزة المشتركين.
 public sealed record LibraryVideo(string Id, string Title, string FileName, string Url, long SizeBytes);
 public sealed record ResolvedVideo(string FullPath, string ContentType);
 
@@ -14,6 +13,7 @@ public sealed class LibraryService : IDisposable
     private readonly string _root;
     private readonly string _connectionString;
     private readonly object _sync = new();
+    private readonly List<FileSystemWatcher> _watchers = new();
     private readonly FileSystemWatcher _watcher;
     private LibraryVideo[]? _videos;
     private Dictionary<string, ResolvedVideo>? _resolved;
@@ -47,22 +47,40 @@ public sealed class LibraryService : IDisposable
                     VideoId TEXT NOT NULL UNIQUE,
                     UpdatedUtc TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS LibraryScanRoots(
+                    FolderPath TEXT PRIMARY KEY COLLATE NOCASE,
+                    AddedUtc TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS ExternalLibraryFiles(
+                    FullPath TEXT PRIMARY KEY COLLATE NOCASE,
+                    VideoId TEXT NOT NULL UNIQUE,
+                    UpdatedUtc TEXT NOT NULL
+                );
                 """;
             command.ExecuteNonQuery();
         }
 
-        _watcher = new FileSystemWatcher(_root)
+        _watcher = CreateWatcher(_root, true);
+        _watcher.Renamed += OnRenamed;
+        _watchers.Add(_watcher);
+        foreach (var folder in GetScanRoots())
+            AddWatcher(folder);
+    }
+
+    private FileSystemWatcher CreateWatcher(string folder, bool includeSubdirectories)
+    {
+        var watcher = new FileSystemWatcher(folder)
         {
-            IncludeSubdirectories = true,
+            IncludeSubdirectories = includeSubdirectories,
             NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName |
                            NotifyFilters.LastWrite | NotifyFilters.Size,
             EnableRaisingEvents = true
         };
-        _watcher.Created += Invalidate;
-        _watcher.Changed += Invalidate;
-        _watcher.Deleted += Invalidate;
-        _watcher.Renamed += OnRenamed;
-        _watcher.Error += (_, _) => Invalidate();
+        watcher.Created += Invalidate;
+        watcher.Changed += Invalidate;
+        watcher.Deleted += Invalidate;
+        watcher.Error += (_, _) => Invalidate();
+        return watcher;
     }
 
     public IReadOnlyList<LibraryVideo> List()
@@ -82,6 +100,81 @@ public sealed class LibraryService : IDisposable
             return _resolved!.TryGetValue(id, out var video) ? video : null;
     }
 
+    // Registers an additional folder without moving or copying its files.
+    // Its full path is persisted so it is available after application restarts.
+    public int RegisterFolder(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            throw new DirectoryNotFoundException("مجلد الفيديو غير موجود أو لا يمكن الوصول إليه.");
+
+        var full = Path.GetFullPath(folderPath);
+        if (IsInsideRoot(full))
+        {
+            Invalidate();
+            return Directory.EnumerateFiles(full, "*.*", SearchOption.AllDirectories)
+                .Count(path => ContentTypes.ContainsKey(Path.GetExtension(path)));
+        }
+
+        using (var connection = new SqliteConnection(_connectionString))
+        {
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "INSERT OR IGNORE INTO LibraryScanRoots(FolderPath,AddedUtc) VALUES($path,$utc)";
+            command.Parameters.AddWithValue("$path", full);
+            command.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
+            command.ExecuteNonQuery();
+        }
+
+        AddWatcher(full);
+        Invalidate();
+        return Directory.EnumerateFiles(full, "*.*", SearchOption.AllDirectories)
+            .Count(path => ContentTypes.ContainsKey(Path.GetExtension(path)));
+    }
+
+    private bool IsInsideRoot(string path)
+    {
+        var relative = Path.GetRelativePath(_root, path);
+        return relative == "." || (!Path.IsPathRooted(relative) &&
+            relative != ".." && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal));
+    }
+
+    private string[] GetScanRoots()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT FolderPath FROM LibraryScanRoots";
+        using var reader = command.ExecuteReader();
+        var result = new List<string>();
+        while (reader.Read())
+        {
+            var path = reader.GetString(0);
+            if (Directory.Exists(path) && !IsInsideRoot(path))
+                result.Add(path);
+        }
+        return result.ToArray();
+    }
+
+    private void AddWatcher(string folder)
+    {
+        lock (_sync)
+        {
+            if (_watchers.Any(w => string.Equals(w.Path.TrimEnd(Path.DirectorySeparatorChar),
+                folder.TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase)))
+                return;
+            try
+            {
+                var watcher = CreateWatcher(folder, true);
+                watcher.Renamed += OnExternalRenamed;
+                _watchers.Add(watcher);
+            }
+            catch
+            {
+                // An inaccessible optional folder must not prevent the server from starting.
+            }
+        }
+    }
+
     private void EnsureIndex()
     {
         lock (_sync)
@@ -91,22 +184,35 @@ public sealed class LibraryService : IDisposable
 
             var videos = new List<LibraryVideo>();
             var resolved = new Dictionary<string, ResolvedVideo>(StringComparer.OrdinalIgnoreCase);
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
 
-            foreach (var path in Directory.EnumerateFiles(_root, "*.*", SearchOption.AllDirectories))
+            var roots = new[] { _root }.Concat(GetScanRoots()).Distinct(StringComparer.OrdinalIgnoreCase);
+            foreach (var scanRoot in roots)
             {
-                if (!ContentTypes.TryGetValue(Path.GetExtension(path), out var contentType))
-                    continue;
+                if (!Directory.Exists(scanRoot)) continue;
+                IEnumerable<string> paths;
+                try { paths = Directory.EnumerateFiles(scanRoot, "*.*", SearchOption.AllDirectories).ToArray(); }
+                catch { continue; }
 
-                var relative = NormalizeRelativePath(Path.GetRelativePath(_root, path));
-                var id = GetOrCreateId(connection, transaction, relative);
-                var file = new FileInfo(path);
-                videos.Add(new LibraryVideo(id, file.Name[..^file.Extension.Length],
-                    file.Name, "/media/" + id, file.Length));
-                resolved[id] = new ResolvedVideo(path, contentType);
+                foreach (var path in paths)
+                {
+                    if (!ContentTypes.TryGetValue(Path.GetExtension(path), out var contentType))
+                        continue;
+                    var fullPath = Path.GetFullPath(path);
+                    if (!seen.Add(fullPath)) continue;
+
+                    var id = IsInsideRoot(fullPath)
+                        ? GetOrCreateId(connection, transaction, NormalizeRelativePath(Path.GetRelativePath(_root, fullPath)))
+                        : GetOrCreateExternalId(connection, transaction, fullPath);
+                    var file = new FileInfo(fullPath);
+                    videos.Add(new LibraryVideo(id, file.Name[..^file.Extension.Length],
+                        file.Name, "/media/" + id, file.Length));
+                    resolved[id] = new ResolvedVideo(fullPath, contentType);
+                }
             }
 
             transaction.Commit();
@@ -129,13 +235,33 @@ public sealed class LibraryService : IDisposable
                 return existing;
         }
 
-        // Keep the legacy path-derived ID when first registering a file. This
-        // preserves all existing metadata, episode links and watch-progress rows.
         var id = CreateId(relativePath);
         using var insert = connection.CreateCommand();
         insert.Transaction = transaction;
         insert.CommandText = "INSERT INTO LibraryFileIds(RelativePath,VideoId,UpdatedUtc) VALUES($path,$id,$updated)";
         insert.Parameters.AddWithValue("$path", relativePath);
+        insert.Parameters.AddWithValue("$id", id);
+        insert.Parameters.AddWithValue("$updated", DateTime.UtcNow.ToString("O"));
+        insert.ExecuteNonQuery();
+        return id;
+    }
+
+    private static string GetOrCreateExternalId(SqliteConnection connection, SqliteTransaction transaction, string fullPath)
+    {
+        using (var find = connection.CreateCommand())
+        {
+            find.Transaction = transaction;
+            find.CommandText = "SELECT VideoId FROM ExternalLibraryFiles WHERE FullPath=$path";
+            find.Parameters.AddWithValue("$path", fullPath);
+            var existing = find.ExecuteScalar() as string;
+            if (!string.IsNullOrWhiteSpace(existing)) return existing;
+        }
+
+        var id = CreateId("external:" + fullPath);
+        using var insert = connection.CreateCommand();
+        insert.Transaction = transaction;
+        insert.CommandText = "INSERT INTO ExternalLibraryFiles(FullPath,VideoId,UpdatedUtc) VALUES($path,$id,$updated)";
+        insert.Parameters.AddWithValue("$path", fullPath);
         insert.Parameters.AddWithValue("$id", id);
         insert.Parameters.AddWithValue("$updated", DateTime.UtcNow.ToString("O"));
         insert.ExecuteNonQuery();
@@ -152,8 +278,6 @@ public sealed class LibraryService : IDisposable
             connection.Open();
             using var transaction = connection.BeginTransaction();
 
-            // Handle both a single file rename and a directory move. Existing IDs
-            // are retained, so metadata, series episode links and watch progress survive.
             using var find = connection.CreateCommand();
             find.Transaction = transaction;
             find.CommandText = """
@@ -164,8 +288,7 @@ public sealed class LibraryService : IDisposable
             find.Parameters.AddWithValue("$prefix", oldRelative.TrimEnd('/') + "/");
             var mappings = new List<(string Path, string Id)>();
             using (var reader = find.ExecuteReader())
-                while (reader.Read())
-                    mappings.Add((reader.GetString(0), reader.GetString(1)));
+                while (reader.Read()) mappings.Add((reader.GetString(0), reader.GetString(1)));
 
             foreach (var mapping in mappings)
             {
@@ -175,8 +298,7 @@ public sealed class LibraryService : IDisposable
                 exists.Transaction = transaction;
                 exists.CommandText = "SELECT 1 FROM LibraryFileIds WHERE RelativePath=$path";
                 exists.Parameters.AddWithValue("$path", target);
-                if (exists.ExecuteScalar() is not null)
-                    continue;
+                if (exists.ExecuteScalar() is not null) continue;
 
                 using var update = connection.CreateCommand();
                 update.Transaction = transaction;
@@ -188,35 +310,43 @@ public sealed class LibraryService : IDisposable
             }
             transaction.Commit();
         }
-        catch
-        {
-            // A file-system notification must never crash the media server.
-        }
-        finally
-        {
-            Invalidate();
-        }
+        catch { }
+        finally { Invalidate(); }
     }
 
-    private static string NormalizeRelativePath(string path) =>
-        path.Replace('\\', '/').TrimStart('/');
+    private void OnExternalRenamed(object? sender, RenamedEventArgs e)
+    {
+        try
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "UPDATE ExternalLibraryFiles SET FullPath=$new,UpdatedUtc=$utc WHERE FullPath=$old";
+            command.Parameters.AddWithValue("$new", Path.GetFullPath(e.FullPath));
+            command.Parameters.AddWithValue("$old", Path.GetFullPath(e.OldFullPath));
+            command.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
+            command.ExecuteNonQuery();
+        }
+        catch { }
+        finally { Invalidate(); }
+    }
+
+    private static string NormalizeRelativePath(string path) => path.Replace('\\', '/').TrimStart('/');
 
     private void Invalidate(object? sender, FileSystemEventArgs e) => Invalidate();
-
     private void Invalidate()
     {
-        lock (_sync)
-        {
-            _videos = null;
-            _resolved = null;
-        }
+        lock (_sync) { _videos = null; _resolved = null; }
     }
 
-    private static string CreateId(string relativePath)
+    private static string CreateId(string path)
     {
-        var normalized = relativePath.Replace('\\', '/').ToLowerInvariant();
+        var normalized = path.Replace('\\', '/').ToLowerInvariant();
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)))[..24].ToLowerInvariant();
     }
 
-    public void Dispose() => _watcher.Dispose();
+    public void Dispose()
+    {
+        foreach (var watcher in _watchers) watcher.Dispose();
+    }
 }
