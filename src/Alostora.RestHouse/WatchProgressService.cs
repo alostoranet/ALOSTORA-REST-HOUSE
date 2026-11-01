@@ -13,11 +13,14 @@ public sealed class WatchProgressService
     public WatchProgressService(string databasePath)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
-        _connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath }.ToString();
+        _connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath, DefaultTimeout = 10, Pooling = true }.ToString();
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
         using var command = connection.CreateCommand();
         command.CommandText = """
+            PRAGMA journal_mode=WAL;
+            PRAGMA synchronous=NORMAL;
+            PRAGMA busy_timeout=10000;
             CREATE TABLE IF NOT EXISTS WatchProgress (
                 ViewerId TEXT NOT NULL,
                 VideoId TEXT NOT NULL,
@@ -49,6 +52,14 @@ public sealed class WatchProgressService
 
     public void Save(WatchProgressRequest request)
     {
+        if (string.IsNullOrWhiteSpace(request.ViewerId) || request.ViewerId.Length > 80 ||
+            string.IsNullOrWhiteSpace(request.VideoId) || request.VideoId.Length != 24 ||
+            !request.VideoId.All(Uri.IsHexDigit) ||
+            !double.IsFinite(request.PositionSeconds) || !double.IsFinite(request.DurationSeconds) ||
+            request.PositionSeconds < 0 || request.DurationSeconds <= 0 ||
+            request.PositionSeconds > request.DurationSeconds + 5)
+            throw new ArgumentException("بيانات تقدم المشاهدة غير صالحة.", nameof(request));
+
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
         using var command = connection.CreateCommand();
@@ -62,7 +73,7 @@ public sealed class WatchProgressService
             """;
         command.Parameters.AddWithValue("$viewer", request.ViewerId.Trim());
         command.Parameters.AddWithValue("$video", request.VideoId.Trim());
-        command.Parameters.AddWithValue("$position", Math.Max(0, request.PositionSeconds));
+        command.Parameters.AddWithValue("$position", Math.Clamp(request.PositionSeconds, 0, request.DurationSeconds));
         command.Parameters.AddWithValue("$duration", Math.Max(0, request.DurationSeconds));
         command.Parameters.AddWithValue("$updated", DateTime.UtcNow.ToString("O"));
         command.ExecuteNonQuery();
