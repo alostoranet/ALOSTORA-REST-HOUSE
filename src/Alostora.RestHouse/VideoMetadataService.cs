@@ -106,6 +106,16 @@ public sealed class VideoMetadataService
             r.IsDBNull(11) ? null : r.GetString(11),
             r.IsDBNull(12) ? null : r.GetString(12));
 
+    public void Delete(string videoId)
+    {
+        using var c = new SqliteConnection(_connectionString);
+        c.Open();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "DELETE FROM VideoMetadata WHERE VideoId=$id";
+        cmd.Parameters.AddWithValue("$id", videoId);
+        cmd.ExecuteNonQuery();
+    }
+
     public void Save(SaveVideoMetadataRequest x)
     {
         using var c = new SqliteConnection(_connectionString);
