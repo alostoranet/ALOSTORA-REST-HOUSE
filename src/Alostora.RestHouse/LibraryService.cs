@@ -371,7 +371,6 @@ public sealed class LibraryService : IDisposable
         var root = Path.GetFullPath(folderPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         var selected = selectedPaths?.Select(Path.GetFullPath).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
             ?? Array.Empty<string>();
-        if (selected.Length == 0) return 0;
         foreach (var path in selected)
         {
             var relative = Path.GetRelativePath(root, path);
@@ -380,46 +379,75 @@ public sealed class LibraryService : IDisposable
                 throw new InvalidOperationException("توجد ملفات خارج المجلد المحدد أو ليست ملفات فيديو صالحة.");
         }
 
+        var allFiles = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
+            .Where(path => ContentTypes.ContainsKey(Path.GetExtension(path)))
+            .Select(Path.GetFullPath).ToArray();
+        var selectedSet = new HashSet<string>(selected, StringComparer.OrdinalIgnoreCase);
+        var insideMainLibrary = IsInsideRoot(root);
+
         using (var connection = new SqliteConnection(_connectionString))
         {
             connection.Open();
             using var transaction = connection.BeginTransaction();
-            using (var removeRoot = connection.CreateCommand())
+            if (insideMainLibrary)
             {
-                removeRoot.Transaction = transaction;
-                removeRoot.CommandText = "DELETE FROM LibraryScanRoots WHERE FolderPath=$path";
-                removeRoot.Parameters.AddWithValue("$path", root);
-                removeRoot.ExecuteNonQuery();
+                foreach (var path in allFiles)
+                {
+                    var relative = NormalizeRelativePath(Path.GetRelativePath(_root, path));
+                    var id = GetOrCreateId(connection, transaction, relative);
+                    using var command = connection.CreateCommand();
+                    command.Transaction = transaction;
+                    command.CommandText = selectedSet.Contains(path)
+                        ? "DELETE FROM ExcludedLibraryFiles WHERE VideoId=$id"
+                        : "INSERT INTO ExcludedLibraryFiles(VideoId,ExcludedUtc) VALUES($id,$utc) ON CONFLICT(VideoId) DO UPDATE SET ExcludedUtc=excluded.ExcludedUtc";
+                    command.Parameters.AddWithValue("$id", id);
+                    if (!selectedSet.Contains(path)) command.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
+                    command.ExecuteNonQuery();
+                }
             }
-            foreach (var path in selected)
+            else
             {
-                using var command = connection.CreateCommand();
-                command.Transaction = transaction;
-                command.CommandText = "INSERT OR IGNORE INTO ExternalLibraryFiles(FullPath,VideoId,UpdatedUtc) VALUES($path,$id,$utc)";
-                command.Parameters.AddWithValue("$path", path);
-                command.Parameters.AddWithValue("$id", CreateId("external:" + path));
-                command.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
-                command.ExecuteNonQuery();
-                using var restore = connection.CreateCommand();
-                restore.Transaction = transaction;
-                restore.CommandText = "DELETE FROM ExcludedLibraryFiles WHERE VideoId=$id";
-                restore.Parameters.AddWithValue("$id", CreateId("external:" + path));
-                restore.ExecuteNonQuery();
+                using (var removeRoot = connection.CreateCommand())
+                {
+                    removeRoot.Transaction = transaction;
+                    removeRoot.CommandText = "DELETE FROM LibraryScanRoots WHERE FolderPath=$path";
+                    removeRoot.Parameters.AddWithValue("$path", root);
+                    removeRoot.ExecuteNonQuery();
+                }
+                foreach (var path in selected)
+                {
+                    var id = CreateId("external:" + path);
+                    using var command = connection.CreateCommand();
+                    command.Transaction = transaction;
+                    command.CommandText = "INSERT OR IGNORE INTO ExternalLibraryFiles(FullPath,VideoId,UpdatedUtc) VALUES($path,$id,$utc)";
+                    command.Parameters.AddWithValue("$path", path);
+                    command.Parameters.AddWithValue("$id", id);
+                    command.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
+                    command.ExecuteNonQuery();
+                    using var restore = connection.CreateCommand();
+                    restore.Transaction = transaction;
+                    restore.CommandText = "DELETE FROM ExcludedLibraryFiles WHERE VideoId=$id";
+                    restore.Parameters.AddWithValue("$id", id);
+                    restore.ExecuteNonQuery();
+                }
             }
             transaction.Commit();
         }
 
-        lock (_sync)
+        if (!insideMainLibrary)
         {
-            foreach (var watcher in _watchers.Where(w => string.Equals(
-                w.Path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), root,
-                StringComparison.OrdinalIgnoreCase)).ToArray())
+            lock (_sync)
             {
-                watcher.Dispose();
-                _watchers.Remove(watcher);
+                foreach (var watcher in _watchers.Where(w => string.Equals(
+                    w.Path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), root,
+                    StringComparison.OrdinalIgnoreCase)).ToArray())
+                {
+                    watcher.Dispose();
+                    _watchers.Remove(watcher);
+                }
             }
+            AddWatcher(root);
         }
-        AddWatcher(root);
         Invalidate();
         return selected.Length;
     }
