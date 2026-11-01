@@ -70,6 +70,25 @@ public sealed class SeriesCatalogService
         return rows;
     }
 
+    public SeasonRecord? GetSeason(long seasonId)
+    {
+        using var c = Open(); using var cmd = c.CreateCommand();
+        cmd.CommandText = "SELECT SeasonId,SeriesId,SeasonNumber,Title,FolderPath FROM SeriesSeasons WHERE SeasonId=$id";
+        cmd.Parameters.AddWithValue("$id", seasonId);
+        using var r = cmd.ExecuteReader();
+        return r.Read() ? new SeasonRecord(r.GetInt64(0), r.GetString(1), r.GetInt32(2), r.GetString(3), r.IsDBNull(4) ? null : r.GetString(4)) : null;
+    }
+
+    public IReadOnlyList<EpisodeRecord> ListEpisodes(long seasonId)
+    {
+        using var c = Open(); using var cmd = c.CreateCommand();
+        cmd.CommandText = "SELECT EpisodeId,SeasonId,VideoId,EpisodeNumber,Title FROM SeriesEpisodes WHERE SeasonId=$id ORDER BY EpisodeNumber";
+        cmd.Parameters.AddWithValue("$id", seasonId);
+        using var r = cmd.ExecuteReader(); var rows = new List<EpisodeRecord>();
+        while (r.Read()) rows.Add(new EpisodeRecord(r.GetInt64(0), r.GetInt64(1), r.GetString(2), r.GetInt32(3), r.GetString(4)));
+        return rows;
+    }
+
     public SeriesRecord? GetSeries(string id)
     {
         using var c=Open(); using var cmd=c.CreateCommand(); cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath FROM SeriesCatalog WHERE SeriesId=$id"; cmd.Parameters.AddWithValue("$id",id);
