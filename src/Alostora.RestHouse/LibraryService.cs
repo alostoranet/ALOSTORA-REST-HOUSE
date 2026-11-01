@@ -383,58 +383,36 @@ public sealed class LibraryService : IDisposable
             .Where(path => ContentTypes.ContainsKey(Path.GetExtension(path)))
             .Select(Path.GetFullPath).ToArray();
         var selectedSet = new HashSet<string>(selected, StringComparer.OrdinalIgnoreCase);
-        var insideMainLibrary = IsInsideRoot(root);
-
         using (var connection = new SqliteConnection(_connectionString))
         {
             connection.Open();
             using var transaction = connection.BeginTransaction();
-            if (insideMainLibrary)
+            using (var removeRoot = connection.CreateCommand())
             {
-                foreach (var path in allFiles)
-                {
-                    var relative = NormalizeRelativePath(Path.GetRelativePath(_root, path));
-                    var id = GetOrCreateId(connection, transaction, relative);
-                    using var command = connection.CreateCommand();
-                    command.Transaction = transaction;
-                    command.CommandText = selectedSet.Contains(path)
-                        ? "DELETE FROM ExcludedLibraryFiles WHERE VideoId=$id"
-                        : "INSERT INTO ExcludedLibraryFiles(VideoId,ExcludedUtc) VALUES($id,$utc) ON CONFLICT(VideoId) DO UPDATE SET ExcludedUtc=excluded.ExcludedUtc";
-                    command.Parameters.AddWithValue("$id", id);
-                    if (!selectedSet.Contains(path)) command.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
-                    command.ExecuteNonQuery();
-                }
+                removeRoot.Transaction = transaction;
+                removeRoot.CommandText = "DELETE FROM LibraryScanRoots WHERE FolderPath=$path";
+                removeRoot.Parameters.AddWithValue("$path", root);
+                removeRoot.ExecuteNonQuery();
             }
-            else
+
+            foreach (var path in allFiles)
             {
-                using (var removeRoot = connection.CreateCommand())
-                {
-                    removeRoot.Transaction = transaction;
-                    removeRoot.CommandText = "DELETE FROM LibraryScanRoots WHERE FolderPath=$path";
-                    removeRoot.Parameters.AddWithValue("$path", root);
-                    removeRoot.ExecuteNonQuery();
-                }
-                foreach (var path in selected)
-                {
-                    var id = CreateId("external:" + path);
-                    using var command = connection.CreateCommand();
-                    command.Transaction = transaction;
-                    command.CommandText = "INSERT OR IGNORE INTO ExternalLibraryFiles(FullPath,VideoId,UpdatedUtc) VALUES($path,$id,$utc)";
-                    command.Parameters.AddWithValue("$path", path);
-                    command.Parameters.AddWithValue("$id", id);
-                    command.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
-                    command.ExecuteNonQuery();
-                    using var restore = connection.CreateCommand();
-                    restore.Transaction = transaction;
-                    restore.CommandText = "DELETE FROM ExcludedLibraryFiles WHERE VideoId=$id";
-                    restore.Parameters.AddWithValue("$id", id);
-                    restore.ExecuteNonQuery();
-                }
+                var id = IsInsideRoot(path)
+                    ? GetOrCreateId(connection, transaction, NormalizeRelativePath(Path.GetRelativePath(_root, path)))
+                    : GetOrCreateExternalId(connection, transaction, path);
+                using var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = selectedSet.Contains(path)
+                    ? "DELETE FROM ExcludedLibraryFiles WHERE VideoId=$id"
+                    : "INSERT INTO ExcludedLibraryFiles(VideoId,ExcludedUtc) VALUES($id,$utc) ON CONFLICT(VideoId) DO UPDATE SET ExcludedUtc=excluded.ExcludedUtc";
+                command.Parameters.AddWithValue("$id", id);
+                if (!selectedSet.Contains(path)) command.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
+                command.ExecuteNonQuery();
             }
             transaction.Commit();
         }
 
-        if (!insideMainLibrary)
+        if (!IsInsideRoot(root))
         {
             lock (_sync)
             {
