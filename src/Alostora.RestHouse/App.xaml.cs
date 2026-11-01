@@ -13,6 +13,7 @@ public sealed record UpdateSeasonFolderRequest(string? FolderPath);
 public sealed record ScanFolderRequest(string FolderPath);
 public sealed record DetectedEpisodeLink(string VideoId, int EpisodeNumber, string? Title, bool Selected);
 public sealed record LinkDetectedEpisodesRequest(List<DetectedEpisodeLink> Episodes);
+public sealed record RelinkEpisodeRequest(string VideoId);
 
 public partial class App : Application
 {
@@ -162,6 +163,16 @@ public partial class App : Application
     if(!IsLocal(c)) return Results.NotFound();
     if(request.SeasonId<1||request.EpisodeNumber<1||request.EpisodeNumber>10000||string.IsNullOrWhiteSpace(request.VideoId)||files.Resolve(request.VideoId) is null||(request.Title?.Length??0)>160) return Results.BadRequest(new{error="بيانات الحلقة غير صحيحة أو ملف الفيديو غير موجود"});
     try { var id=series.AddEpisode(request); return Results.Ok(new{episodeId=id}); } catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="الموسم غير موجود أو الملف مربوط بحلقة أخرى أو رقم الحلقة مكرر"}); }
+   });
+   _server.MapGet("/api/admin/missing-episodes",(HttpContext c,SeriesCatalogService series,LibraryService files)=>
+    IsLocal(c)?Results.Ok(series.ListMissingEpisodes(files)):Results.NotFound());
+   _server.MapPost("/api/admin/episodes/{episodeId:long}/relink",(HttpContext c,long episodeId,RelinkEpisodeRequest request,SeriesCatalogService series,LibraryService files)=>{
+    if(!IsLocal(c)) return Results.NotFound();
+    if(string.IsNullOrWhiteSpace(request.VideoId)||request.VideoId.Length!=24||!request.VideoId.All(Uri.IsHexDigit)||files.Resolve(request.VideoId) is null)
+     return Results.BadRequest(new{error="ملف الفيديو الجديد غير موجود في المكتبة"});
+    try { series.UpdateEpisodeVideo(episodeId,request.VideoId); return Results.Ok(new{relinked=true}); }
+    catch(KeyNotFoundException) { return Results.NotFound(new{error="الحلقة غير موجودة"}); }
+    catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="هذا الملف مربوط بحلقة أخرى بالفعل"}); }
    });
    _server.MapGet("/api/admin/metadata",(HttpContext c,VideoMetadataService meta)=>IsLocal(c)?Results.Ok(meta.List()):Results.NotFound());
    _server.MapPost("/api/admin/metadata",(HttpContext c,SaveVideoMetadataRequest request,LibraryService librarySvc,VideoMetadataService meta)=>{
