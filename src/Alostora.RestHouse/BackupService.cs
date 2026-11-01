@@ -68,8 +68,13 @@ public static class BackupService
             if (Directory.Exists(extractedPosters))
             {
                 Directory.CreateDirectory(stagedPosters);
-                foreach (var file in Directory.EnumerateFiles(extractedPosters, "*", SearchOption.TopDirectoryOnly))
-                    File.Copy(file, Path.Combine(stagedPosters, Path.GetFileName(file)), overwrite: true);
+                foreach (var file in Directory.EnumerateFiles(extractedPosters, "*", SearchOption.AllDirectories))
+                {
+                    var relative = Path.GetRelativePath(extractedPosters, file);
+                    var destination = Path.Combine(stagedPosters, relative);
+                    Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                    File.Copy(file, destination, overwrite: true);
+                }
             }
 
             var backupDirectory = Path.Combine(applicationRoot, "Backups");
@@ -161,9 +166,11 @@ public static class BackupService
             {
                 var targetPosters = Path.Combine(tempDirectory, "posters");
                 Directory.CreateDirectory(targetPosters);
-                foreach (var file in Directory.EnumerateFiles(postersDirectory, "*", SearchOption.TopDirectoryOnly))
+                foreach (var file in Directory.EnumerateFiles(postersDirectory, "*", SearchOption.AllDirectories))
                 {
-                    var target = Path.Combine(targetPosters, Path.GetFileName(file));
+                    var relative = Path.GetRelativePath(postersDirectory, file);
+                    var target = Path.Combine(targetPosters, relative);
+                    Directory.CreateDirectory(Path.GetDirectoryName(target)!);
                     File.Copy(file, target, overwrite: true);
                 }
             }
