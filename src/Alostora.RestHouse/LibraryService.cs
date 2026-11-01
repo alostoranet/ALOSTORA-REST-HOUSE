@@ -117,6 +117,24 @@ public sealed class LibraryService : IDisposable
 
     // Registers an additional folder without moving or copying its files.
     // Its full path is persisted so it is available after application restarts.
+    public void EnsureFolderRegistered(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            return;
+        var full = Path.GetFullPath(folderPath);
+        if (IsInsideRoot(full)) return;
+
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT 1 FROM LibraryScanRoots WHERE FolderPath=$path";
+        command.Parameters.AddWithValue("$path", full);
+        if (command.ExecuteScalar() is null)
+            RegisterFolder(full);
+        else
+            AddWatcher(full);
+    }
+
     public int RegisterFolder(string folderPath)
     {
         if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
