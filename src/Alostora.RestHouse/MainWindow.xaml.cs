@@ -7,6 +7,8 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Net.Sockets;
 using System.Net.NetworkInformation;
+using System.Diagnostics;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
@@ -30,6 +32,42 @@ public partial class MainWindow : Window
     }
 
     private async void RefreshLibrary_Click(object sender, RoutedEventArgs e) => await LoadVideosAsync();
+
+    private async void EnableFirewall_Click(object sender, RoutedEventArgs e)
+    {
+        const string ruleName = "ALOSTORA REST HOUSE TCP 8096";
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "netsh.exe",
+            Arguments = "advfirewall firewall add rule name=\"" + ruleName + "\" dir=in action=allow protocol=TCP localport=8096 profile=private",
+            UseShellExecute = true,
+            Verb = "runas",
+            WindowStyle = ProcessWindowStyle.Hidden
+        };
+
+        try
+        {
+            using var process = Process.Start(startInfo);
+            if (process is null)
+            {
+                MessageBox.Show("تعذر بدء إعداد جدار حماية Windows.", "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            await process.WaitForExitAsync();
+            if (process.ExitCode == 0)
+                MessageBox.Show("تم السماح باتصالات TCP على المنفذ 8096 ضمن ملف تعريف الشبكة الخاصة. تأكد أن شبكة Windows مضبوطة على «خاصة».", "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Information);
+            else
+                MessageBox.Show("لم يتمكن Windows من إضافة قاعدة جدار الحماية. شغّل البرنامج بصلاحية مسؤول وحاول مجدداً.", "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            MessageBox.Show("تم إلغاء طلب صلاحية المسؤول. لم تتغير إعدادات جدار الحماية.", "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("تعذر إعداد جدار الحماية: " + ex.Message, "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 
     private async void CreateBackup_Click(object sender, RoutedEventArgs e)
     {
