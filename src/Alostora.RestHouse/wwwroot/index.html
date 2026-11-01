@@ -86,7 +86,7 @@ async function play(item){
  player.querySelectorAll('track').forEach(track=>track.remove());
  const preferredSubtitleIndex=subtitleTracks.findIndex(sub=>sub.isDefault)>=0?subtitleTracks.findIndex(sub=>sub.isDefault):subtitleTracks.findIndex(sub=>sub.language==='ar');
  subtitleTracks.forEach((sub,index)=>{const track=document.createElement('track');track.kind='subtitles';track.label=sub.label||'ترجمة';track.srclang=sub.language||'und';track.src=sub.url;if(index===preferredSubtitleIndex)track.default=true;track.addEventListener('load',()=>{if(track.default)track.track.mode='showing';});player.append(track);});
- document.querySelector('#subtitleHint').textContent=subtitleTracks.length?'الترجمات المتاحة: '+subtitleTracks.map(x=>x.label).join('، ')+' — اختر الترجمة من زر CC في المشغل.':'لا توجد ترجمة خارجية لهذا الملف. ضع ملف SRT أو VTT بجانب الفيديو وبنفس اسمه.';
+ document.querySelector('#subtitleHint').textContent=subtitleTracks.length?'الترجمات المتاحة: '+subtitleTracks.map(x=>x.label).join('، ')+' — اختر الترجمة من زر CC في المشغل.':'لا توجد ترجمة خارجية لهذا الملف. ضع ملف SRT أو VTT أو ASS أو SSA بجانب الفيديو وبنفس اسمه.';
  const tracks=probe?.audioTracks||[];
  const selectedDefault=tracks.find(x=>x.isDefault)||tracks[0]||null;
  if(tracks.length>1&&probe?.available&&probe?.success){
