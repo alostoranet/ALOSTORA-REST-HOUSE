@@ -30,7 +30,8 @@ public sealed class MediaConversionService
     private readonly LibraryService _library;
     private readonly string? _configuredFfmpeg;
     private readonly string _cacheDirectory;
-    private readonly ConcurrentDictionary<string, Job> _jobs = new(StringComparer.OrdinalIgnoreCase);\n    private readonly SemaphoreSlim _conversionSlots = new(2, 2);
+    private readonly ConcurrentDictionary<string, Job> _jobs = new(StringComparer.OrdinalIgnoreCase);
+    private readonly SemaphoreSlim _conversionSlots = new(2, 2);
 
     public MediaConversionService(LibraryService library, string? configuredFfmpeg, string cacheDirectory)
     {
