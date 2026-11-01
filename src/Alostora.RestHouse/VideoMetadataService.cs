@@ -33,7 +33,7 @@ public sealed class VideoMetadataService
               Kind TEXT NOT NULL DEFAULT 'Movie',
               PosterPath TEXT NULL,
               Director TEXT NULL,
-              Cast TEXT NULL,
+              CastMembers TEXT NULL,
               Rating REAL NULL,
               RuntimeMinutes INTEGER NULL,
               ReleaseDate TEXT NULL,
@@ -43,7 +43,7 @@ public sealed class VideoMetadataService
             """;
         cmd.ExecuteNonQuery();
         EnsureColumn(c, "Director", "TEXT NULL");
-        EnsureColumn(c, "Cast", "TEXT NULL");
+        EnsureColumn(c, "CastMembers", "TEXT NULL");
         EnsureColumn(c, "Rating", "REAL NULL");
         EnsureColumn(c, "RuntimeMinutes", "INTEGER NULL");
         EnsureColumn(c, "ReleaseDate", "TEXT NULL");
@@ -71,7 +71,7 @@ public sealed class VideoMetadataService
         using var cmd = c.CreateCommand();
         cmd.CommandText = """
             SELECT VideoId,Title,Description,Year,Genre,Kind,PosterPath,
-                   Director,Cast,Rating,RuntimeMinutes,ReleaseDate,Tags
+                   Director,CastMembers,Rating,RuntimeMinutes,ReleaseDate,Tags
             FROM VideoMetadata WHERE VideoId=$id
             """;
         cmd.Parameters.AddWithValue("$id", id);
@@ -114,9 +114,9 @@ public sealed class VideoMetadataService
         cmd.CommandText = """
             INSERT INTO VideoMetadata(
               VideoId,Title,Description,Year,Genre,Kind,PosterPath,
-              Director,Cast,Rating,RuntimeMinutes,ReleaseDate,Tags,UpdatedUtc)
+              Director,CastMembers,Rating,RuntimeMinutes,ReleaseDate,Tags,UpdatedUtc)
             VALUES($id,$title,$description,$year,$genre,$kind,$poster,
-              $director,$cast,$rating,$runtime,$releaseDate,$tags,$updated)
+              $director,$castMembers,$rating,$runtime,$releaseDate,$tags,$updated)
             ON CONFLICT(VideoId) DO UPDATE SET
               Title=excluded.Title,
               Description=excluded.Description,
@@ -125,7 +125,7 @@ public sealed class VideoMetadataService
               Kind=excluded.Kind,
               PosterPath=COALESCE(excluded.PosterPath, VideoMetadata.PosterPath),
               Director=excluded.Director,
-              Cast=excluded.Cast,
+              CastMembers=excluded.CastMembers,
               Rating=excluded.Rating,
               RuntimeMinutes=excluded.RuntimeMinutes,
               ReleaseDate=excluded.ReleaseDate,
@@ -140,7 +140,7 @@ public sealed class VideoMetadataService
         cmd.Parameters.AddWithValue("$kind", x.Kind == "Series" ? "Series" : "Movie");
         cmd.Parameters.AddWithValue("$poster", (object?)x.PosterPath ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$director", (object?)x.Director ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("$cast", (object?)x.Cast ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$castMembers", (object?)x.Cast ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$rating", (object?)x.Rating ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$runtime", (object?)x.RuntimeMinutes ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$releaseDate", (object?)x.ReleaseDate ?? DBNull.Value);
