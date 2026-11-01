@@ -49,7 +49,7 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) != true) return;
         try
         {
-            Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+            System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
             await System.Threading.Tasks.Task.Run(() =>
                 BackupService.CreateArchive(databasePath, postersPath, dialog.FileName));
             MessageBox.Show(
@@ -68,7 +68,7 @@ public partial class MainWindow : Window
         }
         finally
         {
-            Mouse.OverrideCursor = null;
+            System.Windows.Input.Mouse.OverrideCursor = null;
         }
     }
 
