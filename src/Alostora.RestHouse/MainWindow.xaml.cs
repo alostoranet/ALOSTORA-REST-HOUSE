@@ -251,6 +251,52 @@ public partial class MainWindow : Window
     }
 
 
+    private async void RestoreBackup_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختر نسخة احتياطية لاستعادة المكتبة",
+            Filter = "نسخ استراحة الأسطورة|*.zip",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        if (dialog.ShowDialog(this) != true) return;
+
+        var confirm = MessageBox.Show(
+            "سيتم استبدال قاعدة بيانات المكتبة والأغلفة بمحتويات النسخة المحددة.\n" +
+            "سيُنشئ البرنامج نسخة أمان من البيانات الحالية قبل الاستعادة.\n\n" +
+            "بعد نجاح الاستعادة أغلق البرنامج وافتحه مرة أخرى. هل تريد المتابعة؟",
+            "تأكيد استعادة النسخة الاحتياطية",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes) return;
+
+        try
+        {
+            System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+            await System.Threading.Tasks.Task.Run(() => BackupService.RestoreArchive(
+                Path.Combine(_root, "resthouse.db"), _posters, dialog.FileName, _root));
+            MessageBox.Show(
+                "تمت استعادة النسخة الاحتياطية وفحص قاعدة البيانات بنجاح.\n" +
+                "أغلق ALOSTORA REST HOUSE وافتحه مرة أخرى لتحديث بيانات المكتبة.",
+                "استعادة النسخة الاحتياطية",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                "لم تكتمل الاستعادة. لم يتم تجاهل الخطأ، وحاول البرنامج إعادة البيانات السابقة عند حدوث مشكلة:\n\n" + ex.Message,
+                "تعذر استعادة النسخة",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+        finally
+        {
+            System.Windows.Input.Mouse.OverrideCursor = null;
+        }
+    }
+
     private async System.Threading.Tasks.Task LoadVideosAsync()
     {
         try
