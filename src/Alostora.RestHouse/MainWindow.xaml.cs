@@ -333,6 +333,32 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void RemoveVideoFromLibrary_Click(object sender, RoutedEventArgs e)
+    {
+        if (VideosGrid.SelectedItem is not AdminVideo video)
+        {
+            StatusText.Text = "حدد ملف فيديو من القائمة أولاً.";
+            return;
+        }
+        var confirm = MessageBox.Show(
+            $"سيتم إخفاء الفيديو من مكتبة المشاهدة فقط، ولن يُحذف الملف الأصلي من القرص. يمكنك إضافته مجدداً لاحقاً.\n\nالملف: {video.Title}\n\nهل تريد المتابعة؟",
+            "إزالة من المكتبة فقط", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (confirm != MessageBoxResult.Yes) return;
+        try
+        {
+            var response = await _http.PostAsync("/api/admin/library/" + Uri.EscapeDataString(video.Id) + "/remove", null);
+            if (!response.IsSuccessStatusCode)
+            {
+                StatusText.Text = "تعذرت إزالة الفيديو من المكتبة: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            VideosGrid.SelectedItem = null;
+            await LoadVideosAsync();
+            StatusText.Text = "تمت إزالة الفيديو من المكتبة، والملف الأصلي ما زال محفوظاً في مكانه.";
+        }
+        catch (Exception ex) { StatusText.Text = "تعذرت إزالة الفيديو: " + ex.Message; }
+    }
+
     private async void DeleteVideo_Click(object sender, RoutedEventArgs e)
     {
         if (VideosGrid.SelectedItem is not AdminVideo video)
