@@ -110,10 +110,10 @@ public partial class App : Application
     if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeasonNumber<1||request.SeasonNumber>500||(request.Title?.Length??0)>120||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="بيانات الموسم غير صحيحة أو مجلد الموسم غير موجود"});
     try { var id=series.AddSeason(request); if(!string.IsNullOrWhiteSpace(request.FolderPath)) files.RegisterFolder(request.FolderPath); return Results.Ok(new{seasonId=id}); } catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="المسلسل غير موجود أو رقم الموسم مكرر"}); }
    });
-   _server.MapPost("/api/admin/seasons/{seasonId:long}/folder",(HttpContext c,long seasonId,UpdateSeasonFolderRequest request,SeriesCatalogService series,LibraryService files)=>{
+   _server.MapPost("/api/admin/seasons/{seasonId:long}/folder",(HttpContext c,long seasonId,UpdateSeasonFolderRequest request,SeriesCatalogService series)=>{
     if(!IsLocal(c)) return Results.NotFound();
     if((request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="مجلد الموسم غير موجود"});
-    try { series.UpdateSeasonFolder(seasonId,request.FolderPath); if(!string.IsNullOrWhiteSpace(request.FolderPath)) files.RegisterFolder(request.FolderPath); return Results.Ok(new{saved=true}); }
+    try { series.UpdateSeasonFolder(seasonId,request.FolderPath); return Results.Ok(new{saved=true}); }
     catch(KeyNotFoundException) { return Results.NotFound(new{error="الموسم غير موجود"}); }
    });
    _server.MapGet("/api/admin/seasons/{seasonId:long}/preview",(HttpContext c,long seasonId,SeriesCatalogService series,LibraryService files)=>{
