@@ -14,17 +14,33 @@ public sealed record AppSettings(string LibraryPath, string PostersPath, string?
         var path = Path.Combine(root, "settings.json");
         if (!File.Exists(path)) return defaults;
 
+        AppSettings? loaded;
         try
         {
-            var loaded = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path));
-            if (loaded is null || string.IsNullOrWhiteSpace(loaded.LibraryPath) ||
-                string.IsNullOrWhiteSpace(loaded.PostersPath))
-                return defaults;
+            loaded = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path));
+        }
+        catch
+        {
+            return defaults;
+        }
 
+        if (loaded is null || string.IsNullOrWhiteSpace(loaded.LibraryPath) ||
+            string.IsNullOrWhiteSpace(loaded.PostersPath))
+            return defaults;
+
+        string? ffmpeg = null;
+        if (!string.IsNullOrWhiteSpace(loaded.FfmpegPath))
+        {
+            try { ffmpeg = Path.GetFullPath(loaded.FfmpegPath); }
+            catch { ffmpeg = null; }
+        }
+
+        try
+        {
             return new AppSettings(
                 Path.GetFullPath(loaded.LibraryPath),
                 Path.GetFullPath(loaded.PostersPath),
-                string.IsNullOrWhiteSpace(loaded.FfmpegPath) ? null : Path.GetFullPath(loaded.FfmpegPath));
+                ffmpeg);
         }
         catch
         {
