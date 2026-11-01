@@ -12,11 +12,13 @@ public sealed class ScheduledBackupService : BackgroundService
 {
     private const int RetentionCount = 14;
     private readonly string _root;
+    private readonly string _postersPath;
     private readonly ILogger<ScheduledBackupService> _logger;
 
-    public ScheduledBackupService(string root, ILogger<ScheduledBackupService> logger)
+    public ScheduledBackupService(string root, string postersPath, ILogger<ScheduledBackupService> logger)
     {
         _root = root;
+        _postersPath = postersPath;
         _logger = logger;
     }
 
@@ -52,7 +54,7 @@ public sealed class ScheduledBackupService : BackgroundService
     private async Task CreateDailyBackupAsync(CancellationToken cancellationToken)
     {
         var databasePath = Path.Combine(_root, "resthouse.db");
-        var postersPath = Path.Combine(_root, "posters");
+        var postersPath = _postersPath;
         var backupDirectory = Path.Combine(_root, "Backups");
         Directory.CreateDirectory(backupDirectory);
 
