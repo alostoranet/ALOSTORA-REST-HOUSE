@@ -24,9 +24,10 @@ jobs:
         shell: pwsh
         run: |
           $html = Get-Content src/Alostora.RestHouse/wwwroot/index.html -Raw
-          if ($html -notmatch '(?s)<script>(.*?)</script>') { throw "Viewer JavaScript block was not found." }
+          $match = [regex]::Match($html, '(?s)<script>(.*?)</script>')
+          if (-not $match.Success) { throw "Viewer JavaScript block was not found." }
           $scriptPath = Join-Path $env:RUNNER_TEMP "alostora-viewer.js"
-          [System.IO.File]::WriteAllText($scriptPath, $Matches[1], [System.Text.UTF8Encoding]::new($false))
+          [System.IO.File]::WriteAllText($scriptPath, $match.Groups[1].Value, [System.Text.UTF8Encoding]::new($false))
           node --check $scriptPath
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build
