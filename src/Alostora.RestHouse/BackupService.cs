@@ -145,6 +145,13 @@ public static class BackupService
             if (archive.GetEntry("backup-info.txt") is null)
                 throw new InvalidDataException("النسخة المنشأة لا تحتوي معلومات النسخة الاحتياطية.");
 
+            // Read every entry to detect damaged compressed poster/image data as well as the database.
+            foreach (var entry in archive.Entries)
+            {
+                using var entryStream = entry.Open();
+                entryStream.CopyTo(Stream.Null);
+            }
+
             var verifiedDatabase = Path.Combine(verificationDirectory, "resthouse.db");
             using (var input = databaseEntry.Open())
             using (var output = new FileStream(verifiedDatabase, FileMode.CreateNew, FileAccess.Write, FileShare.None))
