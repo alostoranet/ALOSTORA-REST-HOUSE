@@ -30,7 +30,9 @@ public partial class MainWindow : Window
         InitializeComponent();
         _root = root;
         _library = library;
-        _posters = posters;\n        _ffmpegPath = ffmpegPath;\n        FfmpegPathBox.Text = ffmpegPath ?? \"\";
+        _posters = posters;
+        _ffmpegPath = ffmpegPath;
+        FfmpegPathBox.Text = ffmpegPath ?? "";
         LibraryBox.Text = library;
         MediaFolderBox.Text = library;
         PostersFolderBox.Text = posters;
