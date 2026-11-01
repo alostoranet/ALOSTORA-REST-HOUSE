@@ -76,6 +76,13 @@ async function play(item){
  try{const sr=await fetch('/api/subtitles/'+encodeURIComponent(item.id));if(sr.ok)subtitleTracks=await sr.json();}catch{}
  try{const ar=await fetch('/api/playback/'+encodeURIComponent(item.id)+'/tracks');if(ar.ok)probe=await ar.json();}catch{}
  if(generation!==playbackGeneration)return;
+ if(probe?.available&&probe?.success&&Array.isArray(probe.embeddedSubtitles)){
+  for(const sub of probe.embeddedSubtitles){
+   const lang=(sub.language||'und').toLowerCase();
+   const languageLabel=({ar:'العربية',ara:'العربية',en:'English',eng:'English',fr:'Français',fre:'Français',fra:'Français',tr:'Türkçe',tur:'Türkçe',es:'Español',spa:'Español'})[lang]||lang.toUpperCase();
+   subtitleTracks.push({label:[languageLabel,sub.title,sub.codec].filter(Boolean).join(' — '),language:lang,url:'/api/subtitles/'+encodeURIComponent(item.id)+'/embedded/'+sub.index,isDefault:sub.isDefault,isForced:false,isSdh:false});
+  }
+ }
  player.querySelectorAll('track').forEach(track=>track.remove());
  const preferredSubtitleIndex=subtitleTracks.findIndex(sub=>sub.isDefault)>=0?subtitleTracks.findIndex(sub=>sub.isDefault):subtitleTracks.findIndex(sub=>sub.language==='ar');
  subtitleTracks.forEach((sub,index)=>{const track=document.createElement('track');track.kind='subtitles';track.label=sub.label||'ترجمة';track.srclang=sub.language||'und';track.src=sub.url;if(index===preferredSubtitleIndex)track.default=true;track.addEventListener('load',()=>{if(track.default)track.track.mode='showing';});player.append(track);});
