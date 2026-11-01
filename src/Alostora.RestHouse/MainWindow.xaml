@@ -41,7 +41,7 @@
 <DataGrid x:Name="SeasonsGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="SeasonsGrid_SelectionChanged" CanUserAddRows="False" Height="135" Margin="0,8,0,12">
 <DataGrid.Columns><DataGridTextColumn Header="رقم الموسم" Binding="{Binding SeasonNumber}" Width="95"/><DataGridTextColumn Header="اسم الموسم" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="المعرّف" Binding="{Binding SeasonId}" Width="75"/></DataGrid.Columns></DataGrid>
 <WrapPanel Margin="0,8"><Button Content="اكتشاف حلقات الموسم" Click="PreviewSeasonFolder_Click" Padding="10,7" Margin="0,0,6,0"/><Button Content="اعتماد ربط الحلقات المحددة" Click="LinkDetectedEpisodes_Click" Padding="10,7"/></WrapPanel>
-<DataGrid x:Name="EpisodeCandidatesGrid" AutoGenerateColumns="True" CanUserAddRows="False" Height="150" Margin="0,0,0,12"/>
+<DataGrid x:Name="EpisodeCandidatesGrid" AutoGenerateColumns="False" IsReadOnly="False" CanUserAddRows="False" Height="150" Margin="0,0,0,12"><DataGrid.Columns><DataGridCheckBoxColumn Header="ربط" Binding="{Binding Selected, UpdateSourceTrigger=PropertyChanged}" Width="48"/><DataGridTextColumn Header="رقم الحلقة" Binding="{Binding EpisodeNumber, UpdateSourceTrigger=PropertyChanged}" Width="85"/><DataGridTextColumn Header="اسم الملف" Binding="{Binding FileName}" IsReadOnly="True" Width="*"/><DataGridTextColumn Header="الحالة" Binding="{Binding Status}" IsReadOnly="True" Width="105"/></DataGrid.Columns></DataGrid>
 <Separator/>
 <TextBlock Text="إضافة حلقة إلى الموسم المحدد" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,12,0,8"/>
 <TextBlock Text="ملف الفيديو من المكتبة"/><ComboBox x:Name="EpisodeVideoPicker" DisplayMemberPath="Title" Padding="8" Margin="0,4,0,8"/>
