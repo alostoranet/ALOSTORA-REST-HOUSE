@@ -67,7 +67,7 @@ public sealed class SeriesCatalogService
     public void SaveSeries(SaveSeriesRequest x)
     {
         using var c=Open(); using var cmd=c.CreateCommand();
-        cmd.CommandText="""INSERT INTO SeriesCatalog(SeriesId,Title,Description,Year,Genre,PosterPath,UpdatedUtc) VALUES($id,$title,$description,$year,$genre,$poster,$updated) ON CONFLICT(SeriesId) DO UPDATE SET Title=excluded.Title,Description=excluded.Description,Year=excluded.Year,Genre=excluded.Genre,PosterPath=excluded.PosterPath,UpdatedUtc=excluded.UpdatedUtc""";
+        cmd.CommandText="""INSERT INTO SeriesCatalog(SeriesId,Title,Description,Year,Genre,PosterPath,UpdatedUtc) VALUES($id,$title,$description,$year,$genre,$poster,$updated) ON CONFLICT(SeriesId) DO UPDATE SET Title=excluded.Title,Description=excluded.Description,Year=excluded.Year,Genre=excluded.Genre,PosterPath=COALESCE(excluded.PosterPath, SeriesCatalog.PosterPath),UpdatedUtc=excluded.UpdatedUtc""";
         cmd.Parameters.AddWithValue("$id",x.SeriesId); cmd.Parameters.AddWithValue("$title",x.Title.Trim()); cmd.Parameters.AddWithValue("$description",x.Description??""); cmd.Parameters.AddWithValue("$year",(object?)x.Year??DBNull.Value); cmd.Parameters.AddWithValue("$genre",x.Genre??""); cmd.Parameters.AddWithValue("$poster",(object?)x.PosterPath??DBNull.Value); cmd.Parameters.AddWithValue("$updated",DateTime.UtcNow.ToString("O")); cmd.ExecuteNonQuery();
     }
     public long AddSeason(SaveSeasonRequest x)
