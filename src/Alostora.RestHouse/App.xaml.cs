@@ -13,7 +13,7 @@ public sealed record UpdateSeasonFolderRequest(string? FolderPath);
 public sealed record ScanFolderRequest(string FolderPath);
 public sealed record DetectedEpisodeLink(string VideoId, int EpisodeNumber, string? Title, bool Selected);
 public sealed record LinkDetectedEpisodesRequest(List<DetectedEpisodeLink> Episodes);
-public sealed record RelinkEpisodeRequest(string VideoId);
+public sealed record RelinkEpisodeRequest(string VideoId);\npublic sealed record PreparePlaybackRequest(int? AudioStreamIndex);
 
 public partial class App : Application
 {
@@ -31,7 +31,7 @@ public partial class App : Application
    var webRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
    var builder=WebApplication.CreateBuilder(new WebApplicationOptions { ContentRootPath = AppContext.BaseDirectory, WebRootPath = Directory.Exists(webRoot) ? webRoot : null });
    builder.WebHost.UseUrls("http://0.0.0.0:8096");
-   builder.Services.AddSingleton(new LibraryService(library,Path.Combine(root,"resthouse.db")));
+   var libraryService = new LibraryService(library,Path.Combine(root,"resthouse.db"));\n   builder.Services.AddSingleton(libraryService);\n   builder.Services.AddSingleton(new MediaConversionService(libraryService,settings.FfmpegPath,Path.Combine(root,"TranscodeCache")));
    builder.Services.AddSingleton(new WatchProgressService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new VideoMetadataService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new SeriesCatalogService(Path.Combine(root,"resthouse.db")));
@@ -67,7 +67,20 @@ public partial class App : Application
     if(address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
     return IPAddress.IsLoopback(address);
    }
-   _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
+   _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));\n   _server.MapGet("/api/media-tools",(MediaConversionService media)=>Results.Ok(media.GetToolStatus()));
+   _server.MapGet("/api/playback/{id}/tracks",async (string id,MediaConversionService media)=>Results.Ok(await media.ProbeAsync(id)));
+   _server.MapPost("/api/playback/{id}/prepare",async (string id,PreparePlaybackRequest request,MediaConversionService media)=>
+   {
+    var result=await media.StartConversionAsync(id,request.AudioStreamIndex);
+    return result.State=="failed"?Results.BadRequest(result):Results.Accepted("/api/playback/jobs/"+result.JobId,result);
+   });
+   _server.MapGet("/api/playback/jobs/{jobId}",(string jobId,MediaConversionService media)=>Results.Ok(media.GetJob(jobId)));
+   _server.MapGet("/stream-cache/{jobId}.mp4",(string jobId,MediaConversionService media)=>
+   {
+    var path=media.ResolveCachedFile(jobId);
+    return path is null?Results.NotFound():Results.File(path,"video/mp4",enableRangeProcessing:true);
+   });
+
    _server.MapGet("/api/library",(LibraryService svc,VideoMetadataService meta,SeriesCatalogService catalog)=>
    {
     foreach(var seriesRow in catalog.ListSeries())
@@ -252,7 +265,7 @@ public partial class App : Application
     return content is null?Results.NotFound():Results.Text(content,"text/vtt; charset=utf-8");
    });
 _server.MapGet("/media/{id}",(string id,LibraryService svc)=>{var item=svc.Resolve(id);return item is null?Results.NotFound():Results.File(item.FullPath,item.ContentType,enableRangeProcessing:true);});
-   await _server.StartAsync(); new MainWindow(root,library,posters).Show();
+   await _server.StartAsync(); new MainWindow(root,library,posters,settings.FfmpegPath).Show();
   } catch(Exception ex){MessageBox.Show("تعذر تشغيل السيرفر:\n"+ex.Message,"استراحة الأسطورة",MessageBoxButton.OK,MessageBoxImage.Error);Shutdown(1);}
  }
  private static int? ParseEpisodeNumber(string fileName)
