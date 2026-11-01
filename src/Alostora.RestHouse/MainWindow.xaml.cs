@@ -31,6 +31,48 @@ public partial class MainWindow : Window
 
     private async void RefreshLibrary_Click(object sender, RoutedEventArgs e) => await LoadVideosAsync();
 
+    private async void CreateBackup_Click(object sender, RoutedEventArgs e)
+    {
+        var root = Path.GetDirectoryName(_library)!;
+        var databasePath = Path.Combine(root, "resthouse.db");
+        var postersPath = Path.Combine(root, "posters");
+        var dialog = new SaveFileDialog
+        {
+            Title = "حفظ نسخة احتياطية من استراحة الأسطورة",
+            Filter = "ملف نسخة احتياطية مضغوط|*.zip",
+            DefaultExt = ".zip",
+            AddExtension = true,
+            OverwritePrompt = true,
+            FileName = "ALOSTORA-REST-HOUSE-Backup-" + DateTime.Now.ToString("yyyyMMdd-HHmm")
+        };
+
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+            await System.Threading.Tasks.Task.Run(() =>
+                BackupService.CreateArchive(databasePath, postersPath, dialog.FileName));
+            MessageBox.Show(
+                "تم إنشاء النسخة الاحتياطية بنجاح.\n\nتتضمن قاعدة البيانات والأغلفة، ولا تتضمن ملفات الفيديو.",
+                "النسخ الاحتياطي",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                "تعذر إنشاء النسخة الاحتياطية:\n" + ex.Message,
+                "النسخ الاحتياطي",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+        finally
+        {
+            Mouse.OverrideCursor = null;
+        }
+    }
+
+
     private async System.Threading.Tasks.Task LoadVideosAsync()
     {
         try
