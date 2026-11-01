@@ -231,6 +231,12 @@ public partial class MainWindow : Window
         DescriptionBox.Text = v.Description ?? "";
         YearBox.Text = v.Year?.ToString() ?? "";
         GenreBox.Text = v.Genre ?? "";
+        DirectorBox.Text = v.Director ?? "";
+        CastBox.Text = v.Cast ?? "";
+        RatingBox.Text = v.Rating?.ToString() ?? "";
+        RuntimeBox.Text = v.RuntimeMinutes?.ToString() ?? "";
+        ReleaseDateBox.Text = v.ReleaseDate ?? "";
+        TagsBox.Text = v.Tags ?? "";
         KindBox.SelectedIndex = string.Equals(v.Kind, "Series", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         PosterStatusText.Text = string.IsNullOrWhiteSpace(v.PosterPath) ? "لا يوجد غلاف لهذا العمل حالياً." : "يوجد غلاف محفوظ لهذا العمل.";
     }
@@ -271,6 +277,20 @@ public partial class MainWindow : Window
             if (!int.TryParse(YearBox.Text, out var parsed)) { StatusText.Text = "السنة يجب أن تكون رقماً صحيحاً."; return; }
             year = parsed;
         }
+        double? rating = null;
+        if (!string.IsNullOrWhiteSpace(RatingBox.Text))
+        {
+            if (!double.TryParse(RatingBox.Text, out var parsedRating) || parsedRating < 0 || parsedRating > 10)
+            { StatusText.Text = "التقييم يجب أن يكون رقماً من 0 إلى 10."; return; }
+            rating = parsedRating;
+        }
+        int? runtime = null;
+        if (!string.IsNullOrWhiteSpace(RuntimeBox.Text))
+        {
+            if (!int.TryParse(RuntimeBox.Text, out var parsedRuntime) || parsedRuntime < 1 || parsedRuntime > 1000)
+            { StatusText.Text = "المدة يجب أن تكون بالدقائق من 1 إلى 1000."; return; }
+            runtime = parsedRuntime;
+        }
         var kindItem = KindBox.SelectedItem as ComboBoxItem;
         var request = new
         {
@@ -280,7 +300,13 @@ public partial class MainWindow : Window
             year,
             genre = GenreBox.Text,
             kind = kindItem?.Tag?.ToString() ?? "Movie",
-            posterPath = (string?)null
+            posterPath = (string?)null,
+            director = DirectorBox.Text,
+            cast = CastBox.Text,
+            rating,
+            runtimeMinutes = runtime,
+            releaseDate = string.IsNullOrWhiteSpace(ReleaseDateBox.Text) ? null : ReleaseDateBox.Text.Trim(),
+            tags = TagsBox.Text
         };
         try
         {
@@ -736,5 +762,11 @@ public partial class MainWindow : Window
         public string? Genre { get; set; }
         public string? Kind { get; set; }
         public string? PosterPath { get; set; }
+        public string? Director { get; set; }
+        public string? Cast { get; set; }
+        public double? Rating { get; set; }
+        public int? RuntimeMinutes { get; set; }
+        public string? ReleaseDate { get; set; }
+        public string? Tags { get; set; }
     }
 }
