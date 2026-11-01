@@ -101,6 +101,8 @@ public static class BackupService
                 newPostersInstalled = true;
             }
 
+            // Remove the rollback copy only after the restored database and posters are installed.
+            try { if (File.Exists(rollbackDatabase)) File.Delete(rollbackDatabase); } catch { }
             try { if (Directory.Exists(oldPosters)) Directory.Delete(oldPosters, recursive: true); } catch { }
         }
         catch
@@ -124,7 +126,6 @@ public static class BackupService
         finally
         {
             try { if (File.Exists(stagedDatabase)) File.Delete(stagedDatabase); } catch { }
-            try { if (File.Exists(rollbackDatabase)) File.Delete(rollbackDatabase); } catch { }
             try { if (Directory.Exists(stagedPosters)) Directory.Delete(stagedPosters, recursive: true); } catch { }
             try { if (Directory.Exists(tempDirectory)) Directory.Delete(tempDirectory, recursive: true); } catch { }
         }
