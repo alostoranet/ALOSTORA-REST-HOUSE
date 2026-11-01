@@ -404,6 +404,54 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void SaveSeasonFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (SeasonsGrid.SelectedItem is not SeasonAdmin season)
+        {
+            SeriesStatusText.Text = "اختر الموسم الذي تريد تحديث مساره أولاً.";
+            return;
+        }
+
+        var folder = string.IsNullOrWhiteSpace(SeasonFolderPathBox.Text)
+            ? null
+            : Path.GetFullPath(SeasonFolderPathBox.Text.Trim());
+        if (folder is not null && !Directory.Exists(folder))
+        {
+            SeriesStatusText.Text = "مجلد الموسم المحدد غير موجود.";
+            return;
+        }
+
+        try
+        {
+            SeriesStatusText.Text = "جارٍ حفظ المسار وفحص ملفات الفيديو...";
+            var response = await _http.PostAsJsonAsync(
+                "/api/admin/seasons/" + season.SeasonId + "/folder",
+                new { folderPath = folder });
+            if (!response.IsSuccessStatusCode)
+            {
+                SeriesStatusText.Text = "تعذر حفظ مسار الموسم. تحقق من المجلد المحدد.";
+                return;
+            }
+
+            var scan = await _http.PostAsJsonAsync("/api/admin/scan-folder", new { folderPath = folder });
+            if (!scan.IsSuccessStatusCode)
+            {
+                SeriesStatusText.Text = "تم حفظ المسار، لكن تعذر فحص المجلد.";
+                await LoadSeasonsAsync(season.SeriesId);
+                return;
+            }
+
+            var result = await scan.Content.ReadFromJsonAsync<FolderScanResult>();
+            await LoadSeasonsAsync(season.SeriesId);
+            await LoadVideosAsync();
+            SeriesStatusText.Text = $"تم حفظ مسار الموسم وفحصه. عدد ملفات الفيديو التي عُثر عليها: {result?.VideoCount ?? 0}.";
+        }
+        catch (Exception ex)
+        {
+            SeriesStatusText.Text = "تعذر حفظ أو فحص مجلد الموسم: " + ex.Message;
+        }
+    }
+
     private async void AddEpisode_Click(object sender, RoutedEventArgs e)
     {
         if (SeasonsGrid.SelectedItem is not SeasonAdmin season) { SeriesStatusText.Text = "اختر الموسم أولاً."; return; }
@@ -468,6 +516,7 @@ public partial class MainWindow : Window
         public string? FolderPath { get; set; }
     }
     private sealed class PosterUploadResult { public string? PosterPath { get; set; } }
+    private sealed class FolderScanResult { public bool Registered { get; set; } public int VideoCount { get; set; } }
     private sealed class AdminVideo
     {
         public string Id { get; set; } = "";
