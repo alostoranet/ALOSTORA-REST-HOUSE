@@ -20,6 +20,15 @@ jobs:
           dotnet-version: 8.0.x
       - name: Restore
         run: dotnet restore src/Alostora.RestHouse/Alostora.RestHouse.csproj
+      - name: Validate viewer JavaScript
+        shell: pwsh
+        run: |
+          $html = Get-Content src/Alostora.RestHouse/wwwroot/index.html -Raw
+          if ($html -notmatch '(?s)<script>(.*?)</script>') { throw "Viewer JavaScript block was not found." }
+          $scriptPath = Join-Path $env:RUNNER_TEMP "alostora-viewer.js"
+          [System.IO.File]::WriteAllText($scriptPath, $Matches[1], [System.Text.UTF8Encoding]::new($false))
+          node --check $scriptPath
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build
         run: dotnet build src/Alostora.RestHouse/Alostora.RestHouse.csproj --configuration Release --no-restore
       - name: Publish Windows x64
