@@ -10,6 +10,7 @@
 <TextBlock Text="التصنيف (أكشن، كوميدي...)"/><TextBox x:Name="GenreBox" Padding="8" Margin="0,4,0,10"/>
 <TextBlock Text="نوع المحتوى"/><ComboBox x:Name="KindBox" Padding="7" Margin="0,4,0,10"><ComboBoxItem Content="فيلم" Tag="Movie" IsSelected="True"/><ComboBoxItem Content="مسلسل" Tag="Series"/></ComboBox>
 <TextBlock Text="معرّف الملف" Foreground="#64748B"/><TextBox x:Name="IdBox" IsReadOnly="True" Padding="8" Margin="0,4,0,14" FlowDirection="LeftToRight"/>
+<Border Background="#F1F5F9" CornerRadius="8" Padding="10" Margin="0,0,0,12"><StackPanel><TextBlock Text="غلاف الفيلم أو المسلسل" FontWeight="Bold" Foreground="#142D4A"/><TextBlock x:Name="PosterStatusText" Text="لم يتم اختيار غلاف جديد." Foreground="#64748B" Margin="0,5,0,8" TextWrapping="Wrap"/><Button Content="اختيار ورفع الغلاف" Click="UploadPoster_Click" Padding="12,8" HorizontalAlignment="Right" Background="#245B87" Foreground="White" BorderThickness="0"/></StackPanel></Border>
 <Button Content="حفظ البيانات" Click="SaveMetadata_Click" Background="#C93640" Foreground="White" FontWeight="Bold" Padding="14,11" BorderThickness="0"/>
 <TextBlock x:Name="StatusText" Text="اختر فيديو من القائمة لتعديل بياناته." Foreground="#526174" TextWrapping="Wrap" Margin="0,12,0,0"/>
 </StackPanel></ScrollViewer></Border></Grid>
