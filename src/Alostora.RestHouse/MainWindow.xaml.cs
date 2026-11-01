@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Net.Sockets;
+using System.Net.NetworkInformation;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
@@ -216,10 +217,34 @@ public partial class MainWindow : Window
         catch (Exception ex) { SeriesStatusText.Text = "تعذر إضافة الحلقة: " + ex.Message; }
     }
 
-    private static string GetLanAddress() =>
-        Dns.GetHostEntry(Dns.GetHostName()).AddressList
-            .FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(x))?.ToString()
-            ?? "عنوان الشبكة غير معروف";
+    private static string GetLanAddress()
+    {
+        static bool IsPrivateIPv4(IPAddress address)
+        {
+            if (address.AddressFamily != AddressFamily.InterNetwork) return false;
+            var b = address.GetAddressBytes();
+            return b[0] == 10 ||
+                   (b[0] == 172 && b[1] >= 16 && b[1] <= 31) ||
+                   (b[0] == 192 && b[1] == 168);
+        }
+
+        var interfaces = NetworkInterface.GetAllNetworkInterfaces()
+            .Where(n => n.OperationalStatus == OperationalStatus.Up)
+            .OrderBy(n => n.NetworkInterfaceType is NetworkInterfaceType.Ethernet or NetworkInterfaceType.Wireless80211 ? 0 : 1)
+            .ThenByDescending(n => n.GetIPProperties().GatewayAddresses
+                .Any(g => g.Address.AddressFamily == AddressFamily.InterNetwork &&
+                          !g.Address.Equals(IPAddress.Any)));
+
+        foreach (var adapter in interfaces)
+        {
+            var address = adapter.GetIPProperties().UnicastAddresses
+                .Select(x => x.Address)
+                .FirstOrDefault(IsPrivateIPv4);
+            if (address is not null) return address.ToString();
+        }
+
+        return "عنوان الشبكة غير معروف";
+    }
 
     private sealed class SeriesAdmin
     {
