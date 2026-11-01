@@ -80,7 +80,7 @@ public static class BackupService
             var backupDirectory = Path.Combine(applicationRoot, "Backups");
             Directory.CreateDirectory(backupDirectory);
             var safetyArchive = Path.Combine(backupDirectory,
-                "ALOSTORA-PRE-RESTORE-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".zip");
+                "ALOSTORA-PRE-RESTORE-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N") + ".zip");
             if (File.Exists(databasePath))
                 CreateArchive(databasePath, postersDirectory, safetyArchive);
 
@@ -128,6 +128,44 @@ public static class BackupService
             try { if (File.Exists(stagedDatabase)) File.Delete(stagedDatabase); } catch { }
             try { if (Directory.Exists(stagedPosters)) Directory.Delete(stagedPosters, recursive: true); } catch { }
             try { if (Directory.Exists(tempDirectory)) Directory.Delete(tempDirectory, recursive: true); } catch { }
+        }
+    }
+
+    private static void ValidateArchive(string archivePath)
+    {
+        var verificationDirectory = Path.Combine(
+            Path.GetTempPath(), "AlostoraRestHouseVerify-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(verificationDirectory);
+
+        try
+        {
+            using var archive = ZipFile.OpenRead(archivePath);
+            var databaseEntry = archive.GetEntry("resthouse.db")
+                ?? throw new InvalidDataException("النسخة المنشأة لا تحتوي قاعدة البيانات.");
+            if (archive.GetEntry("backup-info.txt") is null)
+                throw new InvalidDataException("النسخة المنشأة لا تحتوي معلومات النسخة الاحتياطية.");
+
+            var verifiedDatabase = Path.Combine(verificationDirectory, "resthouse.db");
+            using (var input = databaseEntry.Open())
+            using (var output = new FileStream(verifiedDatabase, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                input.CopyTo(output);
+
+            using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+            {
+                DataSource = verifiedDatabase,
+                Mode = SqliteOpenMode.ReadOnly
+            }.ToString());
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA integrity_check;";
+            var result = command.ExecuteScalar() as string;
+            if (!string.Equals(result, "ok", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("فشل فحص سلامة قاعدة البيانات في النسخة المنشأة.");
+        }
+        finally
+        {
+            try { Directory.Delete(verificationDirectory, recursive: true); }
+            catch { /* Validation has completed; temporary cleanup must not mask its result. */ }
         }
     }
 
@@ -181,13 +219,26 @@ public static class BackupService
                 "\nContains: SQLite database and poster images. Video files are not included.");
 
             var archiveDirectory = Path.GetDirectoryName(Path.GetFullPath(archivePath));
-            if (!string.IsNullOrEmpty(archiveDirectory))
-                Directory.CreateDirectory(archiveDirectory);
+            if (string.IsNullOrEmpty(archiveDirectory))
+                throw new InvalidOperationException("تعذر تحديد مجلد حفظ النسخة الاحتياطية.");
+            Directory.CreateDirectory(archiveDirectory);
 
-            if (File.Exists(archivePath))
-                File.Delete(archivePath);
+            // Build beside the destination so publishing the completed archive is an atomic rename.
+            var temporaryArchive = Path.Combine(
+                archiveDirectory,
+                "." + Path.GetFileName(archivePath) + "." + Guid.NewGuid().ToString("N") + ".tmp");
 
-            ZipFile.CreateFromDirectory(tempDirectory, archivePath, CompressionLevel.Optimal, includeBaseDirectory: false);
+            try
+            {
+                ZipFile.CreateFromDirectory(tempDirectory, temporaryArchive, CompressionLevel.Optimal, includeBaseDirectory: false);
+                ValidateArchive(temporaryArchive);
+                File.Move(temporaryArchive, archivePath, overwrite: true);
+            }
+            finally
+            {
+                try { if (File.Exists(temporaryArchive)) File.Delete(temporaryArchive); }
+                catch { /* Preserve the previous valid archive if cleanup is unavailable. */ }
+            }
         }
         finally
         {
