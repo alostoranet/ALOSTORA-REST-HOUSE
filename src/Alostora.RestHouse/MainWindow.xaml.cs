@@ -596,6 +596,66 @@ public partial class MainWindow : Window
         catch (Exception ex) { SeriesStatusText.Text = "تعذر إضافة الحلقة: " + ex.Message; }
     }
 
+    private async void RefreshMissingEpisodes_Click(object sender, RoutedEventArgs e)
+    {
+        await LoadMissingEpisodesAsync();
+    }
+
+    private async System.Threading.Tasks.Task LoadMissingEpisodesAsync()
+    {
+        try
+        {
+            var rows = await _http.GetFromJsonAsync<MissingEpisodeAdmin[]>("/api/admin/missing-episodes")
+                ?? Array.Empty<MissingEpisodeAdmin>();
+            MissingEpisodesGrid.ItemsSource = rows;
+            SeriesStatusText.Text = rows.Length == 0
+                ? "فحص الملفات مكتمل: جميع ملفات الحلقات المرتبطة موجودة."
+                : $"تم العثور على {rows.Length} حلقة لا يوجد ملفها في المسارات المسجلة. أضف المجلد الجديد ثم أعد الربط.";
+        }
+        catch (Exception ex)
+        {
+            SeriesStatusText.Text = "تعذر فحص الملفات المفقودة: " + ex.Message;
+        }
+    }
+
+    private async void RelinkMissingEpisode_Click(object sender, RoutedEventArgs e)
+    {
+        if (MissingEpisodesGrid.SelectedItem is not MissingEpisodeAdmin episode)
+        {
+            SeriesStatusText.Text = "حدد الحلقة المفقودة أولاً.";
+            return;
+        }
+        if (EpisodeVideoPicker.SelectedItem is not AdminVideo video)
+        {
+            SeriesStatusText.Text = "أضف مجلد الملف الجديد إلى المكتبة ثم اختر الفيديو البديل من قائمة الملفات.";
+            return;
+        }
+        if (MessageBox.Show(
+            $"هل تريد ربط الحلقة «{episode.Title}» بالملف «{video.Title}»؟",
+            "تأكيد إعادة الربط",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question) != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            var response = await _http.PostAsJsonAsync(
+                "/api/admin/episodes/" + episode.EpisodeId + "/relink",
+                new { videoId = video.Id });
+            if (!response.IsSuccessStatusCode)
+            {
+                SeriesStatusText.Text = "تعذرت إعادة الربط. قد يكون الملف مستخدماً في حلقة أخرى.";
+                return;
+            }
+            await LoadMissingEpisodesAsync();
+            SeriesStatusText.Text = $"تم ربط الحلقة «{episode.Title}» بالملف الجديد.";
+        }
+        catch (Exception ex)
+        {
+            SeriesStatusText.Text = "تعذر إعادة ربط الحلقة: " + ex.Message;
+        }
+    }
+
     private static string GetLanAddress()
     {
         static bool IsPrivateIPv4(IPAddress address)
@@ -645,6 +705,16 @@ public partial class MainWindow : Window
     }
     private sealed class PosterUploadResult { public string? PosterPath { get; set; } }
     private sealed class LinkDetectedResult { public int LinkedCount { get; set; } public int Skipped { get; set; } }
+    private sealed class MissingEpisodeAdmin
+    {
+        public long EpisodeId { get; set; }
+        public string SeriesId { get; set; } = "";
+        public string SeriesTitle { get; set; } = "";
+        public int SeasonNumber { get; set; }
+        public int EpisodeNumber { get; set; }
+        public string Title { get; set; } = "";
+        public string VideoId { get; set; } = "";
+    }
     private sealed class EpisodeCandidate
     {
         public string VideoId { get; set; } = "";
