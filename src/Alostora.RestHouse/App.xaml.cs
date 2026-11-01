@@ -24,7 +24,30 @@ public partial class App : Application
    builder.Services.AddSingleton(new WatchProgressService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new VideoMetadataService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new SeriesCatalogService(Path.Combine(root,"resthouse.db")));
-   _server=builder.Build(); _server.UseDefaultFiles(); _server.UseStaticFiles();
+   _server=builder.Build();
+   static bool IsLanAddress(IPAddress? address)
+   {
+    if(address is null) return false;
+    if(address.IsIPv4MappedToIPv6) address=address.MapToIPv4();
+    if(IPAddress.IsLoopback(address)) return true;
+    if(address.AddressFamily==System.Net.Sockets.AddressFamily.InterNetwork)
+    {
+     var b=address.GetAddressBytes();
+     return b[0]==10 || (b[0]==172&&b[1]>=16&&b[1]<=31) || (b[0]==192&&b[1]==168) || (b[0]==169&&b[1]==254);
+    }
+    return address.IsIPv6LinkLocal || address.IsIPv6UniqueLocal;
+   }
+   _server.Use(async (context,next) =>
+   {
+    if(!IsLanAddress(context.Connection.RemoteIpAddress))
+    {
+     context.Response.StatusCode=StatusCodes.Status403Forbidden;
+     await context.Response.WriteAsync("ALOSTORA REST HOUSE is available on the local network only.");
+     return;
+    }
+    await next();
+   });
+   _server.UseDefaultFiles(); _server.UseStaticFiles();
    static bool IsLocal(HttpContext c) => c.Connection.RemoteIpAddress is not null && IPAddress.IsLoopback(c.Connection.RemoteIpAddress);
    _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
    _server.MapGet("/api/library",(LibraryService svc,VideoMetadataService meta)=>Results.Ok(svc.List().Select(v=>{var m=meta.Get(v.Id);return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath=m?.PosterPath};})));
