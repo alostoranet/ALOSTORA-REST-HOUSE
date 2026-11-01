@@ -55,7 +55,7 @@ async function startTranscodedPlayback(item,audioIndex,generation,saved){
  let job=await response.json();
  for(let attempt=0;attempt<43200;attempt++){
   if(generation!==playbackGeneration)return;
-  if(job.state==='ready'&&job.url){hint.textContent='تم تجهيز الفيديو. يبدأ التشغيل الآن.';player.src=job.url;player.load();player.onloadedmetadata=()=>{if(generation!==playbackGeneration)return;loadedVideoId=item.id;activeVideo={id:item.id};if(saved&&Number.isFinite(saved.positionSeconds)&&saved.positionSeconds>5&&Number.isFinite(player.duration)&&saved.positionSeconds<player.duration-10)player.currentTime=saved.positionSeconds;player.play().catch(()=>{});};return;}
+  if(job.state==='ready'&&job.url){hint.textContent='تم تجهيز الفيديو. يبدأ التشغيل الآن.';player.onloadedmetadata=()=>{if(generation!==playbackGeneration)return;loadedVideoId=item.id;activeVideo={id:item.id};if(saved&&Number.isFinite(saved.positionSeconds)&&saved.positionSeconds>5&&Number.isFinite(player.duration)&&saved.positionSeconds<player.duration-10)player.currentTime=saved.positionSeconds;player.play().catch(()=>{hint.textContent='اضغط زر التشغيل في مشغل الفيديو لبدء المشاهدة.';});};player.src=job.url;player.load();return;}
   if(job.state==='failed'||job.state==='missing')throw new Error(job.message||'فشل تحويل الفيديو.');
   hint.textContent=job.message||'جارٍ تحويل الفيديو...';
   await wait(1500);
@@ -103,7 +103,7 @@ async function play(item){
   return;
  }
  hint.textContent=tracks.length>1?'يمكنك اختيار مسار صوتي آخر ثم الضغط على «تشغيل بالصوت المحدد».':'تشغيل مباشر دون تحويل.';
- player.onloadedmetadata=()=>{if(generation!==playbackGeneration)return;loadedVideoId=item.id;activeVideo={id:item.id};if(saved&&Number.isFinite(saved.positionSeconds)&&saved.positionSeconds>5&&Number.isFinite(player.duration)&&player.duration>0&&saved.positionSeconds<player.duration-10)player.currentTime=saved.positionSeconds;player.play().catch(()=>{});};
+ player.onloadedmetadata=()=>{if(generation!==playbackGeneration)return;loadedVideoId=item.id;activeVideo={id:item.id};if(saved&&Number.isFinite(saved.positionSeconds)&&saved.positionSeconds>5&&Number.isFinite(player.duration)&&player.duration>0&&saved.positionSeconds<player.duration-10)player.currentTime=saved.positionSeconds;player.play().catch(()=>{hint.textContent='اضغط زر التشغيل في مشغل الفيديو لبدء المشاهدة.';});};
  player.onerror=async()=>{if(generation!==playbackGeneration||player.dataset.transcodeAttempted==='1')return;if(!probe?.available||!probe?.success){hint.textContent='المتصفح لم يستطع تشغيل ترميز هذا الملف، ومحرك التحويل غير متاح. جهّز FFmpeg من لوحة الإدارة لإتاحة التحويل التلقائي.';return;}player.dataset.transcodeAttempted='1';try{hint.textContent='المتصفح لا يدعم ترميز هذا الملف مباشرة. جارٍ تحويله تلقائياً...';await startTranscodedPlayback(item,selectedDefault?.index??null,generation,saved);}catch(ex){hint.textContent='تعذر تشغيل ترميز الفيديو: '+ex.message;}};
  player.src=item.url;player.load();player.scrollIntoView({behavior:'smooth'});
 }
