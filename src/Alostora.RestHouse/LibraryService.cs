@@ -70,6 +70,10 @@ public sealed class LibraryService : IDisposable
                     VideoId TEXT NOT NULL UNIQUE,
                     UpdatedUtc TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS ExcludedLibraryFiles(
+                    VideoId TEXT PRIMARY KEY,
+                    ExcludedUtc TEXT NOT NULL
+                );
                 """;
             command.ExecuteNonQuery();
         }
@@ -396,6 +400,11 @@ public sealed class LibraryService : IDisposable
                 command.Parameters.AddWithValue("$id", CreateId("external:" + path));
                 command.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
                 command.ExecuteNonQuery();
+                using var restore = connection.CreateCommand();
+                restore.Transaction = transaction;
+                restore.CommandText = "DELETE FROM ExcludedLibraryFiles WHERE VideoId=$id";
+                restore.Parameters.AddWithValue("$id", CreateId("external:" + path));
+                restore.ExecuteNonQuery();
             }
             transaction.Commit();
         }
@@ -523,6 +532,15 @@ public sealed class LibraryService : IDisposable
             connection.Open();
             using var transaction = connection.BeginTransaction();
 
+            var excludedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using (var excludedCommand = connection.CreateCommand())
+            {
+                excludedCommand.Transaction = transaction;
+                excludedCommand.CommandText = "SELECT VideoId FROM ExcludedLibraryFiles";
+                using var excludedReader = excludedCommand.ExecuteReader();
+                while (excludedReader.Read()) excludedIds.Add(excludedReader.GetString(0));
+            }
+
             var roots = new[] { _root }.Concat(GetScanRoots()).Distinct(StringComparer.OrdinalIgnoreCase);
             foreach (var scanRoot in roots)
             {
@@ -541,6 +559,7 @@ public sealed class LibraryService : IDisposable
                     var id = IsInsideRoot(fullPath)
                         ? GetOrCreateId(connection, transaction, NormalizeRelativePath(Path.GetRelativePath(_root, fullPath)))
                         : GetOrCreateExternalId(connection, transaction, fullPath);
+                    if (excludedIds.Contains(id)) continue;
                     var file = new FileInfo(fullPath);
                     videos.Add(new LibraryVideo(id, file.Name[..^file.Extension.Length],
                         file.Name, "/media/" + id, file.Length));
@@ -560,7 +579,7 @@ public sealed class LibraryService : IDisposable
                 {
                     if (!File.Exists(selectedFile.Path) || !ContentTypes.TryGetValue(Path.GetExtension(selectedFile.Path), out var contentType)) continue;
                     var fullPath = Path.GetFullPath(selectedFile.Path);
-                    if (!seen.Add(fullPath)) continue;
+                    if (!seen.Add(fullPath) || excludedIds.Contains(selectedFile.Id)) continue;
                     var file = new FileInfo(fullPath);
                     videos.Add(new LibraryVideo(selectedFile.Id, file.Name[..^file.Extension.Length], file.Name, "/media/" + selectedFile.Id, file.Length));
                     resolved[selectedFile.Id] = new ResolvedVideo(fullPath, contentType);
@@ -732,11 +751,25 @@ public sealed class LibraryService : IDisposable
         using (var command = connection.CreateCommand())
         {
             command.Transaction = transaction;
-            command.CommandText = "DELETE FROM LibraryFileIds WHERE VideoId=$id; DELETE FROM ExternalLibraryFiles WHERE VideoId=$id;";
+            command.CommandText = "DELETE FROM LibraryFileIds WHERE VideoId=$id; DELETE FROM ExternalLibraryFiles WHERE VideoId=$id; DELETE FROM ExcludedLibraryFiles WHERE VideoId=$id;";
             command.Parameters.AddWithValue("$id", id);
             command.ExecuteNonQuery();
         }
         transaction.Commit();
+        Invalidate();
+    }
+
+    public void RemoveFromLibrary(string id)
+    {
+        if (Resolve(id) is null)
+            throw new FileNotFoundException("ملف الفيديو غير موجود في المكتبة.");
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "INSERT INTO ExcludedLibraryFiles(VideoId,ExcludedUtc) VALUES($id,$utc) ON CONFLICT(VideoId) DO UPDATE SET ExcludedUtc=excluded.ExcludedUtc";
+        command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
+        command.ExecuteNonQuery();
         Invalidate();
     }
 
