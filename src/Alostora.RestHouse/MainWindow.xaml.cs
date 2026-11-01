@@ -641,6 +641,62 @@ public partial class MainWindow : Window
         catch (Exception ex) { SeriesStatusText.Text = "تعذر حفظ المسلسل: " + ex.Message; }
     }
 
+    private async void DeleteSeries_Click(object sender, RoutedEventArgs e)
+    {
+        if (SeriesPicker.SelectedItem is not SeriesAdmin series)
+        {
+            SeriesStatusText.Text = "اختر المسلسل الذي تريد حذفه أولاً.";
+            return;
+        }
+        var confirm = MessageBox.Show(
+            $"سيتم حذف بيانات «{series.Title}» وجميع مواسمه وروابط حلقاته فقط. لن تُحذف ملفات الفيديو الأصلية من القرص.\n\nهل تريد المتابعة؟",
+            "حذف بيانات المسلسل", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes) return;
+        try
+        {
+            var response = await _http.DeleteAsync("/api/admin/series/" + Uri.EscapeDataString(series.SeriesId));
+            if (!response.IsSuccessStatusCode)
+            {
+                SeriesStatusText.Text = "تعذر حذف المسلسل: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            SeriesPicker.SelectedItem = null;
+            SeriesIdBox.Clear(); SeriesTitleBox.Clear(); SeriesDescriptionBox.Clear(); SeriesYearBox.Clear();
+            SeriesGenreBox.Clear(); SeriesPosterPathBox.Clear(); SeriesFolderPathBox.Clear();
+            SeasonsGrid.ItemsSource = null; MissingEpisodesGrid.ItemsSource = null;
+            await LoadSeriesAsync();
+            await LoadVideosAsync();
+            SeriesStatusText.Text = "تم حذف بيانات المسلسل ومواسمه، وملفات الفيديو الأصلية ما زالت محفوظة.";
+        }
+        catch (Exception ex) { SeriesStatusText.Text = "تعذر حذف المسلسل: " + ex.Message; }
+    }
+
+    private async void DeleteSeason_Click(object sender, RoutedEventArgs e)
+    {
+        if (SeasonsGrid.SelectedItem is not SeasonAdmin season)
+        {
+            SeriesStatusText.Text = "اختر الموسم الذي تريد حذفه أولاً.";
+            return;
+        }
+        var confirm = MessageBox.Show(
+            $"سيتم حذف الموسم {season.SeasonNumber} وروابط حلقاته من بيانات المسلسل فقط، ولن تُحذف ملفات الفيديو الأصلية.\n\nهل تريد المتابعة؟",
+            "حذف الموسم", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes) return;
+        try
+        {
+            var response = await _http.DeleteAsync("/api/admin/seasons/" + season.SeasonId);
+            if (!response.IsSuccessStatusCode)
+            {
+                SeriesStatusText.Text = "تعذر حذف الموسم: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            await LoadSeasonsAsync(season.SeriesId);
+            await LoadMissingEpisodesAsync();
+            SeriesStatusText.Text = "تم حذف الموسم وروابط حلقاته، وملفات الفيديو الأصلية لم تُمس.";
+        }
+        catch (Exception ex) { SeriesStatusText.Text = "تعذر حذف الموسم: " + ex.Message; }
+    }
+
     private async void AddSeason_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(SeriesIdBox.Text)) { SeriesStatusText.Text = "احفظ المسلسل أولاً."; return; }
