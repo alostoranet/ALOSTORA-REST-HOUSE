@@ -628,6 +628,24 @@ public sealed class LibraryService : IDisposable
         lock (_sync) { _videos = null; _resolved = null; }
     }
 
+    public void DeleteFile(string id)
+    {
+        var video = Resolve(id) ?? throw new FileNotFoundException("ملف الفيديو غير موجود في المكتبة.");
+        File.Delete(video.FullPath);
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText = "DELETE FROM LibraryFileIds WHERE VideoId=$id; DELETE FROM ExternalLibraryFiles WHERE VideoId=$id;";
+            command.Parameters.AddWithValue("$id", id);
+            command.ExecuteNonQuery();
+        }
+        transaction.Commit();
+        Invalidate();
+    }
+
     private static string CreateId(string path)
     {
         var normalized = path.Replace('\\', '/').ToLowerInvariant();
