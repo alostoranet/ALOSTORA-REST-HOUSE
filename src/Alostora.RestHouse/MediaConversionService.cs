@@ -272,7 +272,7 @@ public sealed class MediaConversionService
     }
 
     private static bool NeedsConversion(string path) =>
-        Path.GetExtension(path).ToLowerInvariant() is ".mkv" or ".avi" or ".mov" or ".ts" or ".flv" or ".wmv";
+        Path.GetExtension(path).ToLowerInvariant() is ".mkv" or ".avi" or ".mov" or ".ts" or ".m2ts" or ".mts" or ".flv" or ".wmv" or ".mpg" or ".mpeg" or ".3gp";
 
     private static string? GetString(JsonElement element, string name) =>
         element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) &&
