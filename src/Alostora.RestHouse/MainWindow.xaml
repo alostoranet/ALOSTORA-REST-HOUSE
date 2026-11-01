@@ -28,12 +28,13 @@
 <TextBlock Text="الوصف"/><TextBox x:Name="SeriesDescriptionBox" Padding="8" Margin="0,4,0,8" Height="65" AcceptsReturn="True" TextWrapping="Wrap"/>
 <TextBlock Text="السنة"/><TextBox x:Name="SeriesYearBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="التصنيف"/><TextBox x:Name="SeriesGenreBox" Padding="8" Margin="0,4,0,8"/>
+<TextBlock Text="مجلد ملفات المسلسل (اختياري)"/><DockPanel Margin="0,4,0,8"><Button DockPanel.Dock="Left" Content="اختيار مجلد" Click="ChooseSeriesFolder_Click" Padding="10,6" Margin="6,0,0,0"/><TextBox x:Name="SeriesFolderPathBox" Padding="8" FlowDirection="LeftToRight"/></DockPanel>
 <TextBlock Text="مسار الغلاف (اختياري)"/><TextBox x:Name="SeriesPosterPathBox" Padding="8" Margin="0,4,0,8"/><Button Content="اختيار ورفع غلاف المسلسل" Click="UploadSeriesPoster_Click" Padding="10,8" HorizontalAlignment="Right" Margin="0,0,0,10"/>
 <Button Content="حفظ بيانات المسلسل" Click="SaveSeries_Click" Background="#C93640" Foreground="White" FontWeight="Bold" Padding="12,9" BorderThickness="0" Margin="0,3,0,14"/>
 <Separator/>
 <TextBlock Text="المواسم" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,12,0,8"/>
 <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="90"/></Grid.ColumnDefinitions>
-<TextBox x:Name="SeasonTitleBox" Grid.Column="0" Padding="8" Margin="0,0,6,8" ToolTip="اسم الموسم (اختياري)"/>
+<StackPanel Grid.Column="0" Margin="0,0,6,8"><TextBox x:Name="SeasonTitleBox" Padding="8" Margin="0,0,0,5" ToolTip="اسم الموسم (اختياري)"/><DockPanel><Button DockPanel.Dock="Left" Content="مجلد الموسم" Click="ChooseSeasonFolder_Click" Padding="8,5" Margin="0,0,5,0"/><TextBox x:Name="SeasonFolderPathBox" Padding="7" FlowDirection="LeftToRight" ToolTip="مسار مجلد ملفات هذا الموسم"/></DockPanel></StackPanel>
 <TextBox x:Name="SeasonNumberBox" Grid.Column="1" Padding="8" Margin="0,0,0,8" Text="1" ToolTip="رقم الموسم"/>
 </Grid>
 <Button Content="إضافة الموسم" Click="AddSeason_Click" HorizontalAlignment="Right" Padding="12,8"/>
