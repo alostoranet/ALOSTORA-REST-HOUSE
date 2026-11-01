@@ -128,7 +128,8 @@ public partial class App : Application
     var candidates=files.ListFolder(season.FolderPath).Select(file=>new {
      videoId=file.Id,fileName=file.FileName,title=file.Title,
      episodeNumber=ParseEpisodeNumber(file.FileName),
-     isAlreadyLinked=linkedIds.Contains(file.Id)
+     isAlreadyLinked=linkedIds.Contains(file.Id),
+     isNumberUsed=ParseEpisodeNumber(file.FileName) is int parsedNumber && usedNumbers.Contains(parsedNumber)
     }).ToArray();
     return Results.Ok(candidates);
    });
