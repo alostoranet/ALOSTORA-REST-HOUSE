@@ -134,6 +134,19 @@ public partial class App : Application
     return Results.Ok(series.GetCatalog(files,meta));
    });
    _server.MapGet("/api/admin/series",(HttpContext c,SeriesCatalogService series,LibraryService files)=>{ if(!IsLocal(c)) return Results.NotFound(); var rows=series.ListSeries(); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.EnsureFolderRegistered(row.FolderPath); return Results.Ok(rows); });
+   _server.MapDelete("/api/admin/series/{seriesId}",(HttpContext c,string seriesId,SeriesCatalogService series)=>
+   {
+    if(!IsLocal(c)) return Results.NotFound();
+    if(string.IsNullOrWhiteSpace(seriesId)||seriesId.Length>80) return Results.BadRequest(new{error="معرّف المسلسل غير صالح"});
+    try { series.DeleteSeries(seriesId); return Results.Ok(new{deleted=true,message="تم حذف بيانات المسلسل ومواسمه وروابط حلقاته دون حذف ملفات الفيديو الأصلية"}); }
+    catch(KeyNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
+   });
+   _server.MapDelete("/api/admin/seasons/{seasonId:long}",(HttpContext c,long seasonId,SeriesCatalogService series)=>
+   {
+    if(!IsLocal(c)) return Results.NotFound();
+    try { series.DeleteSeason(seasonId); return Results.Ok(new{deleted=true,message="تم حذف الموسم وروابط حلقاته دون حذف ملفات الفيديو"}); }
+    catch(KeyNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
+   });
    _server.MapPost("/api/admin/series",(HttpContext c,SaveSeriesRequest request,SeriesCatalogService series,LibraryService files)=>{
     if(!IsLocal(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeriesId.Length>80||string.IsNullOrWhiteSpace(request.Title)||request.Title.Length>160||(request.Description?.Length??0)>2000||(request.Genre?.Length??0)>80||(request.Year is not null&&(request.Year<1888||request.Year>DateTime.UtcNow.Year+5))||(request.PosterPath?.Length??0)>200||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="تحقق من بيانات المسلسل"});
