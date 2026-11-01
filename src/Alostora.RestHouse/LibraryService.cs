@@ -163,11 +163,20 @@ public sealed class LibraryService : IDisposable
         var info = new FileInfo(fullPath);
         if (!info.Exists || info.Length > 2 * 1024 * 1024) return null;
         var bytes = File.ReadAllBytes(fullPath);
-        var content = bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE
-            ? Encoding.Unicode.GetString(bytes)
-            : bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF
-                ? Encoding.BigEndianUnicode.GetString(bytes)
-                : new UTF8Encoding(false, false).GetString(bytes);
+        string content;
+        if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
+            content = Encoding.Unicode.GetString(bytes);
+        else if (bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF)
+            content = Encoding.BigEndianUnicode.GetString(bytes);
+        else
+        {
+            try { content = new UTF8Encoding(false, true).GetString(bytes); }
+            catch (DecoderFallbackException)
+            {
+                Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+                content = Encoding.GetEncoding(1256).GetString(bytes);
+            }
+        }
         return extension.Equals(".srt", StringComparison.OrdinalIgnoreCase)
             ? ConvertSrtToVtt(content)
             : EnsureVttHeader(content);
