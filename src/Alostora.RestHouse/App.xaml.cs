@@ -13,7 +13,8 @@ public sealed record UpdateSeasonFolderRequest(string? FolderPath);
 public sealed record ScanFolderRequest(string FolderPath);
 public sealed record DetectedEpisodeLink(string VideoId, int EpisodeNumber, string? Title, bool Selected);
 public sealed record LinkDetectedEpisodesRequest(List<DetectedEpisodeLink> Episodes);
-public sealed record RelinkEpisodeRequest(string VideoId);\npublic sealed record PreparePlaybackRequest(int? AudioStreamIndex);
+public sealed record RelinkEpisodeRequest(string VideoId);
+public sealed record PreparePlaybackRequest(int? AudioStreamIndex);
 
 public partial class App : Application
 {
@@ -31,7 +32,9 @@ public partial class App : Application
    var webRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
    var builder=WebApplication.CreateBuilder(new WebApplicationOptions { ContentRootPath = AppContext.BaseDirectory, WebRootPath = Directory.Exists(webRoot) ? webRoot : null });
    builder.WebHost.UseUrls("http://0.0.0.0:8096");
-   var libraryService = new LibraryService(library,Path.Combine(root,"resthouse.db"));\n   builder.Services.AddSingleton(libraryService);\n   builder.Services.AddSingleton(new MediaConversionService(libraryService,settings.FfmpegPath,Path.Combine(root,"TranscodeCache")));
+   var libraryService = new LibraryService(library,Path.Combine(root,"resthouse.db"));
+   builder.Services.AddSingleton(libraryService);
+   builder.Services.AddSingleton(new MediaConversionService(libraryService,settings.FfmpegPath,Path.Combine(root,"TranscodeCache")));
    builder.Services.AddSingleton(new WatchProgressService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new VideoMetadataService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new SeriesCatalogService(Path.Combine(root,"resthouse.db")));
@@ -67,7 +70,8 @@ public partial class App : Application
     if(address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
     return IPAddress.IsLoopback(address);
    }
-   _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));\n   _server.MapGet("/api/media-tools",(MediaConversionService media)=>Results.Ok(media.GetToolStatus()));
+   _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
+   _server.MapGet("/api/media-tools",(MediaConversionService media)=>Results.Ok(media.GetToolStatus()));
    _server.MapGet("/api/playback/{id}/tracks",async (string id,MediaConversionService media)=>Results.Ok(await media.ProbeAsync(id)));
    _server.MapPost("/api/playback/{id}/prepare",async (string id,PreparePlaybackRequest request,MediaConversionService media)=>
    {
