@@ -59,9 +59,12 @@ async function play(item){
  try{const sr=await fetch('/api/subtitles/'+encodeURIComponent(item.id));if(sr.ok)subtitleTracks=await sr.json();}catch{}
  if(generation!==playbackGeneration)return;
  player.querySelectorAll('track').forEach(track=>track.remove());
+ const preferredSubtitleIndex=subtitleTracks.findIndex(sub=>sub.isDefault) >= 0
+  ? subtitleTracks.findIndex(sub=>sub.isDefault)
+  : subtitleTracks.findIndex(sub=>sub.language==='ar');
  subtitleTracks.forEach((sub,index)=>{
   const track=document.createElement('track');track.kind='subtitles';track.label=sub.label||'ترجمة';track.srclang=sub.language||'und';track.src=sub.url;
-  if(index===0&&sub.language==='ar')track.default=true;
+  if(index===preferredSubtitleIndex)track.default=true;
   track.addEventListener('load',()=>{if(track.default)track.track.mode='showing';});
   player.append(track);
  });
