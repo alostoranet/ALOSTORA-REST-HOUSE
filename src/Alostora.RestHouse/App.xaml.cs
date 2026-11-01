@@ -48,7 +48,13 @@ public partial class App : Application
     await next();
    });
    _server.UseDefaultFiles(); _server.UseStaticFiles();
-   static bool IsLocal(HttpContext c) => c.Connection.RemoteIpAddress is not null && IPAddress.IsLoopback(c.Connection.RemoteIpAddress);
+   static bool IsLocal(HttpContext c)
+   {
+    var address = c.Connection.RemoteIpAddress;
+    if(address is null) return false;
+    if(address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
+    return IPAddress.IsLoopback(address);
+   }
    _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
    _server.MapGet("/api/library",(LibraryService svc,VideoMetadataService meta)=>Results.Ok(svc.List().Select(v=>{var m=meta.Get(v.Id);return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath=m?.PosterPath};})));
    _server.MapGet("/api/series",(SeriesCatalogService series,LibraryService files,VideoMetadataService meta)=>Results.Ok(series.GetCatalog(files,meta)));
