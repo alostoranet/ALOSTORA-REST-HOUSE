@@ -3,11 +3,11 @@ using System.IO;
 
 namespace Alostora.RestHouse;
 
-public sealed record SeriesRecord(string SeriesId, string Title, string Description, int? Year, string Genre, string? PosterPath);
-public sealed record SeasonRecord(long SeasonId, string SeriesId, int SeasonNumber, string Title);
+public sealed record SeriesRecord(string SeriesId, string Title, string Description, int? Year, string Genre, string? PosterPath, string? FolderPath);
+public sealed record SeasonRecord(long SeasonId, string SeriesId, int SeasonNumber, string Title, string? FolderPath);
 public sealed record EpisodeRecord(long EpisodeId, long SeasonId, string VideoId, int EpisodeNumber, string Title);
-public sealed record SaveSeriesRequest(string SeriesId, string Title, string? Description, int? Year, string? Genre, string? PosterPath);
-public sealed record SaveSeasonRequest(string SeriesId, int SeasonNumber, string? Title);
+public sealed record SaveSeriesRequest(string SeriesId, string Title, string? Description, int? Year, string? Genre, string? PosterPath, string? FolderPath = null);
+public sealed record SaveSeasonRequest(string SeriesId, int SeasonNumber, string? Title, string? FolderPath = null);
 public sealed record SaveEpisodeRequest(long SeasonId, string VideoId, int EpisodeNumber, string? Title);
 
 public sealed class SeriesCatalogService
@@ -22,11 +22,11 @@ public sealed class SeriesCatalogService
         cmd.CommandText = """
           CREATE TABLE IF NOT EXISTS SeriesCatalog(
             SeriesId TEXT PRIMARY KEY, Title TEXT NOT NULL, Description TEXT NOT NULL DEFAULT '',
-            Year INTEGER NULL, Genre TEXT NOT NULL DEFAULT '', PosterPath TEXT NULL, UpdatedUtc TEXT NOT NULL
+            Year INTEGER NULL, Genre TEXT NOT NULL DEFAULT '', PosterPath TEXT NULL, FolderPath TEXT NULL, UpdatedUtc TEXT NOT NULL
           );
           CREATE TABLE IF NOT EXISTS SeriesSeasons(
             SeasonId INTEGER PRIMARY KEY AUTOINCREMENT, SeriesId TEXT NOT NULL REFERENCES SeriesCatalog(SeriesId) ON DELETE CASCADE,
-            SeasonNumber INTEGER NOT NULL CHECK(SeasonNumber > 0), Title TEXT NOT NULL DEFAULT '',
+            SeasonNumber INTEGER NOT NULL CHECK(SeasonNumber > 0), Title TEXT NOT NULL DEFAULT '', FolderPath TEXT NULL,
             UNIQUE(SeriesId, SeasonNumber)
           );
           CREATE TABLE IF NOT EXISTS SeriesEpisodes(
@@ -38,43 +38,54 @@ public sealed class SeriesCatalogService
           CREATE INDEX IF NOT EXISTS IX_SeriesEpisodes_SeasonId ON SeriesEpisodes(SeasonId);
           """;
         cmd.ExecuteNonQuery();
+        EnsureColumn(c, "SeriesCatalog", "FolderPath", "TEXT NULL");
+        EnsureColumn(c, "SeriesSeasons", "FolderPath", "TEXT NULL");
+    }
+    private static void EnsureColumn(SqliteConnection c, string table, string column, string type)
+    {
+        using var check = c.CreateCommand();
+        check.CommandText = $"PRAGMA table_info({table})";
+        using var reader = check.ExecuteReader();
+        while (reader.Read()) if (string.Equals(reader.GetString(1), column, StringComparison.OrdinalIgnoreCase)) return;
+        reader.Close();
+        using var alter = c.CreateCommand(); alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {type}"; alter.ExecuteNonQuery();
     }
     private SqliteConnection Open() { var c = new SqliteConnection(_connectionString); c.Open(); return c; }
 
     public IReadOnlyList<SeriesRecord> ListSeries()
     {
         using var c=Open(); using var cmd=c.CreateCommand();
-        cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath FROM SeriesCatalog ORDER BY Title COLLATE NOCASE";
+        cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath FROM SeriesCatalog ORDER BY Title COLLATE NOCASE";
         using var r=cmd.ExecuteReader(); var rows=new List<SeriesRecord>();
-        while(r.Read()) rows.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5)));
+        while(r.Read()) rows.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5),r.IsDBNull(6)?null:r.GetString(6)));
         return rows;
     }
     public IReadOnlyList<SeasonRecord> ListSeasons(string seriesId)
     {
         using var c = Open(); using var cmd = c.CreateCommand();
-        cmd.CommandText = "SELECT SeasonId,SeriesId,SeasonNumber,Title FROM SeriesSeasons WHERE SeriesId=$id ORDER BY SeasonNumber";
+        cmd.CommandText = "SELECT SeasonId,SeriesId,SeasonNumber,Title,FolderPath FROM SeriesSeasons WHERE SeriesId=$id ORDER BY SeasonNumber";
         cmd.Parameters.AddWithValue("$id", seriesId);
         using var r = cmd.ExecuteReader(); var rows = new List<SeasonRecord>();
-        while (r.Read()) rows.Add(new(r.GetInt64(0), r.GetString(1), r.GetInt32(2), r.GetString(3)));
+        while (r.Read()) rows.Add(new(r.GetInt64(0), r.GetString(1), r.GetInt32(2), r.GetString(3), r.IsDBNull(4) ? null : r.GetString(4)));
         return rows;
     }
 
     public SeriesRecord? GetSeries(string id)
     {
-        using var c=Open(); using var cmd=c.CreateCommand(); cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath FROM SeriesCatalog WHERE SeriesId=$id"; cmd.Parameters.AddWithValue("$id",id);
-        using var r=cmd.ExecuteReader(); return r.Read()?new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5)):null;
+        using var c=Open(); using var cmd=c.CreateCommand(); cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath FROM SeriesCatalog WHERE SeriesId=$id"; cmd.Parameters.AddWithValue("$id",id);
+        using var r=cmd.ExecuteReader(); return r.Read()?new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5),r.IsDBNull(6)?null:r.GetString(6)):null;
     }
     public void SaveSeries(SaveSeriesRequest x)
     {
         using var c=Open(); using var cmd=c.CreateCommand();
-        cmd.CommandText="""INSERT INTO SeriesCatalog(SeriesId,Title,Description,Year,Genre,PosterPath,UpdatedUtc) VALUES($id,$title,$description,$year,$genre,$poster,$updated) ON CONFLICT(SeriesId) DO UPDATE SET Title=excluded.Title,Description=excluded.Description,Year=excluded.Year,Genre=excluded.Genre,PosterPath=COALESCE(excluded.PosterPath, SeriesCatalog.PosterPath),UpdatedUtc=excluded.UpdatedUtc""";
-        cmd.Parameters.AddWithValue("$id",x.SeriesId); cmd.Parameters.AddWithValue("$title",x.Title.Trim()); cmd.Parameters.AddWithValue("$description",x.Description??""); cmd.Parameters.AddWithValue("$year",(object?)x.Year??DBNull.Value); cmd.Parameters.AddWithValue("$genre",x.Genre??""); cmd.Parameters.AddWithValue("$poster",(object?)x.PosterPath??DBNull.Value); cmd.Parameters.AddWithValue("$updated",DateTime.UtcNow.ToString("O")); cmd.ExecuteNonQuery();
+        cmd.CommandText="""INSERT INTO SeriesCatalog(SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath,UpdatedUtc) VALUES($id,$title,$description,$year,$genre,$poster,$folder,$updated) ON CONFLICT(SeriesId) DO UPDATE SET Title=excluded.Title,Description=excluded.Description,Year=excluded.Year,Genre=excluded.Genre,PosterPath=COALESCE(excluded.PosterPath, SeriesCatalog.PosterPath),FolderPath=excluded.FolderPath,UpdatedUtc=excluded.UpdatedUtc""";
+        cmd.Parameters.AddWithValue("$id",x.SeriesId); cmd.Parameters.AddWithValue("$title",x.Title.Trim()); cmd.Parameters.AddWithValue("$description",x.Description??""); cmd.Parameters.AddWithValue("$year",(object?)x.Year??DBNull.Value); cmd.Parameters.AddWithValue("$genre",x.Genre??""); cmd.Parameters.AddWithValue("$poster",(object?)x.PosterPath??DBNull.Value); cmd.Parameters.AddWithValue("$folder",(object?)x.FolderPath??DBNull.Value); cmd.Parameters.AddWithValue("$updated",DateTime.UtcNow.ToString("O")); cmd.ExecuteNonQuery();
     }
     public long AddSeason(SaveSeasonRequest x)
     {
         using var c=Open(); using var cmd=c.CreateCommand();
-        cmd.CommandText="INSERT INTO SeriesSeasons(SeriesId,SeasonNumber,Title) VALUES($series,$number,$title); SELECT last_insert_rowid();";
-        cmd.Parameters.AddWithValue("$series",x.SeriesId); cmd.Parameters.AddWithValue("$number",x.SeasonNumber); cmd.Parameters.AddWithValue("$title",x.Title??"");
+        cmd.CommandText="INSERT INTO SeriesSeasons(SeriesId,SeasonNumber,Title,FolderPath) VALUES($series,$number,$title,$folder); SELECT last_insert_rowid();";
+        cmd.Parameters.AddWithValue("$series",x.SeriesId); cmd.Parameters.AddWithValue("$number",x.SeasonNumber); cmd.Parameters.AddWithValue("$title",x.Title??""); cmd.Parameters.AddWithValue("$folder",(object?)x.FolderPath??DBNull.Value);
         return (long)cmd.ExecuteScalar()!;
     }
     public long AddEpisode(SaveEpisodeRequest x)
@@ -97,7 +108,7 @@ public sealed class SeriesCatalogService
         using (var cmd = c.CreateCommand())
         {
             cmd.CommandText = """
-                SELECT ss.SeasonId, ss.SeriesId, ss.SeasonNumber, ss.Title,
+                SELECT ss.SeasonId, ss.SeriesId, ss.SeasonNumber, ss.Title, ss.FolderPath,
                        se.EpisodeId, se.VideoId, se.EpisodeNumber, se.Title
                 FROM SeriesSeasons ss
                 LEFT JOIN SeriesEpisodes se ON se.SeasonId = ss.SeasonId
@@ -109,14 +120,14 @@ public sealed class SeriesCatalogService
                 var seasonId = r.GetInt64(0);
                 if (!seasonMap.ContainsKey(seasonId))
                 {
-                    var season = new SeasonRecord(seasonId, r.GetString(1), r.GetInt32(2), r.GetString(3));
+                    var season = new SeasonRecord(seasonId, r.GetString(1), r.GetInt32(2), r.GetString(3), r.IsDBNull(4) ? null : r.GetString(4));
                     seasonMap.Add(seasonId, (season, new List<EpisodeRecord>()));
                 }
 
-                if (!r.IsDBNull(4))
+                if (!r.IsDBNull(5))
                 {
                     seasonMap[seasonId].Episodes.Add(new EpisodeRecord(
-                        r.GetInt64(4), seasonId, r.GetString(5), r.GetInt32(6), r.GetString(7)));
+                        r.GetInt64(5), seasonId, r.GetString(6), r.GetInt32(7), r.GetString(8)));
                 }
             }
         }
@@ -132,6 +143,7 @@ public sealed class SeriesCatalogService
                     seriesId = x.Season.SeriesId,
                     seasonNumber = x.Season.SeasonNumber,
                     title = x.Season.Title,
+                    folderPath = x.Season.FolderPath,
                     episodes = x.Episodes
                         .Where(episode => files.ContainsKey(episode.VideoId))
                         .Select(episode =>
@@ -162,6 +174,7 @@ public sealed class SeriesCatalogService
                 year = series.Year,
                 genre = series.Genre,
                 posterPath = series.PosterPath,
+                folderPath = series.FolderPath,
                 seasons
             };
         }).ToArray();
