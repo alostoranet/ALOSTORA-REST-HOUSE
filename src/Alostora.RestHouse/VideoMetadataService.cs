@@ -86,7 +86,7 @@ public sealed class VideoMetadataService
         using var cmd = c.CreateCommand();
         cmd.CommandText = """
             SELECT VideoId,Title,Description,Year,Genre,Kind,PosterPath,
-                   Director,Cast,Rating,RuntimeMinutes,ReleaseDate,Tags
+                   Director,CastMembers,Rating,RuntimeMinutes,ReleaseDate,Tags
             FROM VideoMetadata ORDER BY Title COLLATE NOCASE
             """;
         using var r = cmd.ExecuteReader();
