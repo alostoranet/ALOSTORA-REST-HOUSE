@@ -88,6 +88,15 @@ public sealed class SeriesCatalogService
         cmd.Parameters.AddWithValue("$series",x.SeriesId); cmd.Parameters.AddWithValue("$number",x.SeasonNumber); cmd.Parameters.AddWithValue("$title",x.Title??""); cmd.Parameters.AddWithValue("$folder",(object?)x.FolderPath??DBNull.Value);
         return (long)cmd.ExecuteScalar()!;
     }
+    public void UpdateSeasonFolder(long seasonId, string? folderPath)
+    {
+        using var c = Open(); using var cmd = c.CreateCommand();
+        cmd.CommandText = "UPDATE SeriesSeasons SET FolderPath=$folder WHERE SeasonId=$id";
+        cmd.Parameters.AddWithValue("$folder", (object?)folderPath ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$id", seasonId);
+        if (cmd.ExecuteNonQuery() == 0) throw new KeyNotFoundException("الموسم غير موجود");
+    }
+
     public long AddEpisode(SaveEpisodeRequest x)
     {
         using var c=Open(); using var cmd=c.CreateCommand();
