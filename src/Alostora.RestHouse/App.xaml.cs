@@ -163,7 +163,13 @@ public partial class App : Application
    _server.MapGet("/posters/{fileName}",(string fileName)=>{
     if(fileName!=Path.GetFileName(fileName)||fileName.Length>120) return Results.NotFound();
     var full=Path.Combine(posters,fileName);
-    if(!File.Exists(full)) return Results.NotFound();
+    if(!File.Exists(full))
+    {
+     var previousPosters=Path.Combine(root,"posters");
+     var previousFile=Path.Combine(previousPosters,fileName);
+     if(File.Exists(previousFile)) full=previousFile;
+     else return Results.NotFound();
+    }
     var type=Path.GetExtension(fileName).ToLowerInvariant() switch {".jpg"=>"image/jpeg",".png"=>"image/png",".webp"=>"image/webp",_=>null};
     return type is null?Results.NotFound():Results.File(full,type);
    });
