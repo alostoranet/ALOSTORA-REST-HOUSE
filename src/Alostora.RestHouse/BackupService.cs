@@ -19,7 +19,7 @@ public static class BackupService
         var databaseDirectory = Path.GetDirectoryName(Path.GetFullPath(databasePath))!;
         var postersParent = Path.GetDirectoryName(Path.GetFullPath(postersDirectory))!;
         var stagedDatabase = Path.Combine(databaseDirectory, "resthouse.restore.tmp");
-        var rollbackDatabase = Path.Combine(databaseDirectory, "resthouse.pre-restore.tmp");
+        var rollbackDatabase = Path.Combine(databaseDirectory, "resthouse.pre-restore-" + Guid.NewGuid().ToString("N") + ".tmp");
         var stagedPosters = Path.Combine(postersParent, ".alostora-posters-restore-" + Guid.NewGuid().ToString("N"));
         var oldPosters = Path.Combine(postersParent, ".alostora-posters-old-" + Guid.NewGuid().ToString("N"));
         var databaseReplaced = false;
@@ -101,7 +101,6 @@ public static class BackupService
                 newPostersInstalled = true;
             }
 
-            try { if (File.Exists(rollbackDatabase)) File.Delete(rollbackDatabase); } catch { }
             try { if (Directory.Exists(oldPosters)) Directory.Delete(oldPosters, recursive: true); } catch { }
         }
         catch
