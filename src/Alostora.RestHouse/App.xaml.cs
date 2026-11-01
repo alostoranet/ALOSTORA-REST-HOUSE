@@ -116,6 +116,31 @@ public partial class App : Application
     meta.Save(new SaveVideoMetadataRequest(videoId,old?.Title??(librarySvc.List().First(x=>x.Id==videoId).Title),old?.Description??"",old?.Year,old?.Genre??"",old?.Kind??"Movie","/posters/"+fileName));
     return Results.Ok(new{posterPath="/posters/"+fileName});
    });
+   _server.MapPost("/api/admin/series-poster/{seriesId}",async (HttpContext c,string seriesId,SeriesCatalogService series)=>{
+    if(!IsLocal(c)) return Results.NotFound();
+    if(string.IsNullOrWhiteSpace(seriesId)||seriesId.Length>80) return Results.BadRequest(new{error="معرّف المسلسل غير صالح"});
+    var old=series.GetSeries(seriesId); if(old is null) return Results.NotFound(new{error="المسلسل غير موجود"});
+    if(c.Request.ContentLength is > 5_242_880) return Results.StatusCode(413);
+    var contentType=c.Request.ContentType?.Split(';')[0].Trim().ToLowerInvariant();
+    var ext=contentType switch {"image/jpeg"=>".jpg","image/png"=>".png","image/webp"=>".webp",_=>null};
+    if(ext is null) return Results.BadRequest(new{error="الصيغ المسموحة JPG وPNG وWEBP فقط"});
+    await using var ms=new MemoryStream(); await c.Request.Body.CopyToAsync(ms);
+    if(ms.Length==0||ms.Length>5_242_880) return Results.BadRequest(new{error="حجم الصورة يجب ألا يتجاوز 5 ميجابايت"});
+    var bytes=ms.ToArray();
+    var valid=contentType switch {
+     "image/jpeg"=>bytes.Length>=3&&bytes[0]==0xFF&&bytes[1]==0xD8&&bytes[2]==0xFF,
+     "image/png"=>bytes.Length>=8&&bytes.Take(8).SequenceEqual(new byte[]{137,80,78,71,13,10,26,10}),
+     "image/webp"=>bytes.Length>=12&&System.Text.Encoding.ASCII.GetString(bytes,0,4)=="RIFF"&&System.Text.Encoding.ASCII.GetString(bytes,8,4)=="WEBP",
+     _=>false
+    };
+    if(!valid) return Results.BadRequest(new{error="محتوى الصورة لا يطابق صيغتها"});
+    var fileName="series-"+Guid.NewGuid().ToString("N")+ext;
+    var fullPath=Path.Combine(posters,fileName);
+    await File.WriteAllBytesAsync(fullPath,bytes);
+    try { series.SaveSeries(new SaveSeriesRequest(old.SeriesId,old.Title,old.Description,old.Year,old.Genre,"/posters/"+fileName)); }
+    catch { File.Delete(fullPath); throw; }
+    return Results.Ok(new{posterPath="/posters/"+fileName});
+   });
    _server.MapGet("/posters/{fileName}",(string fileName)=>{
     if(fileName!=Path.GetFileName(fileName)||fileName.Length>120) return Results.NotFound();
     var full=Path.Combine(posters,fileName);
