@@ -45,11 +45,12 @@ function selectSeason(season,button){tabs.querySelectorAll('button').forEach(b=>
 seasons.forEach((season,index)=>{const button=document.createElement('button');button.textContent=season.title||('الموسم '+season.seasonNumber);button.onclick=()=>selectSeason(season,button);tabs.append(button);if(index===0)selectSeason(season,button);});panel.scrollIntoView({behavior:'smooth',block:'start'});}
 async function play(item){
  if(!item||!item.id||!item.url)return;
+ const generation=++playbackGeneration;
  const previous=activeVideo;
  player.pause();
  if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
  if(previous)await saveProgress(previous,false);
- const generation=++playbackGeneration;
+ if(generation!==playbackGeneration)return;
  activeVideo=null;
  loadedVideoId=null;
  player.onloadedmetadata=null;
