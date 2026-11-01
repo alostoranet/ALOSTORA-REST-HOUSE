@@ -108,6 +108,24 @@ public sealed class SeriesCatalogService
         cmd.Parameters.AddWithValue("$series",x.SeriesId); cmd.Parameters.AddWithValue("$number",x.SeasonNumber); cmd.Parameters.AddWithValue("$title",x.Title??""); cmd.Parameters.AddWithValue("$folder",(object?)x.FolderPath??DBNull.Value);
         return (long)cmd.ExecuteScalar()!;
     }
+    public void DeleteSeries(string seriesId)
+    {
+        using var c = Open();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "DELETE FROM SeriesCatalog WHERE SeriesId=$id";
+        cmd.Parameters.AddWithValue("$id", seriesId);
+        if (cmd.ExecuteNonQuery() == 0) throw new KeyNotFoundException("المسلسل غير موجود");
+    }
+
+    public void DeleteSeason(long seasonId)
+    {
+        using var c = Open();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "DELETE FROM SeriesSeasons WHERE SeasonId=$id";
+        cmd.Parameters.AddWithValue("$id", seasonId);
+        if (cmd.ExecuteNonQuery() == 0) throw new KeyNotFoundException("الموسم غير موجود");
+    }
+
     public void UpdateSeasonFolder(long seasonId, string? folderPath)
     {
         using var c = Open(); using var cmd = c.CreateCommand();
