@@ -49,6 +49,16 @@ public sealed class SeriesCatalogService
         while(r.Read()) rows.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5)));
         return rows;
     }
+    public IReadOnlyList<SeasonRecord> ListSeasons(string seriesId)
+    {
+        using var c = Open(); using var cmd = c.CreateCommand();
+        cmd.CommandText = "SELECT SeasonId,SeriesId,SeasonNumber,Title FROM SeriesSeasons WHERE SeriesId=$id ORDER BY SeasonNumber";
+        cmd.Parameters.AddWithValue("$id", seriesId);
+        using var r = cmd.ExecuteReader(); var rows = new List<SeasonRecord>();
+        while (r.Read()) rows.Add(new(r.GetInt64(0), r.GetString(1), r.GetInt32(2), r.GetString(3)));
+        return rows;
+    }
+
     public SeriesRecord? GetSeries(string id)
     {
         using var c=Open(); using var cmd=c.CreateCommand(); cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath FROM SeriesCatalog WHERE SeriesId=$id"; cmd.Parameters.AddWithValue("$id",id);
