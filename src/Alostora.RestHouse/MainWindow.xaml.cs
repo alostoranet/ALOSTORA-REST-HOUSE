@@ -1085,6 +1085,22 @@ public sealed class FolderVideoSelectionWindow : Window
         selectionButtons.Children.Add(allButton);
         selectionButtons.Children.Add(noneButton);
         header.Children.Add(selectionButtons);
+        var selectionCount = new TextBlock
+        {
+            Margin = new Thickness(0, 8, 0, 0),
+            Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(36, 91, 135)),
+            FontWeight = FontWeights.SemiBold
+        };
+        header.Children.Add(selectionCount);
+        void UpdateSelectionCount() =>
+            selectionCount.Text = $"تم تحديد {_items.Count(x => x.Selected)} من أصل {_items.Count} فيديو";
+        foreach (var item in _items)
+            item.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == nameof(SelectableVideoFile.Selected))
+                    UpdateSelectionCount();
+            };
+        UpdateSelectionCount();
         DockPanel.SetDock(header, Dock.Top);
         root.Children.Add(header);
 
