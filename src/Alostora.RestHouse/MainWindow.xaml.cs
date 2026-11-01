@@ -39,7 +39,7 @@ public partial class MainWindow : Window
         AddressBox.Text = $"رابط المشاهدة: http://{GetLanAddress()}:8096";
         VideosGrid.ItemsSource = _videos;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadVideosAsync(); await LoadSeriesAsync(); };
+        Loaded += async (_, _) => { await LoadVideosAsync(); await LoadSeriesAsync(); await CheckMediaToolsAsync(); };
     }
 
     private async void RefreshLibrary_Click(object sender, RoutedEventArgs e) => await LoadVideosAsync();
@@ -313,6 +313,22 @@ public partial class MainWindow : Window
             StatusText.Text = "تم تحديث القائمة. اختر فيديو لتعديل بياناته.";
         }
         catch (Exception ex) { StatusText.Text = "تعذر تحميل المكتبة: " + ex.Message; }
+    }
+
+    private async System.Threading.Tasks.Task CheckMediaToolsAsync()
+    {
+        try
+        {
+            var status = await _http.GetFromJsonAsync<MediaToolStatus>("/api/media-tools");
+            if (status is null) return;
+            FfmpegStatusText.Text = status.Available
+                ? "محرك التحويل جاهز. يمكن تشغيل MKV وAVI واختيار المسار الصوتي. " + status.FfmpegPath
+                : status.Message;
+        }
+        catch (Exception ex)
+        {
+            FfmpegStatusText.Text = "تعذر فحص محرك التحويل: " + ex.Message;
+        }
     }
 
     private void VideosGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -803,6 +819,13 @@ public partial class MainWindow : Window
         return "عنوان الشبكة غير معروف";
     }
 
+    private sealed class MediaToolStatus
+    {
+        public bool Available { get; set; }
+        public string FfmpegPath { get; set; } = "";
+        public string FfprobePath { get; set; } = "";
+        public string Message { get; set; } = "";
+    }
     private sealed class SeriesAdmin
     {
         public string SeriesId { get; set; } = "";
