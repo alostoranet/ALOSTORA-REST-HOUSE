@@ -15,8 +15,12 @@ public partial class App : Application
  {
   try {
    var root=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"AlostoraRestHouse");
-   var library=Path.Combine(root,"Library"); Directory.CreateDirectory(library);
-   var posters=Path.Combine(root,"posters"); Directory.CreateDirectory(posters);
+   Directory.CreateDirectory(root);
+   var settings=AppSettings.Load(root);
+   var library=settings.LibraryPath;
+   var posters=settings.PostersPath;
+   Directory.CreateDirectory(library);
+   Directory.CreateDirectory(posters);
    var webRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
    var builder=WebApplication.CreateBuilder(new WebApplicationOptions { ContentRootPath = AppContext.BaseDirectory, WebRootPath = Directory.Exists(webRoot) ? webRoot : null });
    builder.WebHost.UseUrls("http://0.0.0.0:8096");
@@ -24,7 +28,7 @@ public partial class App : Application
    builder.Services.AddSingleton(new WatchProgressService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new VideoMetadataService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new SeriesCatalogService(Path.Combine(root,"resthouse.db")));
-   builder.Services.AddHostedService(provider => new ScheduledBackupService(root,provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ScheduledBackupService>>()));
+   builder.Services.AddHostedService(provider => new ScheduledBackupService(root,posters,provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ScheduledBackupService>>()));
    _server=builder.Build();
    static bool IsLanAddress(IPAddress? address)
    {
@@ -63,7 +67,21 @@ public partial class App : Application
     var result=svc.List().Select(v=>
     {
      metadataById.TryGetValue(v.Id,out var m);
-     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath=m?.PosterPath};
+     var posterPath=m?.PosterPath;
+     if(string.IsNullOrWhiteSpace(posterPath))
+     {
+      var baseName=Path.GetFileNameWithoutExtension(v.FileName);
+      foreach(var extension in new[]{".jpg",".jpeg",".png",".webp"})
+      {
+       var candidate=baseName+extension;
+       if(File.Exists(Path.Combine(posters,candidate)))
+       {
+        posterPath="/posters/"+Uri.EscapeDataString(candidate);
+        break;
+       }
+      }
+     }
+     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath};
     });
     return Results.Ok(result);
    });
