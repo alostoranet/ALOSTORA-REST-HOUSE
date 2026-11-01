@@ -124,12 +124,12 @@ public sealed class VideoMetadataService
               Genre=excluded.Genre,
               Kind=excluded.Kind,
               PosterPath=COALESCE(excluded.PosterPath, VideoMetadata.PosterPath),
-              Director=COALESCE(excluded.Director, VideoMetadata.Director),
-              Cast=COALESCE(excluded.Cast, VideoMetadata.Cast),
-              Rating=COALESCE(excluded.Rating, VideoMetadata.Rating),
-              RuntimeMinutes=COALESCE(excluded.RuntimeMinutes, VideoMetadata.RuntimeMinutes),
-              ReleaseDate=COALESCE(excluded.ReleaseDate, VideoMetadata.ReleaseDate),
-              Tags=COALESCE(excluded.Tags, VideoMetadata.Tags),
+              Director=excluded.Director,
+              Cast=excluded.Cast,
+              Rating=excluded.Rating,
+              RuntimeMinutes=excluded.RuntimeMinutes,
+              ReleaseDate=excluded.ReleaseDate,
+              Tags=excluded.Tags,
               UpdatedUtc=excluded.UpdatedUtc;
             """;
         cmd.Parameters.AddWithValue("$id", x.VideoId);
