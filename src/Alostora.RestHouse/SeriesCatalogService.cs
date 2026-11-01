@@ -239,13 +239,12 @@ public sealed class SeriesCatalogService
                     seasonNumber = x.Season.SeasonNumber,
                     title = x.Season.Title,
                     episodes = x.Episodes
-                        .Where(episode => files.ContainsKey(episode.VideoId))
                         .Select(episode =>
                         {
-                            var file = files[episode.VideoId];
+                            var hasFile = files.TryGetValue(episode.VideoId, out var file);
                             metadataById.TryGetValue(episode.VideoId, out var videoMetadata);
                             var title = string.IsNullOrWhiteSpace(episode.Title)
-                                ? (videoMetadata?.Title ?? file.Title)
+                                ? (videoMetadata?.Title ?? file?.Title ?? "حلقة")
                                 : episode.Title;
                             return new
                             {
@@ -253,7 +252,8 @@ public sealed class SeriesCatalogService
                                 videoId = episode.VideoId,
                                 episodeNumber = episode.EpisodeNumber,
                                 title,
-                                url = file.Url,
+                                url = hasFile ? file!.Url : null,
+                                isMissing = !hasFile,
                                 director = videoMetadata?.Director,
                                 cast = videoMetadata?.Cast,
                                 rating = videoMetadata?.Rating,
