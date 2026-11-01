@@ -50,6 +50,10 @@
 <TextBox x:Name="EpisodeNumberBox" Grid.Column="1" Padding="8" Margin="0,0,0,8" Text="1" ToolTip="رقم الحلقة"/>
 </Grid>
 <Button Content="ربط الفيديو كحلقة" Click="AddEpisode_Click" HorizontalAlignment="Right" Padding="12,8"/>
+<Separator/>
+<WrapPanel Margin="0,10,0,6"><TextBlock Text="الحلقات التي فقدت ملفاتها" FontSize="15" FontWeight="Bold" Foreground="#142D4A" VerticalAlignment="Center" Margin="0,0,8,0"/><Button Content="فحص الملفات المفقودة" Click="RefreshMissingEpisodes_Click" Padding="10,6"/><Button Content="إعادة ربط الحلقة بالملف المختار" Click="RelinkMissingEpisode_Click" Padding="10,6" Margin="6,0,0,0"/></WrapPanel>
+<DataGrid x:Name="MissingEpisodesGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single" Height="135" Margin="0,0,0,10">
+<DataGrid.Columns><DataGridTextColumn Header="المسلسل" Binding="{Binding SeriesTitle}" Width="*"/><DataGridTextColumn Header="الموسم" Binding="{Binding SeasonNumber}" Width="55"/><DataGridTextColumn Header="الحلقة" Binding="{Binding EpisodeNumber}" Width="55"/><DataGridTextColumn Header="اسم الحلقة" Binding="{Binding Title}" Width="*"/></DataGrid.Columns></DataGrid>
 <TextBlock x:Name="SeriesStatusText" Text="احفظ المسلسل أولاً، ثم أضف المواسم والحلقات." Foreground="#526174" TextWrapping="Wrap" Margin="0,12,0,0"/>
 </StackPanel></ScrollViewer></TabItem></TabControl></Border></Grid>
 <StackPanel Grid.Row="3"><TextBlock x:Name="AddressBox" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#142D4A"/><TextBlock x:Name="LibraryBox" FontSize="12" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4"/><TextBlock x:Name="CountText" FontSize="13" Foreground="#16834A" HorizontalAlignment="Center" Margin="0,4"/><TextBlock Text="المشاهدة متاحة للأجهزة المتصلة بالشبكة المحلية فقط." Foreground="#64748B" HorizontalAlignment="Center" Margin="0,6"/></StackPanel>
