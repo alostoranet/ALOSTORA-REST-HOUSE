@@ -6,6 +6,7 @@ namespace Alostora.RestHouse;
 public sealed record SeriesRecord(string SeriesId, string Title, string Description, int? Year, string Genre, string? PosterPath, string? FolderPath);
 public sealed record SeasonRecord(long SeasonId, string SeriesId, int SeasonNumber, string Title, string? FolderPath);
 public sealed record EpisodeRecord(long EpisodeId, long SeasonId, string VideoId, int EpisodeNumber, string Title);
+public sealed record MissingEpisodeRecord(long EpisodeId, string SeriesId, string SeriesTitle, int SeasonNumber, int EpisodeNumber, string Title, string VideoId);
 public sealed record SaveSeriesRequest(string SeriesId, string Title, string? Description, int? Year, string? Genre, string? PosterPath, string? FolderPath = null);
 public sealed record SaveSeasonRequest(string SeriesId, int SeasonNumber, string? Title, string? FolderPath = null);
 public sealed record SaveEpisodeRequest(long SeasonId, string VideoId, int EpisodeNumber, string? Title);
@@ -123,6 +124,39 @@ public sealed class SeriesCatalogService
         cmd.Parameters.AddWithValue("$season",x.SeasonId); cmd.Parameters.AddWithValue("$video",x.VideoId); cmd.Parameters.AddWithValue("$number",x.EpisodeNumber); cmd.Parameters.AddWithValue("$title",x.Title??"");
         return (long)cmd.ExecuteScalar()!;
     }
+    public void UpdateEpisodeVideo(long episodeId, string videoId)
+    {
+        using var c = Open(); using var cmd = c.CreateCommand();
+        cmd.CommandText = "UPDATE SeriesEpisodes SET VideoId=$video WHERE EpisodeId=$id";
+        cmd.Parameters.AddWithValue("$video", videoId);
+        cmd.Parameters.AddWithValue("$id", episodeId);
+        if (cmd.ExecuteNonQuery() == 0) throw new KeyNotFoundException("الحلقة غير موجودة");
+    }
+
+    public IReadOnlyList<MissingEpisodeRecord> ListMissingEpisodes(LibraryService library)
+    {
+        var available = library.List().Select(x => x.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        using var c = Open(); using var cmd = c.CreateCommand();
+        cmd.CommandText = """
+            SELECT se.EpisodeId, sc.SeriesId, sc.Title, ss.SeasonNumber,
+                   se.EpisodeNumber, se.Title, se.VideoId
+            FROM SeriesEpisodes se
+            JOIN SeriesSeasons ss ON ss.SeasonId=se.SeasonId
+            JOIN SeriesCatalog sc ON sc.SeriesId=ss.SeriesId
+            ORDER BY sc.Title COLLATE NOCASE, ss.SeasonNumber, se.EpisodeNumber
+            """;
+        using var r = cmd.ExecuteReader();
+        var rows = new List<MissingEpisodeRecord>();
+        while (r.Read())
+        {
+            var videoId = r.GetString(6);
+            if (!available.Contains(videoId))
+                rows.Add(new MissingEpisodeRecord(r.GetInt64(0), r.GetString(1), r.GetString(2),
+                    r.GetInt32(3), r.GetInt32(4), r.GetString(5), videoId));
+        }
+        return rows;
+    }
+
     public object GetCatalog(LibraryService library, VideoMetadataService metadata)
     {
         // Load each source into memory before composing the response. This avoids
