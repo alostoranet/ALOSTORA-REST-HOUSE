@@ -90,6 +90,21 @@ public sealed class LibraryService : IDisposable
             return _videos!.ToArray();
     }
 
+    public IReadOnlyList<LibraryVideo> ListFolder(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            return Array.Empty<LibraryVideo>();
+        var root = Path.GetFullPath(folderPath);
+        return List().Where(video =>
+        {
+            var resolved = Resolve(video.Id);
+            if (resolved is null) return false;
+            var relative = Path.GetRelativePath(root, Path.GetFullPath(resolved.FullPath));
+            return relative == "." || (!Path.IsPathRooted(relative) &&
+                relative != ".." && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal));
+        }).ToArray();
+    }
+
     public ResolvedVideo? Resolve(string id)
     {
         if (string.IsNullOrWhiteSpace(id) || id.Length != 24 || id.Any(c => !Uri.IsHexDigit(c)))
