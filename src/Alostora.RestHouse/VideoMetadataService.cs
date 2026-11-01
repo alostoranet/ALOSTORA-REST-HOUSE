@@ -85,7 +85,9 @@ public sealed class VideoMetadataService
         cmd.Parameters.AddWithValue("$year", (object?)x.Year ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$genre", x.Genre ?? "");
         cmd.Parameters.AddWithValue("$kind", x.Kind == "Series" ? "Series" : "Movie");
-        cmd.Parameters.AddWithValue("$poster", (object?)x.PosterPath ?? DBNull.Value);
+        var existing = Get(x.VideoId);
+        var posterPath = x.PosterPath ?? existing?.PosterPath;
+        cmd.Parameters.AddWithValue("$poster", (object?)posterPath ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$updated", DateTime.UtcNow.ToString("O"));
         cmd.ExecuteNonQuery();
     }
