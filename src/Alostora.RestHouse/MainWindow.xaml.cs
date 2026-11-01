@@ -19,7 +19,8 @@ public partial class MainWindow : Window
 {
     private readonly string _root;
     private string _library;
-    private string _posters;\n    private string? _ffmpegPath;
+    private string _posters;
+    private string? _ffmpegPath;
     private readonly HttpClient _http = new() { BaseAddress = new Uri("http://127.0.0.1:8096") };
     private readonly ObservableCollection<AdminVideo> _videos = new();
     private readonly ObservableCollection<EpisodeCandidate> _episodeCandidates = new();
