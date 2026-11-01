@@ -23,7 +23,7 @@
 <TextBlock Text="الوصف"/><TextBox x:Name="SeriesDescriptionBox" Padding="8" Margin="0,4,0,8" Height="65" AcceptsReturn="True" TextWrapping="Wrap"/>
 <TextBlock Text="السنة"/><TextBox x:Name="SeriesYearBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="التصنيف"/><TextBox x:Name="SeriesGenreBox" Padding="8" Margin="0,4,0,8"/>
-<TextBlock Text="مسار الغلاف (اختياري)"/><TextBox x:Name="SeriesPosterPathBox" Padding="8" Margin="0,4,0,8"/>
+<TextBlock Text="مسار الغلاف (اختياري)"/><TextBox x:Name="SeriesPosterPathBox" Padding="8" Margin="0,4,0,8"/><Button Content="اختيار ورفع غلاف المسلسل" Click="UploadSeriesPoster_Click" Padding="10,8" HorizontalAlignment="Right" Margin="0,0,0,10"/>
 <Button Content="حفظ بيانات المسلسل" Click="SaveSeries_Click" Background="#C93640" Foreground="White" FontWeight="Bold" Padding="12,9" BorderThickness="0" Margin="0,3,0,14"/>
 <Separator/>
 <TextBlock Text="المواسم" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,12,0,8"/>
