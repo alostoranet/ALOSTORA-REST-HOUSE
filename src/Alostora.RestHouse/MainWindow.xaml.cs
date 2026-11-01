@@ -885,7 +885,20 @@ public partial class MainWindow : Window
             var response = await _http.PostAsJsonAsync("/api/admin/episodes", new { seasonId = season.SeasonId, videoId = video.Id, episodeNumber = number, title = EpisodeTitleBox.Text });
             if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "لم تتم إضافة الحلقة. قد يكون الملف مرتبطاً بحلقة أخرى أو الرقم مكرراً."; return; }
             EpisodeTitleBox.Clear(); EpisodeNumberBox.Text = (number + 1).ToString();
-            SeriesStatusText.Text = $"تم ربط «{video.Title}» كالحلقة رقم {number}.";
+            var rows = await _http.GetFromJsonAsync<EpisodeCandidate[]>(
+                "/api/admin/seasons/" + season.SeasonId + "/preview") ?? Array.Empty<EpisodeCandidate>();
+            _episodeCandidates.Clear();
+            foreach (var row in rows)
+            {
+                row.Status = row.IsAlreadyLinked ? "مربوط مسبقاً"
+                    : row.EpisodeNumber is null or <= 0 ? "لم يتم التعرف على الرقم"
+                    : row.IsNumberUsed ? "رقم مكرر"
+                    : "جاهز للمراجعة";
+                row.Selected = !row.IsAlreadyLinked && !row.IsNumberUsed && row.EpisodeNumber is > 0;
+                _episodeCandidates.Add(row);
+            }
+            await LoadMissingEpisodesAsync();
+            SeriesStatusText.Text = $"تم ربط «{video.Title}» كالحلقة رقم {number} وتحديث قائمة ملفات الموسم.";
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر إضافة الحلقة: " + ex.Message; }
     }
