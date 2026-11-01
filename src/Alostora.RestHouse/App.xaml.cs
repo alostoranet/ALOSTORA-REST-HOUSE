@@ -56,7 +56,7 @@ public partial class App : Application
     var fullPath=Path.Combine(posters,fileName);
     await File.WriteAllBytesAsync(fullPath,bytes);
     var old=meta.Get(videoId);
-    meta.Save(new SaveVideoMetadataRequest(videoId,old?.Title??video.Title,old?.Description??"",old?.Year,old?.Genre??"",old?.Kind??"Movie","/posters/"+fileName));
+    meta.Save(new SaveVideoMetadataRequest(videoId,old?.Title??(librarySvc.List().First(x=>x.Id==videoId).Title),old?.Description??"",old?.Year,old?.Genre??"",old?.Kind??"Movie","/posters/"+fileName));
     return Results.Ok(new{posterPath="/posters/"+fileName});
    });
    _server.MapGet("/posters/{fileName}",(string fileName)=>{
