@@ -280,6 +280,20 @@ public partial class App : Application
     var type=Path.GetExtension(full).ToLowerInvariant() switch {".jpg" or ".jpeg"=>"image/jpeg",".png"=>"image/png",".webp"=>"image/webp",_=>null};
     return type is null?Results.NotFound():Results.File(full,type);
    });
+   _server.MapDelete("/api/admin/library/{id}",(HttpContext c,string id,LibraryService librarySvc,VideoMetadataService metadata,WatchProgressService progress)=>
+   {
+    if(!IsLocal(c)) return Results.NotFound();
+    if(string.IsNullOrWhiteSpace(id)||id.Length!=24||!id.All(Uri.IsHexDigit)) return Results.BadRequest(new{error="معرّف الفيديو غير صالح"});
+    try
+    {
+     librarySvc.DeleteFile(id);
+     metadata.Delete(id);
+     progress.DeleteVideo(id);
+     return Results.Ok(new{deleted=true,message="تم حذف ملف الفيديو من القرص وتنظيف بياناته وسجل مشاهدته. إذا كان مربوطاً بحلقة فستظهر كحلقة مفقودة ويمكن إعادة ربطها."});
+    }
+    catch(FileNotFoundException) { return Results.NotFound(new{error="ملف الفيديو غير موجود أو حُذف مسبقاً"}); }
+    catch(Exception ex) { return Results.Problem("تعذر حذف ملف الفيديو: "+ex.Message); }
+   });
    _server.MapGet("/api/progress/{viewerId}",(string viewerId,WatchProgressService db)=>viewerId.Length<=80?Results.Ok(db.Get(viewerId)):Results.BadRequest());
    _server.MapPost("/api/progress",(WatchProgressRequest request,WatchProgressService db,LibraryService svc)=>{if(string.IsNullOrWhiteSpace(request.ViewerId)||request.ViewerId.Length>80||string.IsNullOrWhiteSpace(request.VideoId)||svc.Resolve(request.VideoId) is null||!double.IsFinite(request.PositionSeconds)||!double.IsFinite(request.DurationSeconds)||request.PositionSeconds<0||request.DurationSeconds<=0||request.PositionSeconds>request.DurationSeconds+5||request.PositionSeconds>864000||request.DurationSeconds>864000)return Results.BadRequest();db.Save(request);return Results.Ok(new{saved=true});});
       _server.MapGet("/api/subtitles/{id}",(string id,LibraryService svc)=>svc.Resolve(id) is null?Results.NotFound():Results.Ok(svc.ListSubtitles(id)));
