@@ -76,7 +76,7 @@ public sealed class VideoMetadataService
               Year=excluded.Year,
               Genre=excluded.Genre,
               Kind=excluded.Kind,
-              PosterPath=excluded.PosterPath,
+              PosterPath=COALESCE(excluded.PosterPath, VideoMetadata.PosterPath),
               UpdatedUtc=excluded.UpdatedUtc;
             """;
         cmd.Parameters.AddWithValue("$id", x.VideoId);
@@ -85,9 +85,7 @@ public sealed class VideoMetadataService
         cmd.Parameters.AddWithValue("$year", (object?)x.Year ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$genre", x.Genre ?? "");
         cmd.Parameters.AddWithValue("$kind", x.Kind == "Series" ? "Series" : "Movie");
-        var existing = Get(x.VideoId);
-        var posterPath = x.PosterPath ?? existing?.PosterPath;
-        cmd.Parameters.AddWithValue("$poster", (object?)posterPath ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$poster", (object?)x.PosterPath ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$updated", DateTime.UtcNow.ToString("O"));
         cmd.ExecuteNonQuery();
     }
