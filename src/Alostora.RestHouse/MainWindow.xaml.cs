@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     private string _posters;
     private readonly HttpClient _http = new() { BaseAddress = new Uri("http://127.0.0.1:8096") };
     private readonly ObservableCollection<AdminVideo> _videos = new();
+    private readonly ObservableCollection<EpisodeCandidate> _episodeCandidates = new();
 
     public MainWindow(string root, string library, string posters)
     {
@@ -34,6 +35,7 @@ public partial class MainWindow : Window
         PostersFolderBox.Text = posters;
         AddressBox.Text = $"رابط المشاهدة: http://{GetLanAddress()}:8096";
         VideosGrid.ItemsSource = _videos;
+        EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
         Loaded += async (_, _) => { await LoadVideosAsync(); await LoadSeriesAsync(); };
     }
 
@@ -452,6 +454,94 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void PreviewSeasonFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (SeasonsGrid.SelectedItem is not SeasonAdmin season)
+        {
+            SeriesStatusText.Text = "اختر الموسم أولاً.";
+            return;
+        }
+        try
+        {
+            SeriesStatusText.Text = "جارٍ فحص أسماء ملفات الموسم...";
+            var rows = await _http.GetFromJsonAsync<EpisodeCandidate[]>(
+                "/api/admin/seasons/" + season.SeasonId + "/preview") ?? Array.Empty<EpisodeCandidate>();
+            _episodeCandidates.Clear();
+            foreach (var row in rows)
+            {
+                row.Status = row.IsAlreadyLinked ? "مربوط مسبقاً"
+                    : row.EpisodeNumber is null or <= 0 ? "لم يتم التعرف على الرقم"
+                    : row.IsNumberUsed ? "رقم مكرر"
+                    : "جاهز للمراجعة";
+                row.Selected = !row.IsAlreadyLinked && !row.IsNumberUsed && row.EpisodeNumber is > 0;
+                _episodeCandidates.Add(row);
+            }
+            SeriesStatusText.Text = $"تم العثور على {rows.Length} ملفاً. راجع أرقام الحلقات قبل اعتماد الربط.";
+        }
+        catch (Exception ex) { SeriesStatusText.Text = "تعذر فحص الموسم: " + ex.Message; }
+    }
+
+    private async void LinkDetectedEpisodes_Click(object sender, RoutedEventArgs e)
+    {
+        if (SeasonsGrid.SelectedItem is not SeasonAdmin season)
+        {
+            SeriesStatusText.Text = "اختر الموسم أولاً.";
+            return;
+        }
+        EpisodeCandidatesGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+        EpisodeCandidatesGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        var selected = _episodeCandidates.Where(x => x.Selected).ToArray();
+        if (selected.Length == 0)
+        {
+            SeriesStatusText.Text = "حدد ملفاً واحداً على الأقل للربط.";
+            return;
+        }
+        if (selected.Any(x => x.EpisodeNumber is null or < 1 or > 10000))
+        {
+            SeriesStatusText.Text = "صحح أرقام الحلقات المحددة أولاً.";
+            return;
+        }
+        if (MessageBox.Show($"سيتم ربط {selected.Length} ملفاً بالموسم رقم {season.SeasonNumber}. هل راجعت الأرقام؟",
+            "تأكيد ربط الحلقات", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            return;
+        try
+        {
+            var payload = new
+            {
+                episodes = selected.Select(x => new
+                {
+                    videoId = x.VideoId,
+                    episodeNumber = x.EpisodeNumber,
+                    title = x.Title,
+                    selected = true
+                }).ToArray()
+            };
+            var response = await _http.PostAsJsonAsync(
+                "/api/admin/seasons/" + season.SeasonId + "/link-detected", payload);
+            if (!response.IsSuccessStatusCode)
+            {
+                SeriesStatusText.Text = "تعذر اعتماد ربط الحلقات المحددة.";
+                return;
+            }
+            var result = await response.Content.ReadFromJsonAsync<LinkDetectedResult>();
+            await LoadSeasonsAsync(season.SeriesId);
+            var rows = await _http.GetFromJsonAsync<EpisodeCandidate[]>(
+                "/api/admin/seasons/" + season.SeasonId + "/preview") ?? Array.Empty<EpisodeCandidate>();
+            _episodeCandidates.Clear();
+            foreach (var row in rows)
+            {
+                row.Status = row.IsAlreadyLinked ? "مربوط مسبقاً"
+                    : row.EpisodeNumber is null or <= 0 ? "لم يتم التعرف على الرقم"
+                    : row.IsNumberUsed ? "رقم مكرر"
+                    : "جاهز للمراجعة";
+                row.Selected = !row.IsAlreadyLinked && !row.IsNumberUsed && row.EpisodeNumber is > 0;
+                _episodeCandidates.Add(row);
+            }
+            SeriesStatusText.Text = $"تم ربط {result?.LinkedCount ?? 0} حلقة، وتخطي {result?.Skipped ?? 0} ملف.";
+        }
+        catch (Exception ex) { SeriesStatusText.Text = "تعذر ربط الحلقات: " + ex.Message; }
+    }
+
     private async void AddEpisode_Click(object sender, RoutedEventArgs e)
     {
         if (SeasonsGrid.SelectedItem is not SeasonAdmin season) { SeriesStatusText.Text = "اختر الموسم أولاً."; return; }
@@ -516,6 +606,18 @@ public partial class MainWindow : Window
         public string? FolderPath { get; set; }
     }
     private sealed class PosterUploadResult { public string? PosterPath { get; set; } }
+    private sealed class LinkDetectedResult { public int LinkedCount { get; set; } public int Skipped { get; set; } }
+    private sealed class EpisodeCandidate
+    {
+        public string VideoId { get; set; } = "";
+        public string FileName { get; set; } = "";
+        public string Title { get; set; } = "";
+        public int? EpisodeNumber { get; set; }
+        public bool IsAlreadyLinked { get; set; }
+        public bool IsNumberUsed { get; set; }
+        public bool Selected { get; set; }
+        public string Status { get; set; } = "";
+    }
     private sealed class FolderScanResult { public bool Registered { get; set; } public int VideoCount { get; set; } }
     private sealed class AdminVideo
     {
