@@ -56,7 +56,16 @@ public partial class App : Application
     return IPAddress.IsLoopback(address);
    }
    _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
-   _server.MapGet("/api/library",(LibraryService svc,VideoMetadataService meta)=>Results.Ok(svc.List().Select(v=>{var m=meta.Get(v.Id);return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath=m?.PosterPath};})));
+   _server.MapGet("/api/library",(LibraryService svc,VideoMetadataService meta)=>
+   {
+    var metadataById=meta.List().ToDictionary(x=>x.VideoId);
+    var result=svc.List().Select(v=>
+    {
+     metadataById.TryGetValue(v.Id,out var m);
+     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath=m?.PosterPath};
+    });
+    return Results.Ok(result);
+   });
    _server.MapGet("/api/series",(SeriesCatalogService series,LibraryService files,VideoMetadataService meta)=>Results.Ok(series.GetCatalog(files,meta)));
    _server.MapGet("/api/admin/series",(HttpContext c,SeriesCatalogService series)=>IsLocal(c)?Results.Ok(series.ListSeries()):Results.NotFound());
    _server.MapPost("/api/admin/series",(HttpContext c,SaveSeriesRequest request,SeriesCatalogService series)=>{
