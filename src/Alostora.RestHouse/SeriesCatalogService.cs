@@ -86,21 +86,84 @@ public sealed class SeriesCatalogService
     }
     public object GetCatalog(LibraryService library, VideoMetadataService metadata)
     {
-        var files=library.List().ToDictionary(x=>x.Id);
-        using var c=Open();
-        var series=ListSeries().Select(s=> {
-            var seasons=new List<object>();
-            using var sc=c.CreateCommand(); sc.CommandText="SELECT SeasonId,SeriesId,SeasonNumber,Title FROM SeriesSeasons WHERE SeriesId=$id ORDER BY SeasonNumber"; sc.Parameters.AddWithValue("$id",s.SeriesId);
-            using var sr=sc.ExecuteReader();
-            while(sr.Read()) {
-                var seasonId=sr.GetInt64(0); var episodes=new List<object>();
-                using var ec=c.CreateCommand(); ec.CommandText="SELECT EpisodeId,SeasonId,VideoId,EpisodeNumber,Title FROM SeriesEpisodes WHERE SeasonId=$id ORDER BY EpisodeNumber"; ec.Parameters.AddWithValue("$id",seasonId);
-                using var er=ec.ExecuteReader();
-                while(er.Read()) { var vid=er.GetString(2); if(!files.TryGetValue(vid,out var f)) continue; var m=metadata.Get(vid); episodes.Add(new { episodeId=er.GetInt64(0),videoId=vid,episodeNumber=er.GetInt32(3),title=string.IsNullOrWhiteSpace(er.GetString(4))?(m?.Title??f.Title):er.GetString(4),url=f.Url }); }
-                seasons.Add(new { seasonId,seriesId=sr.GetString(1),seasonNumber=sr.GetInt32(2),title=sr.GetString(3),episodes });
+        // Load each source into memory before composing the response. This avoids
+        // opening nested SQLite readers on the same connection while one is active.
+        var files = library.List().ToDictionary(x => x.Id);
+        var metadataById = metadata.List().ToDictionary(x => x.VideoId);
+        var seriesRows = ListSeries();
+
+        var seasonMap = new Dictionary<long, (SeasonRecord Season, List<EpisodeRecord> Episodes)>();
+        using (var c = Open())
+        using (var cmd = c.CreateCommand())
+        {
+            cmd.CommandText = """
+                SELECT ss.SeasonId, ss.SeriesId, ss.SeasonNumber, ss.Title,
+                       se.EpisodeId, se.VideoId, se.EpisodeNumber, se.Title
+                FROM SeriesSeasons ss
+                LEFT JOIN SeriesEpisodes se ON se.SeasonId = ss.SeasonId
+                ORDER BY ss.SeriesId, ss.SeasonNumber, se.EpisodeNumber
+                """;
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                var seasonId = r.GetInt64(0);
+                if (!seasonMap.ContainsKey(seasonId))
+                {
+                    var season = new SeasonRecord(seasonId, r.GetString(1), r.GetInt32(2), r.GetString(3));
+                    seasonMap.Add(seasonId, (season, new List<EpisodeRecord>()));
+                }
+
+                if (!r.IsDBNull(4))
+                {
+                    seasonMap[seasonId].Episodes.Add(new EpisodeRecord(
+                        r.GetInt64(4), seasonId, r.GetString(5), r.GetInt32(6), r.GetString(7)));
+                }
             }
-            return new { seriesId=s.SeriesId,title=s.Title,description=s.Description,year=s.Year,genre=s.Genre,posterPath=s.PosterPath,seasons };
+        }
+
+        return seriesRows.Select(series =>
+        {
+            var seasons = seasonMap.Values
+                .Where(x => x.Season.SeriesId == series.SeriesId)
+                .OrderBy(x => x.Season.SeasonNumber)
+                .Select(x => new
+                {
+                    seasonId = x.Season.SeasonId,
+                    seriesId = x.Season.SeriesId,
+                    seasonNumber = x.Season.SeasonNumber,
+                    title = x.Season.Title,
+                    episodes = x.Episodes
+                        .Where(episode => files.ContainsKey(episode.VideoId))
+                        .Select(episode =>
+                        {
+                            var file = files[episode.VideoId];
+                            metadataById.TryGetValue(episode.VideoId, out var videoMetadata);
+                            var title = string.IsNullOrWhiteSpace(episode.Title)
+                                ? (videoMetadata?.Title ?? file.Title)
+                                : episode.Title;
+                            return new
+                            {
+                                episodeId = episode.EpisodeId,
+                                videoId = episode.VideoId,
+                                episodeNumber = episode.EpisodeNumber,
+                                title,
+                                url = file.Url
+                            };
+                        })
+                        .ToArray()
+                })
+                .ToArray();
+
+            return new
+            {
+                seriesId = series.SeriesId,
+                title = series.Title,
+                description = series.Description,
+                year = series.Year,
+                genre = series.Genre,
+                posterPath = series.PosterPath,
+                seasons
+            };
         }).ToArray();
-        return series;
     }
 }
