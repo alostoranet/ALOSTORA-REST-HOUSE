@@ -89,13 +89,13 @@ public partial class App : Application
    _server.MapGet("/api/admin/series",(HttpContext c,SeriesCatalogService series)=>IsLocal(c)?Results.Ok(series.ListSeries()):Results.NotFound());
    _server.MapPost("/api/admin/series",(HttpContext c,SaveSeriesRequest request,SeriesCatalogService series)=>{
     if(!IsLocal(c)) return Results.NotFound();
-    if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeriesId.Length>80||string.IsNullOrWhiteSpace(request.Title)||request.Title.Length>160||(request.Description?.Length??0)>2000||(request.Genre?.Length??0)>80||(request.Year is not null&&(request.Year<1888||request.Year>DateTime.UtcNow.Year+5))||(request.PosterPath?.Length??0)>200) return Results.BadRequest(new{error="تحقق من بيانات المسلسل"});
+    if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeriesId.Length>80||string.IsNullOrWhiteSpace(request.Title)||request.Title.Length>160||(request.Description?.Length??0)>2000||(request.Genre?.Length??0)>80||(request.Year is not null&&(request.Year<1888||request.Year>DateTime.UtcNow.Year+5))||(request.PosterPath?.Length??0)>200||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="تحقق من بيانات المسلسل"});
     series.SaveSeries(request); return Results.Ok(new{saved=true});
    });
    _server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalogService series)=>IsLocal(c)?Results.Ok(series.ListSeasons(seriesId)):Results.NotFound());
    _server.MapPost("/api/admin/seasons",(HttpContext c,SaveSeasonRequest request,SeriesCatalogService series)=>{
     if(!IsLocal(c)) return Results.NotFound();
-    if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeasonNumber<1||request.SeasonNumber>500||(request.Title?.Length??0)>120) return Results.BadRequest(new{error="بيانات الموسم غير صحيحة"});
+    if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeasonNumber<1||request.SeasonNumber>500||(request.Title?.Length??0)>120||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="بيانات الموسم غير صحيحة أو مجلد الموسم غير موجود"});
     try { var id=series.AddSeason(request); return Results.Ok(new{seasonId=id}); } catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="المسلسل غير موجود أو رقم الموسم مكرر"}); }
    });
    _server.MapPost("/api/admin/episodes",(HttpContext c,SaveEpisodeRequest request,LibraryService files,SeriesCatalogService series)=>{
@@ -156,7 +156,7 @@ public partial class App : Application
     var fileName="series-"+Guid.NewGuid().ToString("N")+ext;
     var fullPath=Path.Combine(posters,fileName);
     await File.WriteAllBytesAsync(fullPath,bytes);
-    try { series.SaveSeries(new SaveSeriesRequest(old.SeriesId,old.Title,old.Description,old.Year,old.Genre,"/posters/"+fileName)); }
+    try { series.SaveSeries(new SaveSeriesRequest(old.SeriesId,old.Title,old.Description,old.Year,old.Genre,"/posters/"+fileName,old.FolderPath)); }
     catch { File.Delete(fullPath); throw; }
     return Results.Ok(new{posterPath="/posters/"+fileName});
    });
