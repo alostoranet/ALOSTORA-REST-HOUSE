@@ -796,8 +796,9 @@ public sealed class LibraryService : IDisposable
         using (var command = connection.CreateCommand())
         {
             command.Transaction = transaction;
-            command.CommandText = "DELETE FROM LibraryFileIds WHERE VideoId=$id; DELETE FROM ExternalLibraryFiles WHERE VideoId=$id; DELETE FROM ExcludedLibraryFiles WHERE VideoId=$id;";
+            command.CommandText = "DELETE FROM LibraryFileIds WHERE VideoId=$id; DELETE FROM ExternalLibraryFiles WHERE VideoId=$id; DELETE FROM ExcludedLibraryFiles WHERE VideoId=$id; DELETE FROM SelectedLibraryFiles WHERE FullPath=$path;";
             command.Parameters.AddWithValue("$id", id);
+            command.Parameters.AddWithValue("$path", video.FullPath);
             command.ExecuteNonQuery();
         }
         transaction.Commit();
