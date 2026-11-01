@@ -466,18 +466,25 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var scan = await _http.PostAsJsonAsync("/api/admin/scan-folder", new { folderPath = folder });
-            if (!scan.IsSuccessStatusCode)
+            int? videoCount = null;
+            if (folder is not null)
             {
-                SeriesStatusText.Text = "تم حفظ المسار، لكن تعذر فحص المجلد.";
-                await LoadSeasonsAsync(season.SeriesId);
-                return;
+                var scan = await _http.PostAsJsonAsync("/api/admin/scan-folder", new { folderPath = folder });
+                if (!scan.IsSuccessStatusCode)
+                {
+                    SeriesStatusText.Text = "تم حفظ المسار، لكن تعذر فحص المجلد.";
+                    await LoadSeasonsAsync(season.SeriesId);
+                    return;
+                }
+                var result = await scan.Content.ReadFromJsonAsync<FolderScanResult>();
+                videoCount = result?.VideoCount ?? 0;
             }
 
-            var result = await scan.Content.ReadFromJsonAsync<FolderScanResult>();
             await LoadSeasonsAsync(season.SeriesId);
             await LoadVideosAsync();
-            SeriesStatusText.Text = $"تم حفظ مسار الموسم وفحصه. عدد ملفات الفيديو التي عُثر عليها: {result?.VideoCount ?? 0}.";
+            SeriesStatusText.Text = folder is null
+                ? "تم مسح مسار الموسم. لم يتم حذف أي ملفات من المكتبة."
+                : $"تم حفظ مسار الموسم وفحصه. عدد ملفات الفيديو التي عُثر عليها: {videoCount ?? 0}.";
         }
         catch (Exception ex)
         {
