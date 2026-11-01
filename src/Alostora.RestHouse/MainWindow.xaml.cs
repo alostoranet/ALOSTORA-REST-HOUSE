@@ -234,6 +234,55 @@ public partial class MainWindow : Window
         catch (Exception ex) { SeriesStatusText.Text = "تعذر تحميل المواسم: " + ex.Message; }
     }
 
+    private async void UploadSeriesPoster_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(SeriesIdBox.Text))
+        {
+            SeriesStatusText.Text = "احفظ المسلسل أولاً ثم اختر غلافه.";
+            return;
+        }
+
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختر غلاف المسلسل",
+            Filter = "صور مدعومة|*.jpg;*.jpeg;*.png;*.webp",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) != true) return;
+
+        var ext = Path.GetExtension(dialog.FileName).ToLowerInvariant();
+        var contentType = ext switch { ".jpg" or ".jpeg" => "image/jpeg", ".png" => "image/png", ".webp" => "image/webp", _ => "" };
+        var info = new FileInfo(dialog.FileName);
+        if (contentType.Length == 0 || info.Length == 0 || info.Length > 5_242_880)
+        {
+            SeriesStatusText.Text = "اختر صورة JPG أو PNG أو WEBP لا يتجاوز حجمها 5 ميجابايت.";
+            return;
+        }
+
+        try
+        {
+            SeriesStatusText.Text = "جارٍ رفع غلاف المسلسل...";
+            using var bytes = new ByteArrayContent(await File.ReadAllBytesAsync(dialog.FileName));
+            bytes.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            var response = await _http.PostAsync("/api/admin/series-poster/" + Uri.EscapeDataString(SeriesIdBox.Text.Trim()), bytes);
+            if (!response.IsSuccessStatusCode)
+            {
+                SeriesStatusText.Text = "تعذر رفع الغلاف. تحقق من حفظ المسلسل وصيغة الصورة وحجمها.";
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<PosterUploadResult>();
+            SeriesPosterPathBox.Text = result?.PosterPath ?? "";
+            SeriesStatusText.Text = "تم رفع غلاف المسلسل وحفظه.";
+            await LoadSeriesAsync();
+            SeriesPicker.SelectedItem = (SeriesPicker.ItemsSource as SeriesAdmin[])?.FirstOrDefault(x => x.SeriesId == SeriesIdBox.Text.Trim());
+        }
+        catch (Exception ex)
+        {
+            SeriesStatusText.Text = "تعذر رفع غلاف المسلسل: " + ex.Message;
+        }
+    }
+
     private async void SaveSeries_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(SeriesTitleBox.Text)) { SeriesStatusText.Text = "اكتب اسم المسلسل أولاً."; return; }
