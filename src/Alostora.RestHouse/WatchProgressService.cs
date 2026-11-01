@@ -88,6 +88,16 @@ public sealed class WatchProgressService
         transaction.Commit();
     }
 
+    public void DeleteVideo(string videoId)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM WatchProgress WHERE VideoId=$video";
+        command.Parameters.AddWithValue("$video", videoId);
+        command.ExecuteNonQuery();
+    }
+
     public void Save(WatchProgressRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.ViewerId) || request.ViewerId.Length > 80 ||
