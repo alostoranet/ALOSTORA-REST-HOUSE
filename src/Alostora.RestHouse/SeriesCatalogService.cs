@@ -220,7 +220,6 @@ public sealed class SeriesCatalogService
                     seriesId = x.Season.SeriesId,
                     seasonNumber = x.Season.SeasonNumber,
                     title = x.Season.Title,
-                    folderPath = x.Season.FolderPath,
                     episodes = x.Episodes
                         .Where(episode => files.ContainsKey(episode.VideoId))
                         .Select(episode =>
@@ -257,7 +256,6 @@ public sealed class SeriesCatalogService
                 year = series.Year,
                 genre = series.Genre,
                 posterPath = series.PosterPath,
-                folderPath = series.FolderPath,
                 seasons
             };
         }).ToArray();
