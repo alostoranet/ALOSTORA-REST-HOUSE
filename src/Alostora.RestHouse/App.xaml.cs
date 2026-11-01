@@ -4,12 +4,15 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using System.IO;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Windows;
 
 namespace Alostora.RestHouse;
 
 public sealed record UpdateSeasonFolderRequest(string? FolderPath);
 public sealed record ScanFolderRequest(string FolderPath);
+public sealed record DetectedEpisodeLink(string VideoId, int EpisodeNumber, string? Title, bool Selected);
+public sealed record LinkDetectedEpisodesRequest(List<DetectedEpisodeLink> Episodes);
 
 public partial class App : Application
 {
@@ -113,6 +116,41 @@ public partial class App : Application
     try { series.UpdateSeasonFolder(seasonId,request.FolderPath); if(!string.IsNullOrWhiteSpace(request.FolderPath)) files.RegisterFolder(request.FolderPath); return Results.Ok(new{saved=true}); }
     catch(KeyNotFoundException) { return Results.NotFound(new{error="الموسم غير موجود"}); }
    });
+   _server.MapGet("/api/admin/seasons/{seasonId:long}/preview",(HttpContext c,long seasonId,SeriesCatalogService series,LibraryService files)=>{
+    if(!IsLocal(c)) return Results.NotFound();
+    var season=series.GetSeason(seasonId);
+    if(season is null) return Results.NotFound(new{error="الموسم غير موجود"});
+    if(string.IsNullOrWhiteSpace(season.FolderPath)||!Directory.Exists(season.FolderPath)) return Results.BadRequest(new{error="حدد مجلد الموسم واحفظ مساره أولاً"});
+    files.RegisterFolder(season.FolderPath);
+    var linked=series.ListEpisodes(seasonId);
+    var linkedIds=linked.Select(x=>x.VideoId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    var usedNumbers=linked.Select(x=>x.EpisodeNumber).ToHashSet();
+    var candidates=files.ListFolder(season.FolderPath).Select(file=>new {
+     videoId=file.Id,fileName=file.FileName,title=file.Title,
+     episodeNumber=ParseEpisodeNumber(file.FileName),
+     isAlreadyLinked=linkedIds.Contains(file.Id)
+    }).ToArray();
+    return Results.Ok(candidates);
+   });
+   _server.MapPost("/api/admin/seasons/{seasonId:long}/link-detected",(HttpContext c,long seasonId,LinkDetectedEpisodesRequest request,SeriesCatalogService series,LibraryService files)=>{
+    if(!IsLocal(c)) return Results.NotFound();
+    if(request.Episodes is null||request.Episodes.Count>1000) return Results.BadRequest(new{error="قائمة الحلقات غير صالحة"});
+    if(series.GetSeason(seasonId) is null) return Results.NotFound(new{error="الموسم غير موجود"});
+    var existing=series.ListEpisodes(seasonId);
+    var usedIds=existing.Select(x=>x.VideoId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    var usedNumbers=existing.Select(x=>x.EpisodeNumber).ToHashSet();
+    var linkedCount=0; var skipped=0;
+    foreach(var item in request.Episodes.Where(x=>x.Selected))
+    {
+     if(item.EpisodeNumber<1||item.EpisodeNumber>10000||string.IsNullOrWhiteSpace(item.VideoId)||files.Resolve(item.VideoId) is null||usedIds.Contains(item.VideoId)||usedNumbers.Contains(item.EpisodeNumber))
+     { skipped++; continue; }
+     try {
+      series.AddEpisode(new SaveEpisodeRequest(seasonId,item.VideoId,item.EpisodeNumber,item.Title));
+      usedIds.Add(item.VideoId); usedNumbers.Add(item.EpisodeNumber); linkedCount++;
+     } catch(Microsoft.Data.Sqlite.SqliteException) { skipped++; }
+    }
+    return Results.Ok(new{linkedCount,skipped});
+   });
    _server.MapPost("/api/admin/scan-folder",(HttpContext c,ScanFolderRequest request,LibraryService files)=>{
     if(!IsLocal(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.FolderPath)||(request.FolderPath.Length>1000)||!Directory.Exists(request.FolderPath)) return Results.BadRequest(new{error="حدد مجلداً موجوداً ويمكن الوصول إليه"});
@@ -200,5 +238,24 @@ public partial class App : Application
    await _server.StartAsync(); new MainWindow(root,library,posters).Show();
   } catch(Exception ex){MessageBox.Show("تعذر تشغيل السيرفر:\n"+ex.Message,"استراحة الأسطورة",MessageBoxButton.OK,MessageBoxImage.Error);Shutdown(1);}
  }
+ private static int? ParseEpisodeNumber(string fileName)
+ {
+  var name=Path.GetFileNameWithoutExtension(fileName);
+  foreach(var pair in new[]{('٠','0'),('١','1'),('٢','2'),('٣','3'),('٤','4'),('٥','5'),('٦','6'),('٧','7'),('٨','8'),('٩','9'),('۰','0'),('۱','1'),('۲','2'),('۳','3'),('۴','4'),('۵','5'),('۶','6'),('۷','7'),('۸','8'),('۹','9')})
+   name=name.Replace(pair.Item1,pair.Item2);
+  var patterns=new[]{
+   @"(?i)S\d{1,3}\s*E(\d{1,4})",
+   @"(?i)(?:^|[ ._-])(?:EP|EPISODE)[ ._-]?(\d{1,4})(?:$|[ ._-])",
+   @"الحلقة[ ._-]?(\d{1,4})",
+   @"(?i)(?:^|[ ._-])E(\d{1,4})(?:$|[ ._-])"
+  };
+  foreach(var pattern in patterns)
+  {
+   var match=Regex.Match(name,pattern);
+   if(match.Success&&int.TryParse(match.Groups[1].Value,out var number)&&number>0&&number<=10000) return number;
+  }
+  return null;
+ }
+
  private async void OnExit(object sender,ExitEventArgs e){if(_server is not null){await _server.StopAsync();await _server.DisposeAsync();}}
 }
