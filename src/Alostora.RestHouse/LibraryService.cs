@@ -74,6 +74,10 @@ public sealed class LibraryService : IDisposable
                     VideoId TEXT PRIMARY KEY,
                     ExcludedUtc TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS SelectedLibraryFiles(
+                    FullPath TEXT PRIMARY KEY COLLATE NOCASE,
+                    SelectedUtc TEXT NOT NULL
+                );
                 """;
             command.ExecuteNonQuery();
         }
@@ -395,19 +399,56 @@ public sealed class LibraryService : IDisposable
                 removeRoot.ExecuteNonQuery();
             }
 
+            var previouslySelected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using (var selectedCommand = connection.CreateCommand())
+            {
+                selectedCommand.Transaction = transaction;
+                selectedCommand.CommandText = "SELECT FullPath FROM SelectedLibraryFiles";
+                using var reader = selectedCommand.ExecuteReader();
+                while (reader.Read()) previouslySelected.Add(reader.GetString(0));
+            }
+
             foreach (var path in allFiles)
             {
-                var id = IsInsideRoot(path)
+                var insideLibraryRoot = IsInsideRoot(path);
+                if (!selectedSet.Contains(path))
+                {
+                    // Files already selected in an earlier import must remain visible.
+                    // For files inside the automatically scanned library root, hide only
+                    // files that have never been explicitly selected.
+                    if (insideLibraryRoot && !previouslySelected.Contains(path))
+                    {
+                        var id = GetOrCreateId(connection, transaction,
+                            NormalizeRelativePath(Path.GetRelativePath(_root, path)));
+                        using var exclude = connection.CreateCommand();
+                        exclude.Transaction = transaction;
+                        exclude.CommandText = "INSERT INTO ExcludedLibraryFiles(VideoId,ExcludedUtc) VALUES($id,$utc) ON CONFLICT(VideoId) DO NOTHING";
+                        exclude.Parameters.AddWithValue("$id", id);
+                        exclude.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
+                        exclude.ExecuteNonQuery();
+                    }
+                    // External, unselected files are deliberately not registered.
+                    continue;
+                }
+
+                var videoId = insideLibraryRoot
                     ? GetOrCreateId(connection, transaction, NormalizeRelativePath(Path.GetRelativePath(_root, path)))
                     : GetOrCreateExternalId(connection, transaction, path);
-                using var command = connection.CreateCommand();
-                command.Transaction = transaction;
-                command.CommandText = selectedSet.Contains(path)
-                    ? "DELETE FROM ExcludedLibraryFiles WHERE VideoId=$id"
-                    : "INSERT INTO ExcludedLibraryFiles(VideoId,ExcludedUtc) VALUES($id,$utc) ON CONFLICT(VideoId) DO UPDATE SET ExcludedUtc=excluded.ExcludedUtc";
-                command.Parameters.AddWithValue("$id", id);
-                if (!selectedSet.Contains(path)) command.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
-                command.ExecuteNonQuery();
+                using (var include = connection.CreateCommand())
+                {
+                    include.Transaction = transaction;
+                    include.CommandText = "DELETE FROM ExcludedLibraryFiles WHERE VideoId=$id";
+                    include.Parameters.AddWithValue("$id", videoId);
+                    include.ExecuteNonQuery();
+                }
+                using (var remember = connection.CreateCommand())
+                {
+                    remember.Transaction = transaction;
+                    remember.CommandText = "INSERT INTO SelectedLibraryFiles(FullPath,SelectedUtc) VALUES($path,$utc) ON CONFLICT(FullPath) DO UPDATE SET SelectedUtc=excluded.SelectedUtc";
+                    remember.Parameters.AddWithValue("$path", path);
+                    remember.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
+                    remember.ExecuteNonQuery();
+                }
             }
             transaction.Commit();
         }
@@ -430,8 +471,6 @@ public sealed class LibraryService : IDisposable
         return selected.Length;
     }
 
-    // Registers an additional folder without moving or copying its files.
-    // Its full path is persisted so it is available after application restarts.
     public void EnsureFolderRegistered(string folderPath)
     {
         if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
