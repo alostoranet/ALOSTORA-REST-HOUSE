@@ -3,8 +3,14 @@ using System.IO;
 
 namespace Alostora.RestHouse;
 
-public sealed record VideoMetadata(string VideoId, string Title, string Description, int? Year, string Genre, string Kind, string? PosterPath);
-public sealed record SaveVideoMetadataRequest(string VideoId, string Title, string? Description, int? Year, string? Genre, string? Kind, string? PosterPath);
+public sealed record VideoMetadata(
+    string VideoId, string Title, string Description, int? Year, string Genre, string Kind, string? PosterPath,
+    string? Director, string? Cast, double? Rating, int? RuntimeMinutes, string? ReleaseDate, string? Tags);
+
+public sealed record SaveVideoMetadataRequest(
+    string VideoId, string Title, string? Description, int? Year, string? Genre, string? Kind, string? PosterPath,
+    string? Director = null, string? Cast = null, double? Rating = null, int? RuntimeMinutes = null,
+    string? ReleaseDate = null, string? Tags = null);
 
 public sealed class VideoMetadataService
 {
@@ -26,10 +32,36 @@ public sealed class VideoMetadataService
               Genre TEXT NOT NULL DEFAULT '',
               Kind TEXT NOT NULL DEFAULT 'Movie',
               PosterPath TEXT NULL,
+              Director TEXT NULL,
+              Cast TEXT NULL,
+              Rating REAL NULL,
+              RuntimeMinutes INTEGER NULL,
+              ReleaseDate TEXT NULL,
+              Tags TEXT NULL,
               UpdatedUtc TEXT NOT NULL
             );
             """;
         cmd.ExecuteNonQuery();
+        EnsureColumn(c, "Director", "TEXT NULL");
+        EnsureColumn(c, "Cast", "TEXT NULL");
+        EnsureColumn(c, "Rating", "REAL NULL");
+        EnsureColumn(c, "RuntimeMinutes", "INTEGER NULL");
+        EnsureColumn(c, "ReleaseDate", "TEXT NULL");
+        EnsureColumn(c, "Tags", "TEXT NULL");
+    }
+
+    private static void EnsureColumn(SqliteConnection connection, string column, string type)
+    {
+        using var check = connection.CreateCommand();
+        check.CommandText = "PRAGMA table_info(VideoMetadata)";
+        using var reader = check.ExecuteReader();
+        while (reader.Read())
+            if (string.Equals(reader.GetString(1), column, StringComparison.OrdinalIgnoreCase))
+                return;
+        reader.Close();
+        using var alter = connection.CreateCommand();
+        alter.CommandText = $"ALTER TABLE VideoMetadata ADD COLUMN {column} {type}";
+        alter.ExecuteNonQuery();
     }
 
     public VideoMetadata? Get(string id)
@@ -37,14 +69,14 @@ public sealed class VideoMetadataService
         using var c = new SqliteConnection(_connectionString);
         c.Open();
         using var cmd = c.CreateCommand();
-        cmd.CommandText = "SELECT VideoId,Title,Description,Year,Genre,Kind,PosterPath FROM VideoMetadata WHERE VideoId=$id";
+        cmd.CommandText = """
+            SELECT VideoId,Title,Description,Year,Genre,Kind,PosterPath,
+                   Director,Cast,Rating,RuntimeMinutes,ReleaseDate,Tags
+            FROM VideoMetadata WHERE VideoId=$id
+            """;
         cmd.Parameters.AddWithValue("$id", id);
         using var r = cmd.ExecuteReader();
-        return r.Read()
-            ? new VideoMetadata(r.GetString(0), r.GetString(1), r.GetString(2),
-                r.IsDBNull(3) ? null : r.GetInt32(3), r.GetString(4), r.GetString(5),
-                r.IsDBNull(6) ? null : r.GetString(6))
-            : null;
+        return r.Read() ? Read(r) : null;
     }
 
     public IReadOnlyList<VideoMetadata> List()
@@ -52,15 +84,27 @@ public sealed class VideoMetadataService
         using var c = new SqliteConnection(_connectionString);
         c.Open();
         using var cmd = c.CreateCommand();
-        cmd.CommandText = "SELECT VideoId,Title,Description,Year,Genre,Kind,PosterPath FROM VideoMetadata ORDER BY Title COLLATE NOCASE";
+        cmd.CommandText = """
+            SELECT VideoId,Title,Description,Year,Genre,Kind,PosterPath,
+                   Director,Cast,Rating,RuntimeMinutes,ReleaseDate,Tags
+            FROM VideoMetadata ORDER BY Title COLLATE NOCASE
+            """;
         using var r = cmd.ExecuteReader();
         var rows = new List<VideoMetadata>();
-        while (r.Read())
-            rows.Add(new VideoMetadata(r.GetString(0), r.GetString(1), r.GetString(2),
-                r.IsDBNull(3) ? null : r.GetInt32(3), r.GetString(4), r.GetString(5),
-                r.IsDBNull(6) ? null : r.GetString(6)));
+        while (r.Read()) rows.Add(Read(r));
         return rows;
     }
+
+    private static VideoMetadata Read(SqliteDataReader r) =>
+        new(r.GetString(0), r.GetString(1), r.GetString(2),
+            r.IsDBNull(3) ? null : r.GetInt32(3), r.GetString(4), r.GetString(5),
+            r.IsDBNull(6) ? null : r.GetString(6),
+            r.IsDBNull(7) ? null : r.GetString(7),
+            r.IsDBNull(8) ? null : r.GetString(8),
+            r.IsDBNull(9) ? null : r.GetDouble(9),
+            r.IsDBNull(10) ? null : r.GetInt32(10),
+            r.IsDBNull(11) ? null : r.GetString(11),
+            r.IsDBNull(12) ? null : r.GetString(12));
 
     public void Save(SaveVideoMetadataRequest x)
     {
@@ -68,8 +112,11 @@ public sealed class VideoMetadataService
         c.Open();
         using var cmd = c.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO VideoMetadata(VideoId,Title,Description,Year,Genre,Kind,PosterPath,UpdatedUtc)
-            VALUES($id,$title,$description,$year,$genre,$kind,$poster,$updated)
+            INSERT INTO VideoMetadata(
+              VideoId,Title,Description,Year,Genre,Kind,PosterPath,
+              Director,Cast,Rating,RuntimeMinutes,ReleaseDate,Tags,UpdatedUtc)
+            VALUES($id,$title,$description,$year,$genre,$kind,$poster,
+              $director,$cast,$rating,$runtime,$releaseDate,$tags,$updated)
             ON CONFLICT(VideoId) DO UPDATE SET
               Title=excluded.Title,
               Description=excluded.Description,
@@ -77,6 +124,12 @@ public sealed class VideoMetadataService
               Genre=excluded.Genre,
               Kind=excluded.Kind,
               PosterPath=COALESCE(excluded.PosterPath, VideoMetadata.PosterPath),
+              Director=COALESCE(excluded.Director, VideoMetadata.Director),
+              Cast=COALESCE(excluded.Cast, VideoMetadata.Cast),
+              Rating=COALESCE(excluded.Rating, VideoMetadata.Rating),
+              RuntimeMinutes=COALESCE(excluded.RuntimeMinutes, VideoMetadata.RuntimeMinutes),
+              ReleaseDate=COALESCE(excluded.ReleaseDate, VideoMetadata.ReleaseDate),
+              Tags=COALESCE(excluded.Tags, VideoMetadata.Tags),
               UpdatedUtc=excluded.UpdatedUtc;
             """;
         cmd.Parameters.AddWithValue("$id", x.VideoId);
@@ -86,6 +139,12 @@ public sealed class VideoMetadataService
         cmd.Parameters.AddWithValue("$genre", x.Genre ?? "");
         cmd.Parameters.AddWithValue("$kind", x.Kind == "Series" ? "Series" : "Movie");
         cmd.Parameters.AddWithValue("$poster", (object?)x.PosterPath ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$director", (object?)x.Director ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$cast", (object?)x.Cast ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$rating", (object?)x.Rating ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$runtime", (object?)x.RuntimeMinutes ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$releaseDate", (object?)x.ReleaseDate ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$tags", (object?)x.Tags ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$updated", DateTime.UtcNow.ToString("O"));
         cmd.ExecuteNonQuery();
     }
