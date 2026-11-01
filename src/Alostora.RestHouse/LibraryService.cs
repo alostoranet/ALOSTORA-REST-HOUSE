@@ -7,7 +7,7 @@ namespace Alostora.RestHouse;
 
 public sealed record LibraryVideo(string Id, string Title, string FileName, string Url, long SizeBytes);
 public sealed record ResolvedVideo(string FullPath, string ContentType);
-public sealed record SubtitleTrack(string FileName, string Label, string Language, string Url);
+public sealed record SubtitleTrack(string FileName, string Label, string Language, string Url, bool IsDefault, bool IsForced, bool IsSdh);
 
 public sealed class LibraryService : IDisposable
 {
@@ -134,14 +134,27 @@ public sealed class LibraryService : IDisposable
             {
                 if (new FileInfo(path).Length > 2 * 1024 * 1024) continue;
                 var suffix = name.Length == stem.Length ? "" : name[(stem.Length + 1)..];
-                var language = suffix.Split('.', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? "";
-                var label = LanguageLabel(language, suffix, extension);
+                var tokens = suffix.Split('.', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(token => token.Trim().ToLowerInvariant()).Where(token => token.Length > 0).ToArray();
+                var language = tokens.FirstOrDefault(IsKnownLanguage) ?? "und";
+                var isDefault = tokens.Contains("default", StringComparer.OrdinalIgnoreCase);
+                var isForced = tokens.Contains("forced", StringComparer.OrdinalIgnoreCase) ||
+                               tokens.Contains("foreign", StringComparer.OrdinalIgnoreCase);
+                var isSdh = tokens.Contains("sdh", StringComparer.OrdinalIgnoreCase) ||
+                            tokens.Contains("cc", StringComparer.OrdinalIgnoreCase) ||
+                            (tokens.Contains("hi", StringComparer.OrdinalIgnoreCase) && language != "hi" && language != "hin");
+                var titleTokens = tokens.Where(token => !IsKnownLanguage(token) &&
+                    token is not ("default" or "forced" or "foreign" or "sdh" or "cc" or "hi"));
+                var customTitle = string.Join(" ", titleTokens);
+                var label = LanguageLabel(language, customTitle, extension, isForced, isSdh);
                 tracks.Add(new SubtitleTrack(Path.GetFileName(path), label, language,
-                    "/api/subtitles/" + videoId + "/" + Uri.EscapeDataString(Path.GetFileName(path))));
+                    "/api/subtitles/" + videoId + "/" + Uri.EscapeDataString(Path.GetFileName(path)),
+                    isDefault, isForced, isSdh));
             }
             catch { }
         }
-        return tracks.OrderBy(x => x.Language == "ar" ? 0 : 1)
+        return tracks.OrderBy(x => x.IsDefault ? 0 : 1)
+            .ThenBy(x => x.Language == "ar" ? 0 : 1)
             .ThenBy(x => x.Label, StringComparer.CurrentCultureIgnoreCase).ToArray();
     }
 
@@ -182,20 +195,40 @@ public sealed class LibraryService : IDisposable
             : EnsureVttHeader(content);
     }
 
-    private static string LanguageLabel(string language, string suffix, string extension)
+    private static bool IsKnownLanguage(string value) => value.ToLowerInvariant() is
+        "ar" or "ara" or "en" or "eng" or "fr" or "fra" or "fre" or "tr" or "tur" or
+        "es" or "spa" or "de" or "deu" or "ger" or "it" or "ita" or "pt" or "por" or
+        "ru" or "rus" or "ja" or "jpn" or "ko" or "kor" or "zh" or "zho" or "chi" or
+        "hi" or "hin" or "nl" or "nld" or "dut" or "pl" or "pol" or "sv" or "swe";
+
+    private static string LanguageLabel(string language, string customTitle, string extension, bool forced, bool sdh)
     {
         var known = language.ToLowerInvariant() switch
         {
             "ar" or "ara" => "العربية",
             "en" or "eng" => "English",
-            "fr" or "fra" => "Français",
+            "fr" or "fra" or "fre" => "Français",
             "tr" or "tur" => "Türkçe",
             "es" or "spa" => "Español",
-            "de" or "deu" => "Deutsch",
+            "de" or "deu" or "ger" => "Deutsch",
+            "it" or "ita" => "Italiano",
+            "pt" or "por" => "Português",
+            "ru" or "rus" => "Русский",
+            "ja" or "jpn" => "日本語",
+            "ko" or "kor" => "한국어",
+            "zh" or "zho" or "chi" => "中文",
+            "hi" or "hin" => "हिन्दी",
+            "nl" or "nld" or "dut" => "Nederlands",
+            "pl" or "pol" => "Polski",
+            "sv" or "swe" => "Svenska",
             _ => ""
         };
-        if (!string.IsNullOrEmpty(known)) return known;
-        return string.IsNullOrEmpty(suffix) ? "ترجمة" : suffix + " (" + extension.TrimStart('.').ToUpperInvariant() + ")";
+        var label = !string.IsNullOrEmpty(known) ? known :
+            !string.IsNullOrWhiteSpace(customTitle) ? customTitle :
+            language == "und" ? "ترجمة" : language;
+        if (forced) label += " — إجباري";
+        if (sdh) label += " — للصم وضعاف السمع";
+        return label;
     }
 
     private static string EnsureVttHeader(string text)
