@@ -40,10 +40,14 @@ public partial class MainWindow : Window
         AddressBox.Text = $"رابط المشاهدة: http://{GetLanAddress()}:8096";
         VideosGrid.ItemsSource = _videos;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadVideosAsync(); await LoadSeriesAsync(); await CheckMediaToolsAsync(); };
+        Loaded += async (_, _) => { await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await CheckMediaToolsAsync(); };
     }
 
-    private async void RefreshLibrary_Click(object sender, RoutedEventArgs e) => await LoadVideosAsync();
+    private async void RefreshLibrary_Click(object sender, RoutedEventArgs e)
+    {
+        await LoadVideosAsync();
+        await LoadMissingEpisodesAsync();
+    }
 
     private async void AddExternalMediaFolder_Click(object sender, RoutedEventArgs e)
     {
@@ -98,6 +102,7 @@ public partial class MainWindow : Window
             }
 
             await LoadVideosAsync();
+            await LoadMissingEpisodesAsync();
             StatusText.Text = $"تمت إضافة {selectedPaths.Length} ملف فيديو من أصل {candidates.Length} ملفاً موجوداً في المجلد.";
         }
         catch (Exception ex)
