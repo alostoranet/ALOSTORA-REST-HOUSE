@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using Microsoft.Win32;
 
 namespace Alostora.RestHouse;
@@ -55,21 +56,53 @@ public partial class MainWindow : Window
 
         try
         {
-            StatusText.Text = "جارٍ إضافة المجلد وفحص ملفات الفيديو...";
-            var response = await _http.PostAsJsonAsync("/api/admin/scan-folder",
-                new { folderPath = Path.GetFullPath(dialog.FolderName) });
-            if (!response.IsSuccessStatusCode)
+            var folderPath = Path.GetFullPath(dialog.FolderName);
+            StatusText.Text = "جارٍ فحص المجلد وعرض ملفات الفيديو للاختيار...";
+            var previewUrl = "/api/admin/preview-folder?folderPath=" + Uri.EscapeDataString(folderPath);
+            var previewResponse = await _http.GetAsync(previewUrl);
+            if (!previewResponse.IsSuccessStatusCode)
             {
-                StatusText.Text = "تعذر إضافة المجلد. تحقق من وجوده وصلاحية الوصول إليه.";
+                StatusText.Text = "تعذر فحص المجلد. تحقق من وجوده وصلاحية الوصول إليه.";
                 return;
             }
-            var result = await response.Content.ReadFromJsonAsync<FolderScanResult>();
+
+            var candidates = await previewResponse.Content.ReadFromJsonAsync<VideoFileCandidateAdmin[]>() ?? Array.Empty<VideoFileCandidateAdmin>();
+            if (candidates.Length == 0)
+            {
+                StatusText.Text = "لم يتم العثور على ملفات فيديو مدعومة داخل المجلد المحدد.";
+                return;
+            }
+
+            var selection = new FolderVideoSelectionWindow(folderPath, candidates);
+            if (selection.ShowDialog() != true)
+            {
+                StatusText.Text = "تم إلغاء إضافة المجلد. لم تتم إضافة أي ملفات جديدة.";
+                return;
+            }
+
+            var selectedPaths = selection.SelectedPaths;
+            if (selectedPaths.Length == 0)
+            {
+                StatusText.Text = "لم تحدد أي فيديو للإضافة.";
+                return;
+            }
+
+            StatusText.Text = "جارٍ إضافة ملفات الفيديو التي حددتها فقط...";
+            var response = await _http.PostAsJsonAsync("/api/admin/register-selected-files",
+                new { folderPath, filePaths = selectedPaths });
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = await response.Content.ReadAsStringAsync();
+                StatusText.Text = "تعذرت إضافة الملفات المحددة: " + detail;
+                return;
+            }
+
             await LoadVideosAsync();
-            StatusText.Text = $"تمت إضافة المجلد الخارجي وفحصه. عدد ملفات الفيديو المكتشفة: {result?.VideoCount ?? 0}.";
+            StatusText.Text = $"تمت إضافة {selectedPaths.Length} ملف فيديو من أصل {candidates.Length} ملفاً موجوداً في المجلد.";
         }
         catch (Exception ex)
         {
-            StatusText.Text = "تعذر إضافة مجلد الفيديو: " + ex.Message;
+            StatusText.Text = "تعذر إضافة ملفات الفيديو: " + ex.Message;
         }
     }
 
@@ -922,5 +955,85 @@ public partial class MainWindow : Window
         public int? RuntimeMinutes { get; set; }
         public string? ReleaseDate { get; set; }
         public string? Tags { get; set; }
+    }
+}
+
+public sealed class VideoFileCandidateAdmin
+{
+    public string FullPath { get; set; } = "";
+    public string FileName { get; set; } = "";
+    public long SizeBytes { get; set; }
+}
+
+public sealed class FolderVideoSelectionWindow : Window
+{
+    private readonly ObservableCollection<SelectableVideoFile> _items;
+    public string[] SelectedPaths => _items.Where(x => x.Selected).Select(x => x.FullPath).ToArray();
+
+    public FolderVideoSelectionWindow(string folderPath, IEnumerable<VideoFileCandidateAdmin> candidates)
+    {
+        Title = "حدد ملفات الفيديو التي تريد إضافتها";
+        Width = 760;
+        Height = 620;
+        MinWidth = 600;
+        MinHeight = 450;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        FlowDirection = FlowDirection.RightToLeft;
+        Background = System.Windows.Media.Brushes.White;
+        Owner = Application.Current.MainWindow;
+
+        _items = new ObservableCollection<SelectableVideoFile>(candidates.Select(x => new SelectableVideoFile
+        {
+            FullPath = x.FullPath,
+            FileName = x.FileName,
+            SizeText = FormatSize(x.SizeBytes),
+            Selected = false
+        }));
+
+        var root = new DockPanel { Margin = new Thickness(16) };
+        var header = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
+        header.Children.Add(new TextBlock { Text = "اختر الفيديوهات التي تريد إدخالها إلى المكتبة", FontSize = 19, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(20,45,74)) });
+        header.Children.Add(new TextBlock { Text = folderPath, TextWrapping = TextWrapping.Wrap, Foreground = System.Windows.Media.Brushes.DimGray, Margin = new Thickness(0,6,0,8) });
+        var selectionButtons = new StackPanel { Orientation = Orientation.Horizontal };
+        var allButton = new Button { Content = "تحديد الكل", Padding = new Thickness(12,6,12,6), Margin = new Thickness(0,0,6,0) };
+        var noneButton = new Button { Content = "إلغاء التحديد", Padding = new Thickness(12,6,12,6) };
+        allButton.Click += (_, _) => { foreach (var item in _items) item.Selected = true; };
+        noneButton.Click += (_, _) => { foreach (var item in _items) item.Selected = false; };
+        selectionButtons.Children.Add(allButton);
+        selectionButtons.Children.Add(noneButton);
+        header.Children.Add(selectionButtons);
+        DockPanel.SetDock(header, Dock.Top);
+        root.Children.Add(header);
+
+        var footer = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0,12,0,0) };
+        var addButton = new Button { Content = "إضافة المحدد", IsDefault = true, Padding = new Thickness(18,8,18,8), Margin = new Thickness(0,0,8,0), Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(36,91,135)), Foreground = System.Windows.Media.Brushes.White };
+        var cancelButton = new Button { Content = "إلغاء", IsCancel = true, Padding = new Thickness(18,8,18,8) };
+        addButton.Click += (_, _) => { DialogResult = true; };
+        footer.Children.Add(addButton);
+        footer.Children.Add(cancelButton);
+        DockPanel.SetDock(footer, Dock.Bottom);
+        root.Children.Add(footer);
+
+        var grid = new DataGrid { ItemsSource = _items, AutoGenerateColumns = false, CanUserAddRows = false, IsReadOnly = false, SelectionMode = DataGridSelectionMode.Extended, HeadersVisibility = DataGridHeadersVisibility.Column, FlowDirection = FlowDirection.RightToLeft };
+        grid.Columns.Add(new DataGridCheckBoxColumn { Header = "اختيار", Binding = new Binding(nameof(SelectableVideoFile.Selected)) { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged }, Width = 65 });
+        grid.Columns.Add(new DataGridTextColumn { Header = "اسم ملف الفيديو", Binding = new Binding(nameof(SelectableVideoFile.FileName)), IsReadOnly = true, Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
+        grid.Columns.Add(new DataGridTextColumn { Header = "الحجم", Binding = new Binding(nameof(SelectableVideoFile.SizeText)), IsReadOnly = true, Width = 100 });
+        root.Children.Add(grid);
+        Content = root;
+    }
+
+    private static string FormatSize(long bytes) => bytes >= 1024L * 1024 * 1024
+        ? (bytes / (1024d * 1024 * 1024)).ToString("0.00") + " GB"
+        : bytes >= 1024L * 1024 ? (bytes / (1024d * 1024)).ToString("0.0") + " MB"
+        : (bytes / 1024d).ToString("0") + " KB";
+
+    private sealed class SelectableVideoFile : INotifyPropertyChanged
+    {
+        private bool _selected;
+        public string FullPath { get; set; } = "";
+        public string FileName { get; set; } = "";
+        public string SizeText { get; set; } = "";
+        public bool Selected { get => _selected; set { if (_selected == value) return; _selected = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Selected))); } }
+        public event PropertyChangedEventHandler? PropertyChanged;
     }
 }
