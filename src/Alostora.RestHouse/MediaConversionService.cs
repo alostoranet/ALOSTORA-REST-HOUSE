@@ -100,7 +100,8 @@ public sealed class MediaConversionService
 
             using var document = JsonDocument.Parse(output);
             var tracks = new List<AudioTrackInfo>();
-            string? videoCodec = null;\n            string? videoPixelFormat = null;
+            string? videoCodec = null;
+            string? videoPixelFormat = null;
             if (document.RootElement.TryGetProperty("streams", out var streams))
             {
                 foreach (var stream in streams.EnumerateArray())
@@ -108,7 +109,11 @@ public sealed class MediaConversionService
                     var type = GetString(stream, "codec_type");
                     var index = stream.TryGetProperty("index", out var indexValue) && indexValue.TryGetInt32(out var parsedIndex) ? parsedIndex : -1;
                     var codec = GetString(stream, "codec_name") ?? "unknown";
-                    if (type == "video" && videoCodec is null)\n                    {\n                        videoCodec = codec;\n                        videoPixelFormat = GetString(stream, "pix_fmt");\n                    }
+                    if (type == "video" && videoCodec is null)
+                    {
+                        videoCodec = codec;
+                        videoPixelFormat = GetString(stream, "pix_fmt");
+                    }
                     if (type != "audio" || index < 0) continue;
 
                     var language = "und";
@@ -166,12 +171,19 @@ public sealed class MediaConversionService
             return new ConversionJobStatus(key, "ready", "الملف المحوّل جاهز.", "/stream-cache/" + key + ".mp4");
 
         var job = _jobs.GetOrAdd(key, _ => new Job());
-        if (job.State == "queued")
+        var shouldStart = false;
+        lock (job)
         {
-            job.State = "running";
-            job.Message = "جارٍ تجهيز الفيديو للتشغيل...";
-            _ = Task.Run(() => RunConversionAsync(key, video.FullPath, output, probe.VideoCodec, selectedAudio));
+            if (job.State is "queued" or "failed")
+            {
+                job.State = "running";
+                job.Message = "جارٍ تجهيز الفيديو للتشغيل...";
+                job.Error = null;
+                shouldStart = true;
+            }
         }
+        if (shouldStart)
+            _ = Task.Run(() => RunConversionAsync(key, video.FullPath, output, probe.VideoCodec, probe.VideoPixelFormat, selectedAudio));
 
         return new ConversionJobStatus(key, job.State, job.Message, null);
     }
@@ -229,7 +241,8 @@ public sealed class MediaConversionService
                 args.AddRange(new[] { "-map", "0:" + audio.Index });
             args.AddRange(new[] { "-map_metadata", "0" });
 
-            if (string.Equals(videoCodec, "h264", StringComparison.OrdinalIgnoreCase) &&\n                string.Equals(videoPixelFormat, "yuv420p", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(videoCodec, "h264", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(videoPixelFormat, "yuv420p", StringComparison.OrdinalIgnoreCase))
                 args.AddRange(new[] { "-c:v", "copy" });
             else
                 args.AddRange(new[] { "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p" });
