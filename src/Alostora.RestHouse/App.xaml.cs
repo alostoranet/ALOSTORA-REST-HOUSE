@@ -8,6 +8,9 @@ using System.Windows;
 
 namespace Alostora.RestHouse;
 
+public sealed record UpdateSeasonFolderRequest(string? FolderPath);
+public sealed record ScanFolderRequest(string FolderPath);
+
 public partial class App : Application
 {
  private WebApplication? _server;
@@ -86,17 +89,29 @@ public partial class App : Application
     return Results.Ok(result);
    });
    _server.MapGet("/api/series",(SeriesCatalogService series,LibraryService files,VideoMetadataService meta)=>Results.Ok(series.GetCatalog(files,meta)));
-   _server.MapGet("/api/admin/series",(HttpContext c,SeriesCatalogService series)=>IsLocal(c)?Results.Ok(series.ListSeries()):Results.NotFound());
-   _server.MapPost("/api/admin/series",(HttpContext c,SaveSeriesRequest request,SeriesCatalogService series)=>{
+   _server.MapGet("/api/admin/series",(HttpContext c,SeriesCatalogService series,LibraryService files)=>{ if(!IsLocal(c)) return Results.NotFound(); var rows=series.ListSeries(); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.RegisterFolder(row.FolderPath); return Results.Ok(rows); });
+   _server.MapPost("/api/admin/series",(HttpContext c,SaveSeriesRequest request,SeriesCatalogService series,LibraryService files)=>{
     if(!IsLocal(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeriesId.Length>80||string.IsNullOrWhiteSpace(request.Title)||request.Title.Length>160||(request.Description?.Length??0)>2000||(request.Genre?.Length??0)>80||(request.Year is not null&&(request.Year<1888||request.Year>DateTime.UtcNow.Year+5))||(request.PosterPath?.Length??0)>200||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="تحقق من بيانات المسلسل"});
-    series.SaveSeries(request); return Results.Ok(new{saved=true});
+    series.SaveSeries(request); if(!string.IsNullOrWhiteSpace(request.FolderPath)) files.RegisterFolder(request.FolderPath); return Results.Ok(new{saved=true});
    });
-   _server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalogService series)=>IsLocal(c)?Results.Ok(series.ListSeasons(seriesId)):Results.NotFound());
+   _server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalogService series,LibraryService files)=>{ if(!IsLocal(c)) return Results.NotFound(); var rows=series.ListSeasons(seriesId); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.RegisterFolder(row.FolderPath); return Results.Ok(rows); });
    _server.MapPost("/api/admin/seasons",(HttpContext c,SaveSeasonRequest request,SeriesCatalogService series)=>{
     if(!IsLocal(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeasonNumber<1||request.SeasonNumber>500||(request.Title?.Length??0)>120||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="بيانات الموسم غير صحيحة أو مجلد الموسم غير موجود"});
-    try { var id=series.AddSeason(request); return Results.Ok(new{seasonId=id}); } catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="المسلسل غير موجود أو رقم الموسم مكرر"}); }
+    try { var id=series.AddSeason(request); if(!string.IsNullOrWhiteSpace(request.FolderPath)) files.RegisterFolder(request.FolderPath); return Results.Ok(new{seasonId=id}); } catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="المسلسل غير موجود أو رقم الموسم مكرر"}); }
+   });
+   _server.MapPost("/api/admin/seasons/{seasonId:long}/folder",(HttpContext c,long seasonId,UpdateSeasonFolderRequest request,SeriesCatalogService series,LibraryService files)=>{
+    if(!IsLocal(c)) return Results.NotFound();
+    if((request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="مجلد الموسم غير موجود"});
+    try { series.UpdateSeasonFolder(seasonId,request.FolderPath); if(!string.IsNullOrWhiteSpace(request.FolderPath)) files.RegisterFolder(request.FolderPath); return Results.Ok(new{saved=true}); }
+    catch(KeyNotFoundException) { return Results.NotFound(new{error="الموسم غير موجود"}); }
+   });
+   _server.MapPost("/api/admin/scan-folder",(HttpContext c,ScanFolderRequest request,LibraryService files)=>{
+    if(!IsLocal(c)) return Results.NotFound();
+    if(string.IsNullOrWhiteSpace(request.FolderPath)||(request.FolderPath.Length>1000)||!Directory.Exists(request.FolderPath)) return Results.BadRequest(new{error="حدد مجلداً موجوداً ويمكن الوصول إليه"});
+    try { var count=files.RegisterFolder(request.FolderPath); return Results.Ok(new{registered=true,videoCount=count}); }
+    catch(Exception ex) { return Results.BadRequest(new{error=ex.Message}); }
    });
    _server.MapPost("/api/admin/episodes",(HttpContext c,SaveEpisodeRequest request,LibraryService files,SeriesCatalogService series)=>{
     if(!IsLocal(c)) return Results.NotFound();
