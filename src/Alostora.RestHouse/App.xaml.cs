@@ -295,6 +295,14 @@ public partial class App : Application
     var type=Path.GetExtension(full).ToLowerInvariant() switch {".jpg" or ".jpeg"=>"image/jpeg",".png"=>"image/png",".webp"=>"image/webp",_=>null};
     return type is null?Results.NotFound():Results.File(full,type);
    });
+   _server.MapPost("/api/admin/library/{id}/remove",(HttpContext c,string id,LibraryService librarySvc)=>
+   {
+    if(!IsLocal(c)) return Results.NotFound();
+    if(string.IsNullOrWhiteSpace(id)||id.Length!=24||!Regex.IsMatch(id,"^[a-fA-F0-9]{24}$")) return Results.BadRequest(new{error="معرّف الفيديو غير صالح"});
+    try { librarySvc.RemoveFromLibrary(id); return Results.Ok(new{removed=true,message="تمت إزالة الفيديو من المكتبة دون حذف الملف الأصلي"}); }
+    catch(FileNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
+    catch(Exception ex) { return Results.BadRequest(new{error=ex.Message}); }
+   });
    _server.MapDelete("/api/admin/library/{id}",(HttpContext c,string id,LibraryService librarySvc,VideoMetadataService metadata,WatchProgressService progress)=>
    {
     if(!IsLocal(c)) return Results.NotFound();
