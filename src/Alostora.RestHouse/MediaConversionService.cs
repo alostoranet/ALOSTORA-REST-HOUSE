@@ -251,12 +251,7 @@ public sealed class MediaConversionService
                 args.AddRange(new[] { "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p" });
 
             if (audio is not null)
-            {
-                if (string.Equals(audio.Codec, "aac", StringComparison.OrdinalIgnoreCase))
-                    args.AddRange(new[] { "-c:a", "copy" });
-                else
-                    args.AddRange(new[] { "-c:a", "aac", "-b:a", "160k" });
-            }
+                args.AddRange(new[] { "-c:a", "aac", "-b:a", "192k", "-ac", "2" });
             args.AddRange(new[] { "-movflags", "+faststart", "-max_muxing_queue_size", "2048", "-f", "mp4", temporary });
             foreach (var arg in args) start.ArgumentList.Add(arg);
 
