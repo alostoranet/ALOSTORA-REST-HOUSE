@@ -268,7 +268,12 @@ public partial class App : Application
     var content=svc.ReadSubtitle(id,fileName);
     return content is null?Results.NotFound():Results.Text(content,"text/vtt; charset=utf-8");
    });
-_server.MapGet("/media/{id}",(string id,LibraryService svc)=>{var item=svc.Resolve(id);return item is null?Results.NotFound():Results.File(item.FullPath,item.ContentType,enableRangeProcessing:true);});
+   _server.MapGet("/api/subtitles/{id}/embedded/{streamIndex:int}",async (string id,int streamIndex,MediaConversionService media)=>
+   {
+    var content=await media.ReadEmbeddedSubtitleAsync(id,streamIndex);
+    return content is null?Results.NotFound():Results.Text(content,"text/vtt; charset=utf-8");
+   });
+   _server.MapGet("/media/{id}",(string id,LibraryService svc)=>{var item=svc.Resolve(id);return item is null?Results.NotFound():Results.File(item.FullPath,item.ContentType,enableRangeProcessing:true);});
    await _server.StartAsync(); new MainWindow(root,library,posters,settings.FfmpegPath).Show();
   } catch(Exception ex){MessageBox.Show("تعذر تشغيل السيرفر:\n"+ex.Message,"استراحة الأسطورة",MessageBoxButton.OK,MessageBoxImage.Error);Shutdown(1);}
  }
