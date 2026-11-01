@@ -576,14 +576,45 @@ public sealed class LibraryService : IDisposable
     {
         try
         {
+            var oldPath = Path.GetFullPath(e.OldFullPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var newPath = Path.GetFullPath(e.FullPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var prefix = oldPath + Path.DirectorySeparatorChar;
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = "UPDATE ExternalLibraryFiles SET FullPath=$new,UpdatedUtc=$utc WHERE FullPath=$old";
-            command.Parameters.AddWithValue("$new", Path.GetFullPath(e.FullPath));
-            command.Parameters.AddWithValue("$old", Path.GetFullPath(e.OldFullPath));
-            command.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
-            command.ExecuteNonQuery();
+            using var transaction = connection.BeginTransaction();
+            var mappings = new List<(string Path, string Id)>();
+            using (var find = connection.CreateCommand())
+            {
+                find.Transaction = transaction;
+                find.CommandText = """
+                    SELECT FullPath,VideoId FROM ExternalLibraryFiles
+                    WHERE FullPath=$old OR substr(FullPath,1,length($prefix))=$prefix
+                    """;
+                find.Parameters.AddWithValue("$old", oldPath);
+                find.Parameters.AddWithValue("$prefix", prefix);
+                using var reader = find.ExecuteReader();
+                while (reader.Read()) mappings.Add((reader.GetString(0), reader.GetString(1)));
+            }
+
+            foreach (var mapping in mappings)
+            {
+                var suffix = mapping.Path.Length == oldPath.Length ? "" : mapping.Path[oldPath.Length..];
+                var target = newPath + suffix;
+                using var exists = connection.CreateCommand();
+                exists.Transaction = transaction;
+                exists.CommandText = "SELECT 1 FROM ExternalLibraryFiles WHERE FullPath=$path";
+                exists.Parameters.AddWithValue("$path", target);
+                if (exists.ExecuteScalar() is not null) continue;
+
+                using var update = connection.CreateCommand();
+                update.Transaction = transaction;
+                update.CommandText = "UPDATE ExternalLibraryFiles SET FullPath=$new,UpdatedUtc=$utc WHERE FullPath=$old";
+                update.Parameters.AddWithValue("$new", target);
+                update.Parameters.AddWithValue("$old", mapping.Path);
+                update.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
+                update.ExecuteNonQuery();
+            }
+            transaction.Commit();
         }
         catch { }
         finally { Invalidate(); }
