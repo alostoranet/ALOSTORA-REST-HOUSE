@@ -63,6 +63,20 @@ public partial class MainWindow : Window
         SaveFolderSettings();
     }
 
+    private void ChooseSeriesFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var initial = Directory.Exists(SeriesFolderPathBox.Text) ? SeriesFolderPathBox.Text : _library;
+        var dialog = new OpenFolderDialog { Title = "اختر المجلد الذي يحتوي ملفات هذا المسلسل", InitialDirectory = Directory.Exists(initial) ? initial : Environment.GetFolderPath(Environment.SpecialFolder.MyVideos) };
+        if (dialog.ShowDialog(this) == true) SeriesFolderPathBox.Text = Path.GetFullPath(dialog.FolderName);
+    }
+
+    private void ChooseSeasonFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var initial = Directory.Exists(SeasonFolderPathBox.Text) ? SeasonFolderPathBox.Text : (Directory.Exists(SeriesFolderPathBox.Text) ? SeriesFolderPathBox.Text : _library);
+        var dialog = new OpenFolderDialog { Title = "اختر المجلد الذي يحتوي حلقات هذا الموسم", InitialDirectory = Directory.Exists(initial) ? initial : Environment.GetFolderPath(Environment.SpecialFolder.MyVideos) };
+        if (dialog.ShowDialog(this) == true) SeasonFolderPathBox.Text = Path.GetFullPath(dialog.FolderName);
+    }
+
     private void SaveFolderSettings()
     {
         try
@@ -271,6 +285,7 @@ public partial class MainWindow : Window
         SeriesYearBox.Text = s.Year?.ToString() ?? "";
         SeriesGenreBox.Text = s.Genre ?? "";
         SeriesPosterPathBox.Text = s.PosterPath ?? "";
+        SeriesFolderPathBox.Text = s.FolderPath ?? "";
         await LoadSeasonsAsync(s.SeriesId);
     }
 
@@ -346,7 +361,9 @@ public partial class MainWindow : Window
             year = parsed;
         }
         var id = string.IsNullOrWhiteSpace(SeriesIdBox.Text) ? "series-" + Guid.NewGuid().ToString("N") : SeriesIdBox.Text.Trim();
-        var request = new { seriesId = id, title = SeriesTitleBox.Text.Trim(), description = SeriesDescriptionBox.Text, year, genre = SeriesGenreBox.Text, posterPath = string.IsNullOrWhiteSpace(SeriesPosterPathBox.Text) ? null : SeriesPosterPathBox.Text.Trim() };
+        var folderPath = string.IsNullOrWhiteSpace(SeriesFolderPathBox.Text) ? null : Path.GetFullPath(SeriesFolderPathBox.Text.Trim());
+        if (folderPath is not null && !Directory.Exists(folderPath)) { SeriesStatusText.Text = "مجلد المسلسل المحدد غير موجود."; return; }
+        var request = new { seriesId = id, title = SeriesTitleBox.Text.Trim(), description = SeriesDescriptionBox.Text, year, genre = SeriesGenreBox.Text, posterPath = string.IsNullOrWhiteSpace(SeriesPosterPathBox.Text) ? null : SeriesPosterPathBox.Text.Trim(), folderPath };
         try
         {
             var response = await _http.PostAsJsonAsync("/api/admin/series", request);
@@ -367,9 +384,11 @@ public partial class MainWindow : Window
         { SeriesStatusText.Text = "رقم الموسم يجب أن يكون بين 1 و500."; return; }
         try
         {
-            var response = await _http.PostAsJsonAsync("/api/admin/seasons", new { seriesId = SeriesIdBox.Text.Trim(), seasonNumber = number, title = SeasonTitleBox.Text });
+            var seasonFolder = string.IsNullOrWhiteSpace(SeasonFolderPathBox.Text) ? null : Path.GetFullPath(SeasonFolderPathBox.Text.Trim());
+            if (seasonFolder is not null && !Directory.Exists(seasonFolder)) { SeriesStatusText.Text = "مجلد الموسم المحدد غير موجود."; return; }
+            var response = await _http.PostAsJsonAsync("/api/admin/seasons", new { seriesId = SeriesIdBox.Text.Trim(), seasonNumber = number, title = SeasonTitleBox.Text, folderPath = seasonFolder });
             if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "لم تتم إضافة الموسم. ربما رقم الموسم مكرر."; return; }
-            SeasonTitleBox.Clear(); SeasonNumberBox.Text = (number + 1).ToString();
+            SeasonTitleBox.Clear(); SeasonFolderPathBox.Clear(); SeasonNumberBox.Text = (number + 1).ToString();
             await LoadSeasonsAsync(SeriesIdBox.Text.Trim());
             SeriesStatusText.Text = "تمت إضافة الموسم بنجاح.";
         }
@@ -379,7 +398,10 @@ public partial class MainWindow : Window
     private void SeasonsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (SeasonsGrid.SelectedItem is SeasonAdmin season)
+        {
+            SeasonFolderPathBox.Text = season.FolderPath ?? "";
             SeriesStatusText.Text = $"الموسم المحدد: {season.SeasonNumber} — اختر ملف فيديو لإضافته كحلقة.";
+        }
     }
 
     private async void AddEpisode_Click(object sender, RoutedEventArgs e)
@@ -435,6 +457,7 @@ public partial class MainWindow : Window
         public int? Year { get; set; }
         public string Genre { get; set; } = "";
         public string? PosterPath { get; set; }
+        public string? FolderPath { get; set; }
     }
     private sealed class SeasonAdmin
     {
@@ -442,6 +465,7 @@ public partial class MainWindow : Window
         public string SeriesId { get; set; } = "";
         public int SeasonNumber { get; set; }
         public string Title { get; set; } = "";
+        public string? FolderPath { get; set; }
     }
     private sealed class PosterUploadResult { public string? PosterPath { get; set; } }
     private sealed class AdminVideo
