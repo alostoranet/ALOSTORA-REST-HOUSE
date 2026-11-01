@@ -8,8 +8,9 @@ using System.Text.Json;
 namespace Alostora.RestHouse;
 
 public sealed record AudioTrackInfo(int Index, string Language, string Title, string Codec, bool IsDefault);
+public sealed record EmbeddedSubtitleTrackInfo(int Index, string Language, string Title, string Codec, bool IsDefault);
 public sealed record MediaProbeResult(bool Available, bool Success, string Message, bool NeedsConversion,
-    IReadOnlyList<AudioTrackInfo> AudioTracks, string? VideoCodec, string? VideoPixelFormat);
+    IReadOnlyList<AudioTrackInfo> AudioTracks, IReadOnlyList<EmbeddedSubtitleTrackInfo> EmbeddedSubtitles, string? VideoCodec, string? VideoPixelFormat);
 public sealed record MediaToolStatus(bool Available, string FfmpegPath, string FfprobePath, string Message);
 public sealed record ConversionJobStatus(string JobId, string State, string Message, string? Url);
 
@@ -57,11 +58,11 @@ public sealed class MediaConversionService
     {
         var video = _library.Resolve(videoId);
         if (video is null)
-            return new(false, false, "ملف الفيديو غير موجود في المكتبة.", false, Array.Empty<AudioTrackInfo>(), null, null);
+            return new(false, false, "ملف الفيديو غير موجود في المكتبة.", false, Array.Empty<AudioTrackInfo>(), Array.Empty<EmbeddedSubtitleTrackInfo>(), null, null);
 
         var tools = GetToolStatus();
         if (!tools.Available)
-            return new(false, false, tools.Message, NeedsConversion(video.FullPath), Array.Empty<AudioTrackInfo>(), null, null);
+            return new(false, false, tools.Message, NeedsConversion(video.FullPath), Array.Empty<AudioTrackInfo>(), Array.Empty<EmbeddedSubtitleTrackInfo>(), null, null);
 
         try
         {
@@ -80,7 +81,7 @@ public sealed class MediaConversionService
 
             using var process = Process.Start(start);
             if (process is null)
-                return new(true, false, "تعذر تشغيل FFprobe.", NeedsConversion(video.FullPath), Array.Empty<AudioTrackInfo>(), null, null);
+                return new(true, false, "تعذر تشغيل FFprobe.", NeedsConversion(video.FullPath), Array.Empty<AudioTrackInfo>(), Array.Empty<EmbeddedSubtitleTrackInfo>(), null, null);
 
             var outputTask = process.StandardOutput.ReadToEndAsync();
             var errorTask = process.StandardError.ReadToEndAsync();
@@ -89,17 +90,18 @@ public sealed class MediaConversionService
             catch (OperationCanceledException)
             {
                 try { process.Kill(true); } catch { }
-                return new(true, false, "انتهت مهلة فحص ملف الفيديو.", NeedsConversion(video.FullPath), Array.Empty<AudioTrackInfo>(), null, null);
+                return new(true, false, "انتهت مهلة فحص ملف الفيديو.", NeedsConversion(video.FullPath), Array.Empty<AudioTrackInfo>(), Array.Empty<EmbeddedSubtitleTrackInfo>(), null, null);
             }
 
             var output = await outputTask;
             var error = await errorTask;
             if (process.ExitCode != 0)
                 return new(true, false, string.IsNullOrWhiteSpace(error) ? "تعذر قراءة مسارات الفيديو." : error.Trim(),
-                    NeedsConversion(video.FullPath), Array.Empty<AudioTrackInfo>(), null, null);
+                    NeedsConversion(video.FullPath), Array.Empty<AudioTrackInfo>(), Array.Empty<EmbeddedSubtitleTrackInfo>(), null, null);
 
             using var document = JsonDocument.Parse(output);
             var tracks = new List<AudioTrackInfo>();
+            var embeddedSubtitles = new List<EmbeddedSubtitleTrackInfo>();
             string? videoCodec = null;
             string? videoPixelFormat = null;
             if (document.RootElement.TryGetProperty("streams", out var streams))
@@ -114,8 +116,6 @@ public sealed class MediaConversionService
                         videoCodec = codec;
                         videoPixelFormat = GetString(stream, "pix_fmt");
                     }
-                    if (type != "audio" || index < 0) continue;
-
                     var language = "und";
                     var title = "";
                     if (stream.TryGetProperty("tags", out var tags))
@@ -126,17 +126,69 @@ public sealed class MediaConversionService
                     var isDefault = stream.TryGetProperty("disposition", out var disposition) &&
                         disposition.TryGetProperty("default", out var defaultValue) &&
                         defaultValue.ValueKind == JsonValueKind.Number && defaultValue.GetInt32() == 1;
-                    tracks.Add(new AudioTrackInfo(index, language, title, codec, isDefault));
+                    if (type == "audio" && index >= 0)
+                        tracks.Add(new AudioTrackInfo(index, language, title, codec, isDefault));
+                    else if (type == "subtitle" && index >= 0 &&
+                        codec is "subrip" or "ass" or "ssa" or "mov_text" or "webvtt" or "text")
+                        embeddedSubtitles.Add(new EmbeddedSubtitleTrackInfo(index, language, title, codec, isDefault));
                 }
             }
 
-            return new(true, true, "تم فحص مسارات الملف.", NeedsConversion(video.FullPath), tracks, videoCodec, videoPixelFormat);
+            return new(true, true, "تم فحص مسارات الملف.", NeedsConversion(video.FullPath), tracks, embeddedSubtitles, videoCodec, videoPixelFormat);
         }
         catch (Exception ex)
         {
             return new(true, false, "فشل فحص الفيديو: " + ex.Message, NeedsConversion(video.FullPath),
-                Array.Empty<AudioTrackInfo>(), null, null);
+                Array.Empty<AudioTrackInfo>(), Array.Empty<EmbeddedSubtitleTrackInfo>(), null, null);
         }
+    }
+
+    public async Task<string?> ReadEmbeddedSubtitleAsync(string videoId, int streamIndex)
+    {
+        if (streamIndex < 0) return null;
+        var video = _library.Resolve(videoId);
+        if (video is null) return null;
+        var probe = await ProbeAsync(videoId);
+        var track = probe.EmbeddedSubtitles.FirstOrDefault(x => x.Index == streamIndex);
+        if (track is null) return null;
+        var tools = GetToolStatus();
+        if (!tools.Available) return null;
+
+        try
+        {
+            var start = new ProcessStartInfo
+            {
+                FileName = tools.FfmpegPath,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                CreateNoWindow = true
+            };
+            foreach (var arg in new[] { "-nostdin", "-hide_banner", "-loglevel", "error",
+                "-i", video.FullPath, "-map", "0:" + streamIndex, "-c:s", "webvtt",
+                "-f", "webvtt", "pipe:1" })
+                start.ArgumentList.Add(arg);
+
+            using var process = Process.Start(start);
+            if (process is null) return null;
+            var outputTask = process.StandardOutput.ReadToEndAsync();
+            var errorTask = process.StandardError.ReadToEndAsync();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+            try { await process.WaitForExitAsync(timeout.Token); }
+            catch (OperationCanceledException)
+            {
+                try { process.Kill(true); } catch { }
+                return null;
+            }
+            var output = await outputTask;
+            _ = await errorTask;
+            if (process.ExitCode != 0 || output.Length == 0 || output.Length > 10 * 1024 * 1024)
+                return null;
+            var clean = output.TrimStart('\uFEFF');
+            return clean.StartsWith("WEBVTT", StringComparison.Ordinal) ? clean : "WEBVTT\n\n" + clean;
+        }
+        catch { return null; }
     }
 
     public async Task<ConversionJobStatus> StartConversionAsync(string videoId, int? audioStreamIndex)
