@@ -124,13 +124,28 @@ public sealed class SeriesCatalogService
         cmd.Parameters.AddWithValue("$season",x.SeasonId); cmd.Parameters.AddWithValue("$video",x.VideoId); cmd.Parameters.AddWithValue("$number",x.EpisodeNumber); cmd.Parameters.AddWithValue("$title",x.Title??"");
         return (long)cmd.ExecuteScalar()!;
     }
-    public void UpdateEpisodeVideo(long episodeId, string videoId)
+    public string UpdateEpisodeVideo(long episodeId, string videoId)
     {
-        using var c = Open(); using var cmd = c.CreateCommand();
-        cmd.CommandText = "UPDATE SeriesEpisodes SET VideoId=$video WHERE EpisodeId=$id";
-        cmd.Parameters.AddWithValue("$video", videoId);
-        cmd.Parameters.AddWithValue("$id", episodeId);
-        if (cmd.ExecuteNonQuery() == 0) throw new KeyNotFoundException("الحلقة غير موجودة");
+        using var c = Open();
+        using var transaction = c.BeginTransaction();
+        string oldVideoId;
+        using (var find = c.CreateCommand())
+        {
+            find.Transaction = transaction;
+            find.CommandText = "SELECT VideoId FROM SeriesEpisodes WHERE EpisodeId=$id";
+            find.Parameters.AddWithValue("$id", episodeId);
+            oldVideoId = find.ExecuteScalar() as string ?? throw new KeyNotFoundException("الحلقة غير موجودة");
+        }
+        using (var update = c.CreateCommand())
+        {
+            update.Transaction = transaction;
+            update.CommandText = "UPDATE SeriesEpisodes SET VideoId=$video WHERE EpisodeId=$id";
+            update.Parameters.AddWithValue("$video", videoId);
+            update.Parameters.AddWithValue("$id", episodeId);
+            update.ExecuteNonQuery();
+        }
+        transaction.Commit();
+        return oldVideoId;
     }
 
     public IReadOnlyList<MissingEpisodeRecord> ListMissingEpisodes(LibraryService library)
