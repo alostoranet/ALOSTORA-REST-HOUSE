@@ -41,6 +41,35 @@ public partial class MainWindow : Window
 
     private async void RefreshLibrary_Click(object sender, RoutedEventArgs e) => await LoadVideosAsync();
 
+    private async void AddExternalMediaFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "اختر مجلداً إضافياً يحتوي أفلاماً أو حلقات فيديو",
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos)
+        };
+        if (dialog.ShowDialog(this) != true) return;
+
+        try
+        {
+            StatusText.Text = "جارٍ إضافة المجلد وفحص ملفات الفيديو...";
+            var response = await _http.PostAsJsonAsync("/api/admin/scan-folder",
+                new { folderPath = Path.GetFullPath(dialog.FolderName) });
+            if (!response.IsSuccessStatusCode)
+            {
+                StatusText.Text = "تعذر إضافة المجلد. تحقق من وجوده وصلاحية الوصول إليه.";
+                return;
+            }
+            var result = await response.Content.ReadFromJsonAsync<FolderScanResult>();
+            await LoadVideosAsync();
+            StatusText.Text = $"تمت إضافة المجلد الخارجي وفحصه. عدد ملفات الفيديو المكتشفة: {result?.VideoCount ?? 0}.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "تعذر إضافة مجلد الفيديو: " + ex.Message;
+        }
+    }
+
     private void ChooseMediaFolder_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFolderDialog
