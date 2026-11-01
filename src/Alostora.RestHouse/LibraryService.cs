@@ -7,6 +7,7 @@ using Microsoft.Data.Sqlite;
 namespace Alostora.RestHouse;
 
 public sealed record LibraryVideo(string Id, string Title, string FileName, string Url, long SizeBytes);
+public sealed record VideoFileCandidate(string FullPath, string FileName, long SizeBytes);
 public sealed record ResolvedVideo(string FullPath, string ContentType);
 public sealed record SubtitleTrack(string FileName, string Label, string Language, string Url, bool IsDefault, bool IsForced, bool IsSdh);
 
@@ -340,6 +341,80 @@ public sealed class LibraryService : IDisposable
             return _resolved!.TryGetValue(id, out var video) ? video : null;
     }
 
+    public IReadOnlyList<VideoFileCandidate> PreviewFolder(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            throw new DirectoryNotFoundException("مجلد الفيديو غير موجود أو لا يمكن الوصول إليه.");
+        var root = Path.GetFullPath(folderPath);
+        var files = new List<VideoFileCandidate>();
+        foreach (var path in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
+        {
+            if (!ContentTypes.ContainsKey(Path.GetExtension(path))) continue;
+            try
+            {
+                var info = new FileInfo(path);
+                if (info.Exists) files.Add(new VideoFileCandidate(Path.GetFullPath(path), info.Name, info.Length));
+            }
+            catch { }
+        }
+        return files.OrderBy(x => x.FileName, StringComparer.CurrentCultureIgnoreCase).ToArray();
+    }
+
+    public int RegisterSelectedFiles(string folderPath, IEnumerable<string> selectedPaths)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            throw new DirectoryNotFoundException("مجلد الفيديو غير موجود أو لا يمكن الوصول إليه.");
+        var root = Path.GetFullPath(folderPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var selected = selectedPaths?.Select(Path.GetFullPath).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+            ?? Array.Empty<string>();
+        if (selected.Length == 0) return 0;
+        foreach (var path in selected)
+        {
+            var relative = Path.GetRelativePath(root, path);
+            if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
+                !File.Exists(path) || !ContentTypes.ContainsKey(Path.GetExtension(path)))
+                throw new InvalidOperationException("توجد ملفات خارج المجلد المحدد أو ليست ملفات فيديو صالحة.");
+        }
+
+        using (var connection = new SqliteConnection(_connectionString))
+        {
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            using (var removeRoot = connection.CreateCommand())
+            {
+                removeRoot.Transaction = transaction;
+                removeRoot.CommandText = "DELETE FROM LibraryScanRoots WHERE FolderPath=$path";
+                removeRoot.Parameters.AddWithValue("$path", root);
+                removeRoot.ExecuteNonQuery();
+            }
+            foreach (var path in selected)
+            {
+                using var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = "INSERT OR IGNORE INTO ExternalLibraryFiles(FullPath,VideoId,UpdatedUtc) VALUES($path,$id,$utc)";
+                command.Parameters.AddWithValue("$path", path);
+                command.Parameters.AddWithValue("$id", CreateId("external:" + path));
+                command.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
+                command.ExecuteNonQuery();
+            }
+            transaction.Commit();
+        }
+
+        lock (_sync)
+        {
+            foreach (var watcher in _watchers.Where(w => string.Equals(
+                w.Path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), root,
+                StringComparison.OrdinalIgnoreCase)).ToArray())
+            {
+                watcher.Dispose();
+                _watchers.Remove(watcher);
+            }
+        }
+        AddWatcher(root);
+        Invalidate();
+        return selected.Length;
+    }
+
     // Registers an additional folder without moving or copying its files.
     // Its full path is persisted so it is available after application restarts.
     public void EnsureFolderRegistered(string folderPath)
@@ -470,6 +545,25 @@ public sealed class LibraryService : IDisposable
                     videos.Add(new LibraryVideo(id, file.Name[..^file.Extension.Length],
                         file.Name, "/media/" + id, file.Length));
                     resolved[id] = new ResolvedVideo(fullPath, contentType);
+                }
+            }
+
+            using (var selectedCommand = connection.CreateCommand())
+            {
+                selectedCommand.Transaction = transaction;
+                selectedCommand.CommandText = "SELECT FullPath,VideoId FROM ExternalLibraryFiles";
+                using var selectedReader = selectedCommand.ExecuteReader();
+                var selectedFiles = new List<(string Path, string Id)>();
+                while (selectedReader.Read()) selectedFiles.Add((selectedReader.GetString(0), selectedReader.GetString(1)));
+                selectedReader.Close();
+                foreach (var selectedFile in selectedFiles)
+                {
+                    if (!File.Exists(selectedFile.Path) || !ContentTypes.TryGetValue(Path.GetExtension(selectedFile.Path), out var contentType)) continue;
+                    var fullPath = Path.GetFullPath(selectedFile.Path);
+                    if (!seen.Add(fullPath)) continue;
+                    var file = new FileInfo(fullPath);
+                    videos.Add(new LibraryVideo(selectedFile.Id, file.Name[..^file.Extension.Length], file.Name, "/media/" + selectedFile.Id, file.Length));
+                    resolved[selectedFile.Id] = new ResolvedVideo(fullPath, contentType);
                 }
             }
 
