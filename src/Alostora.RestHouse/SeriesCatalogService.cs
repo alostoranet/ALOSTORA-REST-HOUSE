@@ -236,7 +236,13 @@ public sealed class SeriesCatalogService
                                 videoId = episode.VideoId,
                                 episodeNumber = episode.EpisodeNumber,
                                 title,
-                                url = file.Url
+                                url = file.Url,
+                                director = videoMetadata?.Director,
+                                cast = videoMetadata?.Cast,
+                                rating = videoMetadata?.Rating,
+                                runtimeMinutes = videoMetadata?.RuntimeMinutes,
+                                releaseDate = videoMetadata?.ReleaseDate,
+                                tags = videoMetadata?.Tags
                             };
                         })
                         .ToArray()
