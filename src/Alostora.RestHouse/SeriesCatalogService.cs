@@ -16,7 +16,7 @@ public sealed class SeriesCatalogService
     public SeriesCatalogService(string databasePath)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
-        _connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath, ForeignKeys = true }.ToString();
+        _connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath, ForeignKeys = true, DefaultTimeout = 10, Pooling = true }.ToString();
         using var c = Open();
         using var cmd = c.CreateCommand();
         cmd.CommandText = """
