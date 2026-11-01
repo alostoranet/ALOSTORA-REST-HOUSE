@@ -29,7 +29,7 @@ public sealed class MediaConversionService
     private readonly LibraryService _library;
     private readonly string? _configuredFfmpeg;
     private readonly string _cacheDirectory;
-    private readonly ConcurrentDictionary<string, Job> _jobs = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, Job> _jobs = new(StringComparer.OrdinalIgnoreCase);\n    private readonly SemaphoreSlim _conversionSlots = new(2, 2);
 
     public MediaConversionService(LibraryService library, string? configuredFfmpeg, string cacheDirectory)
     {
@@ -223,8 +223,11 @@ public sealed class MediaConversionService
         }
 
         var temporary = output + ".partial";
+        var acquired = false;
         try
         {
+            await _conversionSlots.WaitAsync();
+            acquired = true;
             if (File.Exists(temporary)) File.Delete(temporary);
             var start = new ProcessStartInfo
             {
@@ -282,6 +285,10 @@ public sealed class MediaConversionService
             job.State = "failed";
             job.Error = ex.Message;
         }
+        finally
+        {
+            if (acquired) _conversionSlots.Release();
+        }
     }
 
     private static bool NeedsConversion(string path) =>
@@ -328,6 +335,18 @@ public sealed class MediaConversionService
             foreach (var file in Directory.EnumerateFiles(_cacheDirectory, "*.partial"))
                 if (File.GetLastWriteTimeUtc(file) < DateTime.UtcNow.AddHours(-12))
                     File.Delete(file);
+
+            const long maximumCacheBytes = 20L * 1024 * 1024 * 1024;
+            var cached = new DirectoryInfo(_cacheDirectory).GetFiles("*.mp4")
+                .OrderBy(file => file.LastWriteTimeUtc).ToArray();
+            var total = cached.Sum(file => file.Length);
+            foreach (var file in cached)
+            {
+                if (total <= maximumCacheBytes) break;
+                var length = file.Length;
+                file.Delete();
+                total -= length;
+            }
         }
         catch { }
     }
