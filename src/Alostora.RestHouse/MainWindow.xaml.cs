@@ -404,6 +404,7 @@ public partial class MainWindow : Window
             await LoadSeriesAsync();
             SeriesPicker.SelectedItem = (SeriesPicker.ItemsSource as SeriesAdmin[])?.FirstOrDefault(x => x.SeriesId == id);
             if (SeriesPicker.SelectedItem is null) await LoadSeasonsAsync(id);
+            await LoadVideosAsync();
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر حفظ المسلسل: " + ex.Message; }
     }
@@ -421,6 +422,7 @@ public partial class MainWindow : Window
             if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "لم تتم إضافة الموسم. ربما رقم الموسم مكرر."; return; }
             SeasonTitleBox.Clear(); SeasonFolderPathBox.Clear(); SeasonNumberBox.Text = (number + 1).ToString();
             await LoadSeasonsAsync(SeriesIdBox.Text.Trim());
+            await LoadVideosAsync();
             SeriesStatusText.Text = "تمت إضافة الموسم بنجاح.";
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر إضافة الموسم: " + ex.Message; }
