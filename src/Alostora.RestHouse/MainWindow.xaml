@@ -37,7 +37,7 @@
 <StackPanel Grid.Column="0" Margin="0,0,6,8"><TextBox x:Name="SeasonTitleBox" Padding="8" Margin="0,0,0,5" ToolTip="اسم الموسم (اختياري)"/><DockPanel><Button DockPanel.Dock="Left" Content="مجلد الموسم" Click="ChooseSeasonFolder_Click" Padding="8,5" Margin="0,0,5,0"/><TextBox x:Name="SeasonFolderPathBox" Padding="7" FlowDirection="LeftToRight" ToolTip="مسار مجلد ملفات هذا الموسم"/></DockPanel></StackPanel>
 <TextBox x:Name="SeasonNumberBox" Grid.Column="1" Padding="8" Margin="0,0,0,8" Text="1" ToolTip="رقم الموسم"/>
 </Grid>
-<Button Content="إضافة الموسم" Click="AddSeason_Click" HorizontalAlignment="Right" Padding="12,8"/>
+<WrapPanel HorizontalAlignment="Right" Margin="0,0,0,6"><Button Content="إضافة الموسم" Click="AddSeason_Click" Padding="12,8" Margin="0,0,6,0"/><Button Content="حفظ مسار الموسم المحدد وفحص ملفاته" Click="SaveSeasonFolder_Click" Padding="12,8"/></WrapPanel>
 <DataGrid x:Name="SeasonsGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="SeasonsGrid_SelectionChanged" CanUserAddRows="False" Height="135" Margin="0,8,0,12">
 <DataGrid.Columns><DataGridTextColumn Header="رقم الموسم" Binding="{Binding SeasonNumber}" Width="95"/><DataGridTextColumn Header="اسم الموسم" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="المعرّف" Binding="{Binding SeasonId}" Width="75"/></DataGrid.Columns></DataGrid>
 <Separator/>
