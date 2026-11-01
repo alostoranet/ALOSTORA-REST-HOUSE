@@ -7,6 +7,7 @@ namespace Alostora.RestHouse;
 
 public sealed record LibraryVideo(string Id, string Title, string FileName, string Url, long SizeBytes);
 public sealed record ResolvedVideo(string FullPath, string ContentType);
+public sealed record SubtitleTrack(string FileName, string Label, string Language, string Url);
 
 public sealed class LibraryService : IDisposable
 {
@@ -103,6 +104,111 @@ public sealed class LibraryService : IDisposable
             return relative == "." || (!Path.IsPathRooted(relative) &&
                 relative != ".." && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal));
         }).ToArray();
+    }
+
+    public IReadOnlyList<SubtitleTrack> ListSubtitles(string videoId)
+    {
+        var video = Resolve(videoId);
+        if (video is null) return Array.Empty<SubtitleTrack>();
+        var directory = Path.GetDirectoryName(video.FullPath);
+        if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
+            return Array.Empty<SubtitleTrack>();
+
+        var stem = Path.GetFileNameWithoutExtension(video.FullPath);
+        var tracks = new List<SubtitleTrack>();
+        IEnumerable<string> candidates;
+        try { candidates = Directory.EnumerateFiles(directory, "*.*", SearchOption.TopDirectoryOnly).ToArray(); }
+        catch { return tracks; }
+
+        foreach (var path in candidates)
+        {
+            var extension = Path.GetExtension(path);
+            if (!extension.Equals(".srt", StringComparison.OrdinalIgnoreCase) &&
+                !extension.Equals(".vtt", StringComparison.OrdinalIgnoreCase))
+                continue;
+            var name = Path.GetFileNameWithoutExtension(path);
+            if (!name.Equals(stem, StringComparison.OrdinalIgnoreCase) &&
+                !name.StartsWith(stem + ".", StringComparison.OrdinalIgnoreCase))
+                continue;
+            try
+            {
+                if (new FileInfo(path).Length > 2 * 1024 * 1024) continue;
+                var suffix = name.Length == stem.Length ? "" : name[(stem.Length + 1)..];
+                var language = suffix.Split('.', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? "";
+                var label = LanguageLabel(language, suffix, extension);
+                tracks.Add(new SubtitleTrack(Path.GetFileName(path), label, language,
+                    "/api/subtitles/" + videoId + "/" + Uri.EscapeDataString(Path.GetFileName(path))));
+            }
+            catch { }
+        }
+        return tracks.OrderBy(x => x.Language == "ar" ? 0 : 1)
+            .ThenBy(x => x.Label, StringComparer.CurrentCultureIgnoreCase).ToArray();
+    }
+
+    public string? ReadSubtitle(string videoId, string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName) || fileName != Path.GetFileName(fileName))
+            return null;
+        var video = Resolve(videoId);
+        if (video is null) return null;
+        var directory = Path.GetDirectoryName(video.FullPath);
+        if (string.IsNullOrWhiteSpace(directory)) return null;
+        if (!ListSubtitles(videoId).Any(x => string.Equals(x.FileName, fileName, StringComparison.OrdinalIgnoreCase)))
+            return null;
+
+        var fullPath = Path.GetFullPath(Path.Combine(directory, fileName));
+        if (!string.Equals(Path.GetDirectoryName(fullPath), Path.GetFullPath(directory), StringComparison.OrdinalIgnoreCase))
+            return null;
+        var extension = Path.GetExtension(fullPath);
+        var info = new FileInfo(fullPath);
+        if (!info.Exists || info.Length > 2 * 1024 * 1024) return null;
+        var bytes = File.ReadAllBytes(fullPath);
+        var content = bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE
+            ? Encoding.Unicode.GetString(bytes)
+            : bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF
+                ? Encoding.BigEndianUnicode.GetString(bytes)
+                : new UTF8Encoding(false, false).GetString(bytes);
+        return extension.Equals(".srt", StringComparison.OrdinalIgnoreCase)
+            ? ConvertSrtToVtt(content)
+            : EnsureVttHeader(content);
+    }
+
+    private static string LanguageLabel(string language, string suffix, string extension)
+    {
+        var known = language.ToLowerInvariant() switch
+        {
+            "ar" or "ara" => "العربية",
+            "en" or "eng" => "English",
+            "fr" or "fra" => "Français",
+            "tr" or "tur" => "Türkçe",
+            "es" or "spa" => "Español",
+            "de" or "deu" => "Deutsch",
+            _ => ""
+        };
+        if (!string.IsNullOrEmpty(known)) return known;
+        return string.IsNullOrEmpty(suffix) ? "ترجمة" : suffix + " (" + extension.TrimStart('.').ToUpperInvariant() + ")";
+    }
+
+    private static string EnsureVttHeader(string text)
+    {
+        var clean = text.TrimStart('\uFEFF').Replace("\r\n", "\n").Replace('\r', '\n');
+        return clean.StartsWith("WEBVTT", StringComparison.Ordinal) ? clean : "WEBVTT\n\n" + clean;
+    }
+
+    private static string ConvertSrtToVtt(string text)
+    {
+        var clean = text.TrimStart('\uFEFF').Replace("\r\n", "\n").Replace('\r', '\n');
+        var lines = clean.Split('\n');
+        var output = new StringBuilder("WEBVTT\n\n");
+        foreach (var line in lines)
+        {
+            var trimmed = line.Trim();
+            if (trimmed.Contains("-->"))
+                output.AppendLine(trimmed.Replace(',', '.'));
+            else
+                output.AppendLine(line);
+        }
+        return output.ToString();
     }
 
     public ResolvedVideo? Resolve(string id)
