@@ -1,20 +1,33 @@
-name: Build Windows
+name: Build Windows application
+
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+      - name: Restore
+        run: dotnet restore src/Alostora.RestHouse/Alostora.RestHouse.csproj
+      - name: Build
+        run: dotnet build src/Alostora.RestHouse/Alostora.RestHouse.csproj --configuration Release --no-restore
       - name: Publish Windows x64
-        run: dotnet publish src/Alostora.RestHouse/Alostora.RestHouse.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
-      - uses: actions/upload-artifact@v4
+        run: dotnet publish src/Alostora.RestHouse/Alostora.RestHouse.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false --output ./publish/win-x64
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
         with:
           name: ALOSTORA-REST-HOUSE-Windows-x64
-          path: publish/**
+          path: ./publish/win-x64/**
           if-no-files-found: error
+          retention-days: 14
