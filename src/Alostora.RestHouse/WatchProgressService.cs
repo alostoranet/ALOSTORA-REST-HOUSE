@@ -50,6 +50,44 @@ public sealed class WatchProgressService
         return items;
     }
 
+    public void MoveVideoProgress(string oldVideoId, string newVideoId)
+    {
+        if (string.IsNullOrWhiteSpace(oldVideoId) || string.IsNullOrWhiteSpace(newVideoId) ||
+            oldVideoId.Length != 24 || newVideoId.Length != 24 ||
+            !oldVideoId.All(Uri.IsHexDigit) || !newVideoId.All(Uri.IsHexDigit) ||
+            string.Equals(oldVideoId, newVideoId, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        using (var copy = connection.CreateCommand())
+        {
+            copy.Transaction = transaction;
+            copy.CommandText = """
+                INSERT INTO WatchProgress(ViewerId,VideoId,PositionSeconds,DurationSeconds,UpdatedUtc)
+                SELECT ViewerId,$newVideo,PositionSeconds,DurationSeconds,UpdatedUtc
+                FROM WatchProgress WHERE VideoId=$oldVideo
+                ON CONFLICT(ViewerId,VideoId) DO UPDATE SET
+                    PositionSeconds=excluded.PositionSeconds,
+                    DurationSeconds=excluded.DurationSeconds,
+                    UpdatedUtc=excluded.UpdatedUtc
+                WHERE excluded.UpdatedUtc > WatchProgress.UpdatedUtc;
+                """;
+            copy.Parameters.AddWithValue("$newVideo", newVideoId);
+            copy.Parameters.AddWithValue("$oldVideo", oldVideoId);
+            copy.ExecuteNonQuery();
+        }
+        using (var delete = connection.CreateCommand())
+        {
+            delete.Transaction = transaction;
+            delete.CommandText = "DELETE FROM WatchProgress WHERE VideoId=$oldVideo";
+            delete.Parameters.AddWithValue("$oldVideo", oldVideoId);
+            delete.ExecuteNonQuery();
+        }
+        transaction.Commit();
+    }
+
     public void Save(WatchProgressRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.ViewerId) || request.ViewerId.Length > 80 ||
