@@ -963,6 +963,12 @@ public partial class MainWindow : Window
         if (SeasonTitleBox is not null) SeasonTitleBox.ToolTip = isParts ? "اسم الجزء (اختياري)" : "اسم الموسم (اختياري)";
         if (SeasonsGrid.Columns.Count >= 2) { SeasonsGrid.Columns[0].Header = isParts ? "رقم الجزء" : "رقم الموسم"; SeasonsGrid.Columns[1].Header = isParts ? "اسم الجزء" : "اسم الموسم"; }
         if (MissingEpisodesGrid.Columns.Count >= 2) MissingEpisodesGrid.Columns[1].Header = isParts ? "الجزء" : "الموسم";
+        SeasonFolderButton.Content = isParts ? "مجلد الجزء" : "مجلد الموسم";
+        SaveSeasonFolderButton.Content = isParts ? "حفظ مسار الجزء وفحص ملفاته" : "حفظ مسار الموسم المحدد وفحص ملفاته";
+        DeleteSeasonButton.Content = isParts ? "حذف الجزء المحدد" : "حذف الموسم المحدد";
+        EpisodesSectionTitle.Text = isParts ? "حلقات الجزء المحدد" : "حلقات الموسم المحدد";
+        PreviewSeasonFolderButton.Content = isParts ? "اكتشاف حلقات الجزء" : "اكتشاف حلقات الموسم";
+        AddEpisodeSectionTitle.Text = isParts ? "إضافة حلقة إلى الجزء المحدد" : "إضافة حلقة إلى الموسم المحدد";
         VideoPlacementStatusText.Text = isNone
             ? "هذا البرنامج لا يستخدم مواسم أو أجزاء؛ اربط الفيديوهات به مباشرة من بيانات الفيديو."
             : isParts ? "يمكنك إضافة أجزاء متعددة، ثم ربط كل فيديو بالجزء ورقم الحلقة المناسب." : "يمكنك إضافة مواسم متعددة، ثم ربط كل فيديو بالموسم ورقم الحلقة المناسب.";
@@ -1858,6 +1864,7 @@ public partial class MainWindow : Window
         public string CategoryTitle { get; set; } = "غير مصنف";
         public string PublishStatus { get; set; } = "";
         public string OrganizationType { get; set; } = "Seasons";
+        public string OrganizationTypeLabel => OrganizationType switch { "None" => "مباشر", "Parts" => "أجزاء", _ => "مواسم" };
     }
     private sealed class SeasonAdmin
     {
