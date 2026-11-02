@@ -19,7 +19,8 @@
 <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions><StackPanel Grid.Column="0" Margin="0,0,5,8"><TextBlock Text="التقييم من 10"/><TextBox x:Name="RatingBox" Padding="8" Margin="0,4,0,0"/></StackPanel><StackPanel Grid.Column="1" Margin="5,0,0,8"><TextBlock Text="المدة بالدقائق"/><TextBox x:Name="RuntimeBox" Padding="8" Margin="0,4,0,0"/></StackPanel></Grid>
 <TextBlock Text="تاريخ الإصدار (YYYY-MM-DD)"/><TextBox x:Name="ReleaseDateBox" Padding="8" Margin="0,4,0,10"/>
 <TextBlock Text="وسوم إضافية"/><TextBox x:Name="TagsBox" Padding="8" Margin="0,4,0,10"/>
-<TextBlock Text="قسم العرض للعميل (مثال: أفلام عربية، أكشن، أطفال)"/><TextBox x:Name="SectionBox" Padding="8" Margin="0,4,0,10" Text="عام"/>
+<TextBlock Text="قسم العرض النصي (اختياري)"/><TextBox x:Name="SectionBox" Padding="8" Margin="0,4,0,10" Text="عام"/>
+<TextBlock Text="التصنيف الفرعي الذي سيظهر فيه العمل"/><ComboBox x:Name="VideoCategoryPicker" DisplayMemberPath="DisplayTitle" SelectedValuePath="CategoryId" Padding="8" Margin="0,4,0,10"/>
 <CheckBox x:Name="PublishBox" Content="نشر هذا العمل في واجهة العميل" IsChecked="True" Margin="0,0,0,12" FontWeight="Bold" Foreground="#16834A"/>
 <TextBlock Text="نوع المحتوى"/><ComboBox x:Name="KindBox" Padding="7" Margin="0,4,0,10"><ComboBoxItem Content="فيلم" Tag="Movie" IsSelected="True"/><ComboBoxItem Content="مسلسل" Tag="Series"/></ComboBox>
 <TextBlock Text="معرّف الملف" Foreground="#64748B"/><TextBox x:Name="IdBox" IsReadOnly="True" Padding="8" Margin="0,4,0,14" FlowDirection="LeftToRight"/>
@@ -36,7 +37,8 @@
 <TextBlock Text="الوصف"/><TextBox x:Name="SeriesDescriptionBox" Padding="8" Margin="0,4,0,8" Height="65" AcceptsReturn="True" TextWrapping="Wrap"/>
 <TextBlock Text="السنة"/><TextBox x:Name="SeriesYearBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="التصنيف"/><TextBox x:Name="SeriesGenreBox" Padding="8" Margin="0,4,0,8"/>
-<TextBlock Text="قسم العرض للعميل"/><TextBox x:Name="SeriesSectionBox" Padding="8" Margin="0,4,0,8" Text="عام"/>
+<TextBlock Text="قسم العرض النصي (اختياري)"/><TextBox x:Name="SeriesSectionBox" Padding="8" Margin="0,4,0,8" Text="عام"/>
+<TextBlock Text="تصنيف المسلسل"/><ComboBox x:Name="SeriesCategoryPicker" DisplayMemberPath="DisplayTitle" SelectedValuePath="CategoryId" Padding="8" Margin="0,4,0,8"/>
 <CheckBox x:Name="SeriesPublishBox" Content="نشر المسلسل في واجهة العميل" IsChecked="True" Margin="0,0,0,10" FontWeight="Bold" Foreground="#16834A"/>
 <TextBlock Text="مجلد ملفات المسلسل (اختياري)"/><DockPanel Margin="0,4,0,8"><Button DockPanel.Dock="Left" Content="اختيار مجلد" Click="ChooseSeriesFolder_Click" Padding="10,6" Margin="6,0,0,0"/><TextBox x:Name="SeriesFolderPathBox" Padding="8" FlowDirection="LeftToRight"/></DockPanel>
 <TextBlock Text="مسار الغلاف (اختياري)"/><TextBox x:Name="SeriesPosterPathBox" Padding="8" Margin="0,4,0,8"/><Button Content="اختيار ورفع غلاف المسلسل" Click="UploadSeriesPoster_Click" Padding="10,8" HorizontalAlignment="Right" Margin="0,0,0,10"/>
@@ -65,6 +67,24 @@
 <DataGrid x:Name="MissingEpisodesGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single" Height="135" Margin="0,0,0,10">
 <DataGrid.Columns><DataGridTextColumn Header="المسلسل" Binding="{Binding SeriesTitle}" Width="*"/><DataGridTextColumn Header="الموسم" Binding="{Binding SeasonNumber}" Width="55"/><DataGridTextColumn Header="الحلقة" Binding="{Binding EpisodeNumber}" Width="55"/><DataGridTextColumn Header="اسم الحلقة" Binding="{Binding Title}" Width="*"/></DataGrid.Columns></DataGrid>
 <TextBlock x:Name="SeriesStatusText" Text="احفظ المسلسل أولاً، ثم أضف المواسم والحلقات." Foreground="#526174" TextWrapping="Wrap" Margin="0,12,0,0"/>
+</StackPanel></ScrollViewer></TabItem><TabItem Header="إدارة الأقسام">
+<ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
+<TextBlock Text="بناء أقسام المكتبة للعميل" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,8"/>
+<TextBlock Text="أنشئ قسماً رئيسياً أولاً، ثم أنشئ تحته أقساماً فرعية. لكل قسم غلاف مستقل، ولا يمكن نشر أي قسم قبل رفع غلافه." TextWrapping="Wrap" Foreground="#526174" Margin="0,0,0,12"/>
+<TextBlock Text="اسم القسم"/><TextBox x:Name="CategoryTitleBox" Padding="8" Margin="0,4,0,8"/>
+<TextBlock Text="القسم الرئيسي الأب (اتركه فارغاً لإنشاء قسم رئيسي)"/><ComboBox x:Name="CategoryParentPicker" DisplayMemberPath="Title" SelectedValuePath="CategoryId" Padding="8" Margin="0,4,0,8"/>
+<TextBlock Text="نوع القسم"/><ComboBox x:Name="CategoryKindPicker" Padding="8" Margin="0,4,0,8">
+<ComboBoxItem Content="قسم رئيسي" Tag="Group" IsSelected="True"/><ComboBoxItem Content="أفلام" Tag="Movie"/><ComboBoxItem Content="مسلسلات" Tag="Series"/><ComboBoxItem Content="محتوى آخر" Tag="Other"/>
+</ComboBox>
+<TextBlock Text="معرّف القسم (يُنشأ تلقائياً عند تركه فارغاً)"/><TextBox x:Name="CategoryIdBox" Padding="8" Margin="0,4,0,8"/>
+<TextBlock Text="مسار الغلاف"/><TextBox x:Name="CategoryPosterPathBox" Padding="8" Margin="0,4,0,8"/>
+<TextBlock x:Name="CategoryPosterStatusText" Text="الغلاف إلزامي للنشر." Foreground="#64748B" Margin="0,0,0,8"/>
+<WrapPanel Margin="0,0,0,10"><Button Content="حفظ القسم" Click="SaveCategory_Click" Padding="12,8" Background="#C93640" Foreground="White" Margin="0,0,6,0"/><Button Content="رفع غلاف القسم" Click="UploadCategoryPoster_Click" Padding="12,8" Margin="0,0,6,0"/><Button Content="حذف القسم المحدد" Click="DeleteCategory_Click" Padding="12,8" Background="#FCE8E8" Foreground="#9F2630"/></WrapPanel>
+<CheckBox x:Name="CategoryPublishBox" Content="نشر القسم للعميل (يتطلب غلافاً)" IsChecked="True" Margin="0,0,0,12"/>
+<DataGrid x:Name="CategoriesGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="CategoriesGrid_SelectionChanged" CanUserAddRows="False" Height="260">
+<DataGrid.Columns><DataGridTextColumn Header="القسم" Binding="{Binding DisplayTitle}" Width="*"/><DataGridTextColumn Header="النوع" Binding="{Binding ContentKindLabel}" Width="100"/><DataGridCheckBoxColumn Header="منشور" Binding="{Binding IsPublished}" Width="65"/><DataGridTextColumn Header="الغلاف" Binding="{Binding PosterPath}" Width="*"/></DataGrid.Columns>
+</DataGrid>
+<TextBlock x:Name="CategoryStatusText" Text="ابدأ بإنشاء قسم رئيسي ثم أضف الأقسام الفرعية." Foreground="#526174" TextWrapping="Wrap" Margin="0,10,0,0"/>
 </StackPanel></ScrollViewer></TabItem></TabControl></Border></Grid>
 <StackPanel Grid.Row="3"><TextBlock x:Name="AddressBox" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#142D4A"/><TextBlock x:Name="LibraryBox" FontSize="12" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4"/><TextBlock x:Name="CountText" FontSize="13" Foreground="#16834A" HorizontalAlignment="Center" Margin="0,4"/><TextBlock Text="المشاهدة متاحة للأجهزة المتصلة بالشبكة المحلية فقط." Foreground="#64748B" HorizontalAlignment="Center" Margin="0,6"/></StackPanel>
 </Grid></Window>
