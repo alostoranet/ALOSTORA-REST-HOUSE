@@ -69,3 +69,13 @@ if ($metadata -notmatch 'r\.IsDBNull\(13\)\s*\?\s*null\s*:\s*r\.GetString\(13\),
     throw "VideoMetadataService.Read ordinal mapping changed; review the List projection."
 }
 Write-Host "PASS: metadata List query includes CategoryId and matches the reader column layout."
+
+# Protect category references so deletion cannot orphan published library items.
+$categoryServicePath = Join-Path $root "src/Alostora.RestHouse/CatalogCategoryService.cs"
+$categoryService = Get-Content $categoryServicePath -Raw
+if ($categoryService -notmatch 'ParentId=\$id AND IsPublished=1' -or
+    $categoryService -notmatch 'FROM VideoMetadata\s+WHERE CategoryId IN' -or
+    $categoryService -notmatch 'FROM SeriesCatalog\s+WHERE CategoryId IN') {
+    throw "Catalog category integrity checks are missing."
+}
+Write-Host "PASS: category publication and linked-content integrity checks are present."
