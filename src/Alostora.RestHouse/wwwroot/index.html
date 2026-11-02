@@ -103,7 +103,7 @@ function render(){
    if(rows.length)section.append(grid);else{const empty=document.createElement('p');empty.className='empty';empty.textContent='سيتم عرض المحتوى هنا عند إضافته ونشره من برنامج الإدارة.';section.append(empty);}
    mainWrap.append(section);
   }
-  if(mainWrap.children.length>1)box.append(mainWrap);
+  if(mainWrap.children.length===1){const empty=document.createElement('p');empty.className='empty';empty.textContent='لم تتم إضافة أقسام فرعية هنا بعد. يمكنك إضافتها من برنامج الإدارة.';mainWrap.append(empty);}box.append(mainWrap);
  }
  const count=visibleMovies.filter(x=>visibleCategoryIds.has(x.categoryId)).length+visibleSeries.filter(x=>visibleCategoryIds.has(x.categoryId)).length;
  msg.textContent=count?'عدد الأعمال المنشورة: '+count:(categories.length?'لا توجد أعمال منشورة في القسم المحدد حالياً.':'لا توجد أقسام منشورة بعد. ستظهر المكتبة هنا بعد إنشاء الأقسام ورفع أغلفتها ونشرها من برنامج الإدارة.');
