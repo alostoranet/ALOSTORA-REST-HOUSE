@@ -145,7 +145,7 @@ public partial class App : Application
        posterPath="/posters/"+string.Join("/",relative.Split('/').Select(Uri.EscapeDataString));
       }
      }
-     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags,section=m?.Section??"عام",isPublished=m?.IsPublished??false};
+     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags,categoryId=m?.CategoryId,section=m?.Section??"عام",isPublished=m?.IsPublished??false};
     });
     return Results.Ok(result);
    });
@@ -290,7 +290,7 @@ public partial class App : Application
     var fullPath=Path.Combine(posters,fileName);
     await File.WriteAllBytesAsync(fullPath,bytes);
     var old=meta.Get(videoId);
-    meta.Save(new SaveVideoMetadataRequest(videoId,old?.Title??(librarySvc.List().First(x=>x.Id==videoId).Title),old?.Description??"",old?.Year,old?.Genre??"",old?.Kind??"Movie","/posters/"+fileName,old?.Director,old?.Cast,old?.Rating,old?.RuntimeMinutes,old?.ReleaseDate,old?.Tags,old?.Section??"عام",old?.IsPublished??false));
+    meta.Save(new SaveVideoMetadataRequest(videoId,old?.Title??(librarySvc.List().First(x=>x.Id==videoId).Title),old?.Description??"",old?.Year,old?.Genre??"",old?.Kind??"Movie","/posters/"+fileName,old?.Director,old?.Cast,old?.Rating,old?.RuntimeMinutes,old?.ReleaseDate,old?.Tags,old?.CategoryId,old?.Section??"عام",old?.IsPublished??false));
     return Results.Ok(new{posterPath="/posters/"+fileName});
    });
    _server.MapPost("/api/admin/series-poster/{seriesId}",async (HttpContext c,string seriesId,SeriesCatalogService series)=>{
@@ -314,7 +314,7 @@ public partial class App : Application
     var fileName="series-"+Guid.NewGuid().ToString("N")+ext;
     var fullPath=Path.Combine(posters,fileName);
     await File.WriteAllBytesAsync(fullPath,bytes);
-    try { series.SaveSeries(new SaveSeriesRequest(old.SeriesId,old.Title,old.Description,old.Year,old.Genre,"/posters/"+fileName,old.FolderPath,old.Section,old.IsPublished)); }
+    try { series.SaveSeries(new SaveSeriesRequest(old.SeriesId,old.Title,old.Description,old.Year,old.Genre,"/posters/"+fileName,old.FolderPath,old.CategoryId,old.Section,old.IsPublished)); }
     catch { File.Delete(fullPath); throw; }
     return Results.Ok(new{posterPath="/posters/"+fileName});
    });
