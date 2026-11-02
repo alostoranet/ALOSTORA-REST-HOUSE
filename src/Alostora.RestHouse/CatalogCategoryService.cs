@@ -47,7 +47,19 @@ public sealed class CatalogCategoryService
         if(x.ContentKind is not ("Group" or "Movie" or "Series" or "Other"))throw new ArgumentException("نوع القسم غير صالح");
         if(x.ContentKind=="Group"&&x.ParentId is not null)throw new ArgumentException("القسم الرئيسي لا يمكن أن يكون تابعاً لقسم آخر");
         if(x.ContentKind!="Group"&&string.IsNullOrWhiteSpace(x.ParentId))throw new ArgumentException("اختر القسم الرئيسي أولاً");
-        using var c=Open();using var cmd=c.CreateCommand();
+        using var c=Open();
+        using var transaction=c.BeginTransaction();
+        if(x.ParentId is null && x.ContentKind=="Group" && !x.IsPublished && !string.IsNullOrWhiteSpace(x.CategoryId))
+        {
+            using var publishedChildren=c.CreateCommand();
+            publishedChildren.Transaction=transaction;
+            publishedChildren.CommandText="SELECT COUNT(*) FROM CatalogCategories WHERE ParentId=$id AND IsPublished=1";
+            publishedChildren.Parameters.AddWithValue("$id",x.CategoryId.Trim());
+            if(Convert.ToInt32(publishedChildren.ExecuteScalar())>0)
+                throw new InvalidOperationException("لا يمكن إلغاء نشر القسم الرئيسي قبل إلغاء نشر أقسامه الفرعية.");
+        }
+        using var cmd=c.CreateCommand();
+        cmd.Transaction=transaction;
         var id=string.IsNullOrWhiteSpace(x.CategoryId)?Guid.NewGuid().ToString("N"):x.CategoryId.Trim();
         cmd.CommandText="""
         INSERT INTO CatalogCategories(CategoryId,ParentId,Title,ContentKind,PosterPath,IsPublished,CreatedUtc)
@@ -58,7 +70,7 @@ public sealed class CatalogCategoryService
         cmd.Parameters.AddWithValue("$id",id);cmd.Parameters.AddWithValue("$parent",(object?)x.ParentId??DBNull.Value);
         cmd.Parameters.AddWithValue("$title",x.Title.Trim());cmd.Parameters.AddWithValue("$kind",x.ContentKind);
         cmd.Parameters.AddWithValue("$poster",(object?)x.PosterPath??DBNull.Value);cmd.Parameters.AddWithValue("$published",x.IsPublished?1:0);
-        cmd.Parameters.AddWithValue("$created",DateTime.UtcNow.ToString("O"));cmd.ExecuteNonQuery();
+        cmd.Parameters.AddWithValue("$created",DateTime.UtcNow.ToString("O"));cmd.ExecuteNonQuery();transaction.Commit();
     }
     public void SetPoster(string id,string path)
     {
@@ -67,7 +79,28 @@ public sealed class CatalogCategoryService
     }
     public void Delete(string id)
     {
-        using var c=Open();using var cmd=c.CreateCommand();cmd.CommandText="DELETE FROM CatalogCategories WHERE CategoryId=$id";cmd.Parameters.AddWithValue("$id",id);
+        using var c=Open();
+        using var transaction=c.BeginTransaction();
+        using (var check=c.CreateCommand())
+        {
+            check.Transaction=transaction;
+            check.CommandText="""
+            SELECT
+              EXISTS(SELECT 1 FROM VideoMetadata
+                     WHERE CategoryId IN (SELECT CategoryId FROM CatalogCategories WHERE CategoryId=$id OR ParentId=$id))
+              OR
+              EXISTS(SELECT 1 FROM SeriesCatalog
+                     WHERE CategoryId IN (SELECT CategoryId FROM CatalogCategories WHERE CategoryId=$id OR ParentId=$id))
+            """;
+            check.Parameters.AddWithValue("$id",id);
+            if(Convert.ToInt32(check.ExecuteScalar())!=0)
+                throw new InvalidOperationException("لا يمكن حذف القسم لأنه مرتبط بأفلام أو مسلسلات. انقل الأعمال إلى تصنيف آخر أولاً.");
+        }
+        using var cmd=c.CreateCommand();
+        cmd.Transaction=transaction;
+        cmd.CommandText="DELETE FROM CatalogCategories WHERE CategoryId=$id";
+        cmd.Parameters.AddWithValue("$id",id);
         if(cmd.ExecuteNonQuery()==0)throw new KeyNotFoundException("القسم غير موجود");
+        transaction.Commit();
     }
 }

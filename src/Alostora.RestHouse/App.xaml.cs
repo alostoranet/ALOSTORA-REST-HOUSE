@@ -95,10 +95,10 @@ public partial class App : Application
     if(request.IsPublished&&!PosterExists(request.PosterPath,posters))return Results.BadRequest(new{error="لا يمكن نشر القسم قبل رفع غلاف صالح موجود فعلياً"});
     if(request.ParentId is not null){var parent=categories.Get(request.ParentId);if(parent is null||parent.ParentId is not null||parent.ContentKind!="Group")return Results.BadRequest(new{error="اختر قسماً رئيسياً صحيحاً"});
      if(request.IsPublished&&!parent.IsPublished)return Results.BadRequest(new{error="يجب نشر القسم الرئيسي أولاً قبل نشر القسم الفرعي"});}
-    try{categories.Save(request);return Results.Ok(new{saved=true});}catch(Exception ex) when(ex is ArgumentException or Microsoft.Data.Sqlite.SqliteException){return Results.BadRequest(new{error=ex.Message});}
+    try{categories.Save(request);return Results.Ok(new{saved=true});}catch(Exception ex) when(ex is ArgumentException or InvalidOperationException or Microsoft.Data.Sqlite.SqliteException){return Results.BadRequest(new{error=ex.Message});}
    });
    _server.MapDelete("/api/admin/catalog-categories/{id}",(HttpContext c,string id,CatalogCategoryService categories)=>{
-    if(!IsLocal(c))return Results.NotFound();try{categories.Delete(id);return Results.Ok(new{deleted=true});}catch(KeyNotFoundException ex){return Results.NotFound(new{error=ex.Message});}
+    if(!IsLocal(c))return Results.NotFound();try{categories.Delete(id);return Results.Ok(new{deleted=true});}catch(KeyNotFoundException ex){return Results.NotFound(new{error=ex.Message});}catch(InvalidOperationException ex){return Results.Conflict(new{error=ex.Message});}
    });
    _server.MapPost("/api/admin/catalog-categories/{id}/poster",async (HttpContext c,string id,CatalogCategoryService categories)=>{
     if(!IsLocal(c))return Results.NotFound();if(categories.Get(id) is null)return Results.NotFound(new{error="القسم غير موجود"});
