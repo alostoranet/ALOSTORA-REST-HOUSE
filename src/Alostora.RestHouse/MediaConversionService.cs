@@ -25,6 +25,7 @@ public sealed class MediaConversionService
         public string State = "queued";
         public string Message = "بانتظار التحويل...";
         public string? Error;
+        public string VideoId = "";
     }
 
     private readonly LibraryService _library;
@@ -219,11 +220,21 @@ public sealed class MediaConversionService
         var keySource = string.Join("|", videoId, info.Length, info.LastWriteTimeUtc.Ticks,
             selectedAudio?.Index.ToString() ?? "no-audio", probe.VideoCodec ?? "unknown");
         var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(keySource))).ToLowerInvariant()[..24];
+        var sourceMarker = Path.Combine(_cacheDirectory, key + ".source");
+        try
+        {
+            File.WriteAllText(sourceMarker, videoId);
+        }
+        catch (Exception ex)
+        {
+            return new ConversionJobStatus("", "failed", "تعذر حفظ مرجع ملف الفيديو للتحقق من صلاحية النشر: " + ex.Message, null);
+        }
+
         var output = Path.Combine(_cacheDirectory, key + ".mp4");
         if (File.Exists(output) && new FileInfo(output).Length > 0)
             return new ConversionJobStatus(key, "ready", "الملف المحوّل جاهز.", "/stream-cache/" + key + ".mp4");
 
-        var job = _jobs.GetOrAdd(key, _ => new Job());
+        var job = _jobs.GetOrAdd(key, _ => new Job { VideoId = videoId });
         var shouldStart = false;
         lock (job)
         {
@@ -240,6 +251,27 @@ public sealed class MediaConversionService
 
         return new ConversionJobStatus(key, job.State, job.Message, null);
     }
+
+    public string? GetSourceVideoId(string jobId)
+    {
+        if (!IsValidId(jobId)) return null;
+        if (_jobs.TryGetValue(jobId, out var job) && IsValidId(job.VideoId))
+            return job.VideoId;
+
+        try
+        {
+            var marker = Path.Combine(_cacheDirectory, jobId.ToLowerInvariant() + ".source");
+            var videoId = File.ReadAllText(marker).Trim();
+            return IsValidId(videoId) ? videoId : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool IsValidId(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && value.Length == 24 && value.All(Uri.IsHexDigit);
 
     public ConversionJobStatus GetJob(string jobId)
     {
@@ -379,7 +411,11 @@ public sealed class MediaConversionService
         {
             foreach (var file in Directory.EnumerateFiles(_cacheDirectory, "*.mp4"))
                 if (File.GetLastWriteTimeUtc(file) < DateTime.UtcNow.AddDays(-5))
+                {
                     File.Delete(file);
+                    var sourceMarker = Path.ChangeExtension(file, ".source");
+                    if (File.Exists(sourceMarker)) File.Delete(sourceMarker);
+                }
             foreach (var file in Directory.EnumerateFiles(_cacheDirectory, "*.partial"))
                 if (File.GetLastWriteTimeUtc(file) < DateTime.UtcNow.AddHours(-12))
                     File.Delete(file);
@@ -393,6 +429,8 @@ public sealed class MediaConversionService
                 if (total <= maximumCacheBytes) break;
                 var length = file.Length;
                 file.Delete();
+                var sourceMarker = Path.ChangeExtension(file.FullName, ".source");
+                if (File.Exists(sourceMarker)) File.Delete(sourceMarker);
                 total -= length;
             }
         }
