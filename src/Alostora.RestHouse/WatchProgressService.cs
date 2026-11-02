@@ -34,6 +34,18 @@ public sealed class WatchProgressService
         command.ExecuteNonQuery();
     }
 
+    public IReadOnlyDictionary<string, int> GetViewCounts()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT VideoId, COUNT(DISTINCT ViewerId) FROM WatchProgress GROUP BY VideoId";
+        using var reader = command.ExecuteReader();
+        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        while (reader.Read()) counts[reader.GetString(0)] = reader.GetInt32(1);
+        return counts;
+    }
+
     public IReadOnlyList<WatchProgressItem> Get(string viewerId)
     {
         if (string.IsNullOrWhiteSpace(viewerId)) return [];
