@@ -232,3 +232,23 @@ if ($app -notmatch 'viewCount=viewCounts' -or $html -notmatch 'المشاهدا�
 }
 if ($html -notmatch 'تصميم وبرمجة: محمد النظاري') { throw "Developer attribution footer is missing." }
 Write-Host "PASS: hierarchical categories, logo reports, reopenable messages, view counts, and developer attribution are wired."
+
+
+# Series organization must support direct videos, seasons, and parts with inherited category placement.
+if ($xaml -notmatch 'SeriesStructureBox' -or
+    $xaml -notmatch 'VideoSeriesPicker' -or
+    $xaml -notmatch 'VideoSeasonPicker' -or
+    $code -notmatch 'organizationType\s*=' -or
+    $code -notmatch 'seriesId\s*=\s*\(VideoSeriesPicker\.SelectedValue as string\)' -or
+    $series -notmatch 'OrganizationType' -or
+    $series -notmatch 'SeriesDirectVideos' -or
+    $series -notmatch 'SetVideoPlacement\(' -or
+    $html -notmatch 'فيديوهات مرتبطة مباشرة بالمسلسل' -or
+    $html -notmatch "organizationType==='Parts'" -or
+    $publicAccess -notmatch 'SeriesDirectVideos') {
+    throw "Series organization and video-to-series/season/part placement are incomplete."
+}
+foreach ($testName in @("SeriesCanUsePartsAndStoreVideosDirectlyUnderTheSeries", "VideoCanMoveBetweenDirectSeriesPlacementAndPartWithoutDeletingTheFile")) {
+    if (-not $seriesTests.Contains($testName)) { throw ("Missing series placement regression test: " + $testName) }
+}
+Write-Host "PASS: standalone series, seasons, parts, direct video links, and category inheritance are wired and regression-tested."
