@@ -1154,7 +1154,7 @@ public partial class MainWindow : Window
                 "/api/admin/seasons/" + season.SeasonId + "/link-detected", payload);
             if (!response.IsSuccessStatusCode)
             {
-                SeriesStatusText.Text = "تعذر اعتماد ربط الحلقات المحددة.";
+                SeriesStatusText.Text = "تعذر اعتماد ربط الحلقات المحددة: " + await response.Content.ReadAsStringAsync();
                 return;
             }
             var result = await response.Content.ReadFromJsonAsync<LinkDetectedResult>();
@@ -1186,7 +1186,14 @@ public partial class MainWindow : Window
         try
         {
             var response = await _http.PostAsJsonAsync("/api/admin/episodes", new { seasonId = season.SeasonId, videoId = video.Id, episodeNumber = number, title = EpisodeTitleBox.Text });
-            if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "لم تتم إضافة الحلقة. قد يكون الملف مرتبطاً بحلقة أخرى أو الرقم مكرراً."; return; }
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = await response.Content.ReadAsStringAsync();
+                SeriesStatusText.Text = response.StatusCode == System.Net.HttpStatusCode.Conflict
+                    ? "لم تتم إضافة الحلقة: الملف مربوط مسبقاً أو رقم الحلقة مكرر في هذا الموسم."
+                    : "تعذر إضافة الحلقة: " + detail;
+                return;
+            }
             EpisodeTitleBox.Clear(); EpisodeNumberBox.Text = (number + 1).ToString();
             var rows = await _http.GetFromJsonAsync<EpisodeCandidate[]>(
                 "/api/admin/seasons/" + season.SeasonId + "/preview") ?? Array.Empty<EpisodeCandidate>();
@@ -1255,7 +1262,7 @@ public partial class MainWindow : Window
                 new { videoId = video.Id });
             if (!response.IsSuccessStatusCode)
             {
-                SeriesStatusText.Text = "تعذرت إعادة الربط. قد يكون الملف مستخدماً في حلقة أخرى.";
+                SeriesStatusText.Text = "تعذرت إعادة الربط: " + await response.Content.ReadAsStringAsync();
                 return;
             }
             await LoadMissingEpisodesAsync();
