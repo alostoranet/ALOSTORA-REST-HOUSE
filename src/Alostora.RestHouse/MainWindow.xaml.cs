@@ -473,7 +473,7 @@ public partial class MainWindow : Window
         CategoryKindPicker.SelectedItem = CategoryKindPicker.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == row.ContentKind);
         CategoryPosterPathBox.Text = row.PosterPath ?? "";
         CategoryPublishBox.IsChecked = row.IsPublished;
-        CategoryPosterStatusText.Text = string.IsNullOrWhiteSpace(row.PosterPath) ? "لا يوجد غلاف. ارفع الغلاف قبل النشر." : "تم حفظ غلاف هذا القسم.";
+        CategoryPosterStatusText.Text = string.IsNullOrWhiteSpace(row.PosterPath) ? "لا يوجد غلاف. يمكنك نشر القسم بدونه أو رفع غلاف اختياري." : "تم حفظ غلاف هذا القسم.";
     }
 
     private async void SaveCategory_Click(object sender, RoutedEventArgs e)
@@ -494,6 +494,17 @@ public partial class MainWindow : Window
             CategoriesGrid.SelectedItem = (CategoriesGrid.ItemsSource as CategoryAdmin[])?.FirstOrDefault(x => x.CategoryId == id);
         }
         catch (Exception ex) { CategoryStatusText.Text = "تعذر حفظ القسم: " + ex.Message; }
+    }
+
+    private void PublishCategory_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(CategoryIdBox.Text))
+        {
+            CategoryStatusText.Text = "اختر القسم الذي تريد نشره أولاً.";
+            return;
+        }
+        CategoryPublishBox.IsChecked = true;
+        SaveCategory_Click(sender, e);
     }
 
     private async void UploadCategoryPoster_Click(object sender, RoutedEventArgs e)
