@@ -9,6 +9,7 @@ using System.Windows;
 
 namespace Alostora.RestHouse;
 
+public sealed record BulkLibraryRequest(List<string> Ids);
 public sealed record UpdateSeasonFolderRequest(string? FolderPath);
 public sealed record ScanFolderRequest(string FolderPath);
 public sealed record RegisterSelectedFilesRequest(string FolderPath, List<string> FilePaths);
@@ -39,6 +40,7 @@ public partial class App : Application
    builder.Services.AddSingleton(new WatchProgressService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new VideoMetadataService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new SeriesCatalogService(Path.Combine(root,"resthouse.db")));
+   builder.Services.AddSingleton(new CatalogCategoryService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddHostedService(provider => new ScheduledBackupService(root,posters,provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ScheduledBackupService>>()));
    _server=builder.Build();
    static bool IsLanAddress(IPAddress? address)
@@ -71,7 +73,44 @@ public partial class App : Application
     if(address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
     return IPAddress.IsLoopback(address);
    }
+   static bool PosterExists(string? posterPath,string postersRoot)
+   {
+    if(string.IsNullOrWhiteSpace(posterPath)||!posterPath.StartsWith("/posters/",StringComparison.OrdinalIgnoreCase))return false;
+    try
+    {
+     var relative=Uri.UnescapeDataString(posterPath["/posters/".Length..]).Replace('/',Path.DirectorySeparatorChar);
+     var rootPath=Path.GetFullPath(postersRoot).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar)+Path.DirectorySeparatorChar;
+     var fullPath=Path.GetFullPath(Path.Combine(rootPath,relative));
+     return fullPath.StartsWith(rootPath,StringComparison.OrdinalIgnoreCase)&&File.Exists(fullPath);
+    }
+    catch{return false;}
+   }
    _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
+   _server.MapGet("/api/catalog-categories",(CatalogCategoryService categories)=>Results.Ok(categories.List(publishedOnly:true)));
+   _server.MapGet("/api/admin/catalog-categories",(HttpContext c,CatalogCategoryService categories)=>IsLocal(c)?Results.Ok(categories.List()):Results.NotFound());
+   _server.MapPost("/api/admin/catalog-categories",(HttpContext c,SaveCatalogCategoryRequest request,CatalogCategoryService categories)=>{
+    if(!IsLocal(c))return Results.NotFound();
+    if(string.IsNullOrWhiteSpace(request.Title)||(request.Title?.Length??0)>100||(request.PosterPath?.Length??0)>240)return Results.BadRequest(new{error="اسم القسم أو الغلاف غير صالح"});
+    if(request.IsPublished&&!PosterExists(request.PosterPath,posters))return Results.BadRequest(new{error="لا يمكن نشر القسم قبل رفع غلاف صالح موجود فعلياً"});
+    if(request.ParentId is not null){var parent=categories.Get(request.ParentId);if(parent is null||parent.ParentId is not null||parent.ContentKind!="Group")return Results.BadRequest(new{error="اختر قسماً رئيسياً صحيحاً"});
+     if(request.IsPublished&&!parent.IsPublished)return Results.BadRequest(new{error="يجب نشر القسم الرئيسي أولاً قبل نشر القسم الفرعي"});}
+    try{categories.Save(request);return Results.Ok(new{saved=true});}catch(Exception ex) when(ex is ArgumentException or Microsoft.Data.Sqlite.SqliteException){return Results.BadRequest(new{error=ex.Message});}
+   });
+   _server.MapDelete("/api/admin/catalog-categories/{id}",(HttpContext c,string id,CatalogCategoryService categories)=>{
+    if(!IsLocal(c))return Results.NotFound();try{categories.Delete(id);return Results.Ok(new{deleted=true});}catch(KeyNotFoundException ex){return Results.NotFound(new{error=ex.Message});}
+   });
+   _server.MapPost("/api/admin/catalog-categories/{id}/poster",async (HttpContext c,string id,CatalogCategoryService categories)=>{
+    if(!IsLocal(c))return Results.NotFound();if(categories.Get(id) is null)return Results.NotFound(new{error="القسم غير موجود"});
+    if(c.Request.ContentLength is > 5_242_880)return Results.StatusCode(413);
+    var type=c.Request.ContentType?.Split(';')[0].Trim().ToLowerInvariant();var ext=type switch{"image/jpeg"=>".jpg","image/png"=>".png","image/webp"=>".webp",_=>null};
+    if(ext is null)return Results.BadRequest(new{error="الصيغ المسموحة JPG وPNG وWEBP"});
+    await using var ms=new MemoryStream();await c.Request.Body.CopyToAsync(ms);var bytes=ms.ToArray();
+    var valid=type switch{"image/jpeg"=>bytes.Length>=3&&bytes[0]==255&&bytes[1]==216&&bytes[2]==255,"image/png"=>bytes.Length>=8&&bytes.Take(8).SequenceEqual(new byte[]{137,80,78,71,13,10,26,10}),"image/webp"=>bytes.Length>=12&&System.Text.Encoding.ASCII.GetString(bytes,0,4)=="RIFF"&&System.Text.Encoding.ASCII.GetString(bytes,8,4)=="WEBP",_=>false};
+    if(!valid||bytes.Length==0||bytes.Length>5_242_880)return Results.BadRequest(new{error="الصورة غير صالحة أو تجاوزت 5 ميجابايت"});
+    var fileName="category-"+id+"-"+Guid.NewGuid().ToString("N")+ext;await File.WriteAllBytesAsync(Path.Combine(posters,fileName),bytes);
+    var path="/posters/"+fileName;categories.SetPoster(id,path);return Results.Ok(new{posterPath=path});
+   });
+
    _server.MapGet("/api/media-tools",(HttpContext c,MediaConversionService media)=>IsLocal(c)?Results.Ok(media.GetToolStatus()):Results.NotFound());
    _server.MapGet("/api/playback/{id}/tracks",async (string id,MediaConversionService media)=>Results.Ok(await media.ProbeAsync(id)));
    _server.MapPost("/api/playback/{id}/prepare",async (string id,PreparePlaybackRequest request,MediaConversionService media)=>
@@ -109,6 +148,8 @@ public partial class App : Application
     var result=svc.List().Select(v=>
     {
      metadataById.TryGetValue(v.Id,out var m);
+     var resolvedVideo=svc.Resolve(v.Id);
+     var addedUtc=resolvedVideo is null?null:File.GetCreationTimeUtc(resolvedVideo.FullPath).ToString("O");
      var posterPath=m?.PosterPath;
      if(string.IsNullOrWhiteSpace(posterPath))
      {
@@ -119,7 +160,7 @@ public partial class App : Application
        posterPath="/posters/"+string.Join("/",relative.Split('/').Select(Uri.EscapeDataString));
       }
      }
-     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags};
+     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,addedUtc,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags,categoryId=m?.CategoryId,section=m?.Section??"عام",isPublished=m?.IsPublished??false};
     });
     return Results.Ok(result);
    });
@@ -147,9 +188,18 @@ public partial class App : Application
     try { series.DeleteSeason(seasonId); return Results.Ok(new{deleted=true,message="تم حذف الموسم وروابط حلقاته دون حذف ملفات الفيديو"}); }
     catch(KeyNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
    });
-   _server.MapPost("/api/admin/series",(HttpContext c,SaveSeriesRequest request,SeriesCatalogService series,LibraryService files)=>{
+   _server.MapPost("/api/admin/series",(HttpContext c,SaveSeriesRequest request,SeriesCatalogService series,LibraryService files,CatalogCategoryService categories)=>{
     if(!IsLocal(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeriesId.Length>80||string.IsNullOrWhiteSpace(request.Title)||request.Title.Length>160||(request.Description?.Length??0)>2000||(request.Genre?.Length??0)>80||(request.Year is not null&&(request.Year<1888||request.Year>DateTime.UtcNow.Year+5))||(request.PosterPath?.Length??0)>200||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="تحقق من بيانات المسلسل"});
+    if(request.IsPublished)
+    {
+     var previous=series.GetSeries(request.SeriesId);
+     var poster=request.PosterPath??previous?.PosterPath;
+     var category=string.IsNullOrWhiteSpace(request.CategoryId)?null:categories.Get(request.CategoryId);
+     var parent=category?.ParentId is null?null:categories.Get(category.ParentId);
+     if(!PosterExists(poster,posters))return Results.BadRequest(new{error="غلاف المسلسل إلزامي ويجب أن يكون ملف الصورة موجوداً فعلياً"});
+     if(category is null||category.ContentKind!="Series"||!category.IsPublished||parent is null||!parent.IsPublished)return Results.BadRequest(new{error="اختر تصنيف مسلسلات منشوراً تابعاً لقسم رئيسي منشور"});
+    }
     series.SaveSeries(request); if(!string.IsNullOrWhiteSpace(request.FolderPath)) files.RegisterFolder(request.FolderPath); return Results.Ok(new{saved=true});
    });
    _server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalogService series,LibraryService files)=>{ if(!IsLocal(c)) return Results.NotFound(); var rows=series.ListSeasons(seriesId); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.RegisterFolder(row.FolderPath); return Results.Ok(rows); });
@@ -236,10 +286,20 @@ public partial class App : Application
     catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="هذا الملف مربوط بحلقة أخرى بالفعل"}); }
    });
    _server.MapGet("/api/admin/metadata",(HttpContext c,VideoMetadataService meta)=>IsLocal(c)?Results.Ok(meta.List()):Results.NotFound());
-   _server.MapPost("/api/admin/metadata",(HttpContext c,SaveVideoMetadataRequest request,LibraryService librarySvc,VideoMetadataService meta)=>{
+   _server.MapPost("/api/admin/metadata",(HttpContext c,SaveVideoMetadataRequest request,LibraryService librarySvc,VideoMetadataService meta,CatalogCategoryService categories)=>{
     if(!IsLocal(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.VideoId)||request.VideoId.Length!=24||!request.VideoId.All(Uri.IsHexDigit)||librarySvc.Resolve(request.VideoId) is null) return Results.BadRequest(new{error="الفيديو غير موجود"});
     if(string.IsNullOrWhiteSpace(request.Title)||request.Title.Length>160||(request.Description?.Length??0)>2000||(request.Genre?.Length??0)>80||(request.Year is not null&&(request.Year<1888||request.Year>DateTime.UtcNow.Year+5))||(request.PosterPath?.Length??0)>200||(request.Director?.Length??0)>160||(request.Cast?.Length??0)>1000||(request.Tags?.Length??0)>500||(request.Rating is <0 or >10)||(request.RuntimeMinutes is <1 or >1000)||(request.ReleaseDate?.Length??0)>10) return Results.BadRequest(new{error="تحقق من البيانات المدخلة"});
+    if(request.IsPublished)
+    {
+     var previous=meta.Get(request.VideoId);
+     var poster=request.PosterPath??previous?.PosterPath;
+     var category=string.IsNullOrWhiteSpace(request.CategoryId)?null:categories.Get(request.CategoryId);
+     var parent=category?.ParentId is null?null:categories.Get(category.ParentId);
+     var expectedKind=request.Kind=="Series"?"Series":"Movie";
+     if(!PosterExists(poster,posters))return Results.BadRequest(new{error="غلاف الفيديو إلزامي ويجب أن يكون ملف الصورة موجوداً فعلياً"});
+     if(category is null||(category.ContentKind!=expectedKind&&category.ContentKind!="Other")||!category.IsPublished||parent is null||!parent.IsPublished)return Results.BadRequest(new{error="اختر تصنيفاً فرعياً منشوراً من قسم رئيسي منشور"});
+    }
     meta.Save(request); return Results.Ok(new{saved=true});
    });
    _server.MapPost("/api/admin/poster/{videoId}",async (HttpContext c,string videoId,LibraryService librarySvc,VideoMetadataService meta)=>{
@@ -264,7 +324,7 @@ public partial class App : Application
     var fullPath=Path.Combine(posters,fileName);
     await File.WriteAllBytesAsync(fullPath,bytes);
     var old=meta.Get(videoId);
-    meta.Save(new SaveVideoMetadataRequest(videoId,old?.Title??(librarySvc.List().First(x=>x.Id==videoId).Title),old?.Description??"",old?.Year,old?.Genre??"",old?.Kind??"Movie","/posters/"+fileName,old?.Director,old?.Cast,old?.Rating,old?.RuntimeMinutes,old?.ReleaseDate,old?.Tags));
+    meta.Save(new SaveVideoMetadataRequest(videoId,old?.Title??(librarySvc.List().First(x=>x.Id==videoId).Title),old?.Description??"",old?.Year,old?.Genre??"",old?.Kind??"Movie","/posters/"+fileName,old?.Director,old?.Cast,old?.Rating,old?.RuntimeMinutes,old?.ReleaseDate,old?.Tags,old?.Section??"عام",old?.IsPublished??false,old?.CategoryId));
     return Results.Ok(new{posterPath="/posters/"+fileName});
    });
    _server.MapPost("/api/admin/series-poster/{seriesId}",async (HttpContext c,string seriesId,SeriesCatalogService series)=>{
@@ -288,7 +348,7 @@ public partial class App : Application
     var fileName="series-"+Guid.NewGuid().ToString("N")+ext;
     var fullPath=Path.Combine(posters,fileName);
     await File.WriteAllBytesAsync(fullPath,bytes);
-    try { series.SaveSeries(new SaveSeriesRequest(old.SeriesId,old.Title,old.Description,old.Year,old.Genre,"/posters/"+fileName,old.FolderPath)); }
+    try { series.SaveSeries(new SaveSeriesRequest(old.SeriesId,old.Title,old.Description,old.Year,old.Genre,"/posters/"+fileName,old.FolderPath,old.Section,old.IsPublished,old.CategoryId)); }
     catch { File.Delete(fullPath); throw; }
     return Results.Ok(new{posterPath="/posters/"+fileName});
    });
@@ -307,6 +367,24 @@ public partial class App : Application
     }
     var type=Path.GetExtension(full).ToLowerInvariant() switch {".jpg" or ".jpeg"=>"image/jpeg",".png"=>"image/png",".webp"=>"image/webp",_=>null};
     return type is null?Results.NotFound():Results.File(full,type);
+   });
+   _server.MapPost("/api/admin/library/bulk-remove",(HttpContext c,BulkLibraryRequest request,LibraryService librarySvc)=>
+   {
+    if(!IsLocal(c)) return Results.NotFound();
+    if(request.Ids is null||request.Ids.Count<1||request.Ids.Count>5000||request.Ids.Any(id=>string.IsNullOrWhiteSpace(id)||id.Length!=24||!id.All(Uri.IsHexDigit))) return Results.BadRequest(new{error="قائمة الملفات المحددة غير صالحة"});
+    var ids=request.Ids.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    if(ids.Any(id=>librarySvc.Resolve(id) is null)) return Results.NotFound(new{error="بعض الملفات المحددة لم تعد موجودة في المكتبة"});
+    foreach(var id in ids) librarySvc.RemoveFromLibrary(id);
+    return Results.Ok(new{removed=ids.Length,message="تمت إزالة الملفات المحددة من المكتبة فقط، دون حذف الملفات الأصلية"});
+   });
+   _server.MapPost("/api/admin/library/bulk-delete",(HttpContext c,BulkLibraryRequest request,LibraryService librarySvc,VideoMetadataService metadata,WatchProgressService progress)=>
+   {
+    if(!IsLocal(c)) return Results.NotFound();
+    if(request.Ids is null||request.Ids.Count<1||request.Ids.Count>5000||request.Ids.Any(id=>string.IsNullOrWhiteSpace(id)||id.Length!=24||!id.All(Uri.IsHexDigit))) return Results.BadRequest(new{error="قائمة الملفات المحددة غير صالحة"});
+    var ids=request.Ids.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    if(ids.Any(id=>librarySvc.Resolve(id) is null)) return Results.NotFound(new{error="بعض الملفات المحددة لم تعد موجودة في المكتبة"});
+    foreach(var id in ids) { librarySvc.DeleteFile(id); metadata.Delete(id); progress.DeleteVideo(id); }
+    return Results.Ok(new{deleted=ids.Length,message="تم حذف الملفات المحددة نهائياً وتنظيف بياناتها"});
    });
    _server.MapPost("/api/admin/library/{id}/remove",(HttpContext c,string id,LibraryService librarySvc)=>
    {
