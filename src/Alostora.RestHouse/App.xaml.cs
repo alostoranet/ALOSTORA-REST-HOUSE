@@ -251,7 +251,7 @@ public partial class App : Application
      foreach(var seasonRow in series.ListSeasons(seriesRow.SeriesId))
       if(!string.IsNullOrWhiteSpace(seasonRow.FolderPath)&&Directory.Exists(seasonRow.FolderPath)) files.EnsureFolderRegistered(seasonRow.FolderPath);
     }
-    return Results.Ok(series.GetCatalog(files,meta,allowedSeriesIds));
+    return Results.Ok(series.GetCatalog(files,meta,allowedSeriesIds,IsLocal(c)?null:publicCatalog.GetPublishedVideoIds()));
    });
    _server.MapGet("/api/admin/series",(HttpContext c,SeriesCatalogService series,LibraryService files)=>{ if(!IsLocal(c)) return Results.NotFound(); var rows=series.ListSeries(); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.EnsureFolderRegistered(row.FolderPath); return Results.Ok(rows); });
    _server.MapDelete("/api/admin/series/{seriesId}",(HttpContext c,string seriesId,SeriesCatalogService series)=>
