@@ -530,9 +530,46 @@ public partial class MainWindow : Window
             var rows = await _http.GetFromJsonAsync<SeriesAdmin[]>("/api/admin/series") ?? Array.Empty<SeriesAdmin>();
             SeriesPicker.ItemsSource = rows;
             SeriesPicker.SelectedItem = rows.FirstOrDefault(x => x.SeriesId == selectedId);
-            if (SeriesPicker.SelectedItem is null) SeasonsGrid.ItemsSource = null;
+            if (SeriesPicker.SelectedItem is null) { SeasonsGrid.ItemsSource = null; if (rows.Length == 0) SeriesStatusText.Text = "لا توجد مسلسلات محفوظة بعد. حدد ملفاً مصنفاً كمسلسل من قائمة الفيديو ثم اضغط «إنشاء مسلسل من الفيديو المحدد»."; }
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر تحميل المسلسلات: " + ex.Message; }
+    }
+
+    private async void CreateSeriesFromVideo_Click(object sender, RoutedEventArgs e)
+    {
+        if (VideosGrid.SelectedItem is not AdminVideo video)
+        {
+            SeriesStatusText.Text = "حدد ملف الفيديو أولاً من قائمة ملفات المكتبة.";
+            return;
+        }
+        if (!string.Equals(video.Kind, "Series", StringComparison.OrdinalIgnoreCase))
+        {
+            SeriesStatusText.Text = "هذا الملف مصنف كفيلم. غيّر نوع المحتوى إلى «مسلسل» واحفظه أولاً، ثم أنشئ المسلسل منه.";
+            return;
+        }
+        var id = "series-" + video.Id;
+        try
+        {
+            var response = await _http.PostAsJsonAsync("/api/admin/series", new
+            {
+                seriesId = id,
+                title = video.Title ?? video.Id,
+                description = video.Description ?? "",
+                year = video.Year,
+                genre = video.Genre ?? "",
+                posterPath = video.PosterPath,
+                folderPath = (string?)null
+            });
+            if (!response.IsSuccessStatusCode)
+            {
+                SeriesStatusText.Text = "تعذر إنشاء المسلسل من الملف المحدد: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            await LoadSeriesAsync();
+            SeriesPicker.SelectedItem = (SeriesPicker.ItemsSource as SeriesAdmin[])?.FirstOrDefault(x => x.SeriesId == id);
+            SeriesStatusText.Text = "تم إنشاء سجل المسلسل. اختر مجلد الموسم ثم اكتشف الحلقات واربط الملفات المناسبة.";
+        }
+        catch (Exception ex) { SeriesStatusText.Text = "تعذر إنشاء المسلسل: " + ex.Message; }
     }
 
     private async void SeriesPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
