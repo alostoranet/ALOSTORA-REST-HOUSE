@@ -528,6 +528,7 @@ public partial class MainWindow : Window
         try
         {
             var rows = await _http.GetFromJsonAsync<CategoryAdmin[]>("/api/admin/catalog-categories") ?? Array.Empty<CategoryAdmin>();
+            _categories = rows;
             var parents = rows.Where(x => x.ParentId is null).ToDictionary(x => x.CategoryId, x => x.Title);
             foreach (var row in rows)
             {
@@ -536,11 +537,42 @@ public partial class MainWindow : Window
             }
             CategoriesGrid.ItemsSource = rows;
             CategoryParentPicker.ItemsSource = rows.Where(x => x.ParentId is null && x.ContentKind == "Group").ToArray();
-            var subcategories = rows.Where(x => x.ParentId is not null).ToArray();
-            VideoCategoryPicker.ItemsSource = subcategories.Where(x => x.ContentKind is "Movie" or "Other").ToArray();
+            var publishedParents = rows.Where(x => x.ParentId is null && x.ContentKind == "Group" && x.IsPublished)
+                .Select(x => x.CategoryId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var subcategories = rows.Where(x => x.ParentId is not null && x.IsPublished && publishedParents.Contains(x.ParentId)).ToArray();
             SeriesCategoryPicker.ItemsSource = subcategories.Where(x => x.ContentKind == "Series").ToArray();
+            RefreshVideoCategoryPicker();
+            var seriesCount = ((CategoryAdmin[])SeriesCategoryPicker.ItemsSource).Length;
+            SeriesCategoryStatusText.Text = seriesCount == 0
+                ? "لا توجد أقسام فرعية منشورة للمسلسلات. أضف قسماً رئيسياً منشوراً ثم قسماً فرعياً من نوع مسلسلات."
+                : $"الأقسام الفرعية المتاحة للمسلسلات: {seriesCount}.";
         }
         catch (Exception ex) { CategoryStatusText.Text = "تعذر تحميل الأقسام: " + ex.Message; }
+    }
+
+    private void KindBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (VideoCategoryPicker is null) return;
+        var selected = VideoCategoryPicker.SelectedValue as string;
+        RefreshVideoCategoryPicker(selected);
+    }
+
+    private void RefreshVideoCategoryPicker(string? selectedCategoryId = null)
+    {
+        if (VideoCategoryPicker is null || VideoCategoryStatusText is null) return;
+        var kind = (KindBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Movie";
+        var parentIds = _categories.Where(x => x.ParentId is null && x.ContentKind == "Group" && x.IsPublished)
+            .Select(x => x.CategoryId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var allowedKinds = kind == "Series" ? new[] { "Series" } : new[] { "Movie", "Other" };
+        var rows = _categories.Where(x => x.ParentId is not null && x.IsPublished &&
+            parentIds.Contains(x.ParentId) && allowedKinds.Contains(x.ContentKind, StringComparer.Ordinal)).ToArray();
+        VideoCategoryPicker.ItemsSource = rows;
+        VideoCategoryPicker.SelectedValue = selectedCategoryId;
+        VideoCategoryStatusText.Text = rows.Length == 0
+            ? kind == "Series"
+                ? "لا توجد أقسام مسلسلات منشورة. أنشئ قسماً رئيسياً منشوراً ثم قسماً فرعياً من نوع مسلسلات."
+                : "لا توجد أقسام أفلام منشورة. أنشئ قسماً رئيسياً منشوراً ثم قسماً فرعياً من نوع أفلام."
+            : $"تم العثور على {rows.Length} قسم فرعي مناسب. اختر القسم الذي سيظهر فيه الفيديو.";
     }
 
     private void NewCategory_Click(object sender, RoutedEventArgs e)
