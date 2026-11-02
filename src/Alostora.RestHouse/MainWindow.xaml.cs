@@ -607,15 +607,21 @@ public partial class MainWindow : Window
         if (string.IsNullOrWhiteSpace(CategoryTitleBox.Text)) { CategoryStatusText.Text = "اكتب اسم القسم أولاً."; return; }
         if (kind == "Group") parentId = null;
         else if (string.IsNullOrWhiteSpace(parentId)) { CategoryStatusText.Text = "اختر القسم الرئيسي الذي سيندرج تحته هذا القسم."; return; }
-        var id = string.IsNullOrWhiteSpace(CategoryIdBox.Text) ? Guid.NewGuid().ToString("N") : CategoryIdBox.Text.Trim();
+        var isNew = string.IsNullOrWhiteSpace(CategoryIdBox.Text);
+        var title = CategoryTitleBox.Text.Trim();
+        var parentTitle = parentId is null ? null : _categories.FirstOrDefault(x => x.CategoryId == parentId)?.Title;
+        var id = isNew ? Guid.NewGuid().ToString("N") : CategoryIdBox.Text.Trim();
         try
         {
-            var response = await _http.PostAsJsonAsync("/api/admin/catalog-categories", new { categoryId = id, parentId, title = CategoryTitleBox.Text.Trim(), contentKind = kind, posterPath = string.IsNullOrWhiteSpace(CategoryPosterPathBox.Text) ? null : CategoryPosterPathBox.Text.Trim(), isPublished = CategoryPublishBox.IsChecked == true });
+            var response = await _http.PostAsJsonAsync("/api/admin/catalog-categories", new { categoryId = id, parentId, title, contentKind = kind, posterPath = string.IsNullOrWhiteSpace(CategoryPosterPathBox.Text) ? null : CategoryPosterPathBox.Text.Trim(), isPublished = CategoryPublishBox.IsChecked == true });
             if (!response.IsSuccessStatusCode) { CategoryStatusText.Text = "تعذر حفظ القسم: " + await response.Content.ReadAsStringAsync(); return; }
             CategoryIdBox.Text = id;
-            CategoryStatusText.Text = CategoryPublishBox.IsChecked == true ? "تم حفظ القسم ونشره. سيظهر في الواجهة الرئيسية للعميل بعد تحديث الصفحة." : "تم حفظ القسم كمسودة ولن يظهر للعميل حتى تفعّل النشر وتضغط حفظ القسم.";
             await LoadCategoriesAsync();
             CategoriesGrid.SelectedItem = (CategoriesGrid.ItemsSource as CategoryAdmin[])?.FirstOrDefault(x => x.CategoryId == id);
+            var typeName = kind == "Group" ? "القسم الرئيسي" : "القسم الفرعي";
+            var location = parentTitle is null ? "" : $" داخل القسم الرئيسي «{parentTitle}»";
+            var action = isNew ? "تمت إضافة" : "تم تحديث";
+            CategoryStatusText.Text = $"{action} {typeName} «{title}»{location}. الحالة: {(CategoryPublishBox.IsChecked == true ? "منشور" : "مسودة")}.";
         }
         catch (Exception ex) { CategoryStatusText.Text = "تعذر حفظ القسم: " + ex.Message; }
     }
@@ -672,10 +678,18 @@ public partial class MainWindow : Window
             StatusText.Text = "جارٍ تحديث القائمة...";
             var items = await _http.GetFromJsonAsync<AdminVideo[]>("/api/library") ?? Array.Empty<AdminVideo>();
             _videos.Clear();
-            foreach (var item in items) _videos.Add(item);
+            foreach (var item in items)
+            {
+                if (string.IsNullOrWhiteSpace(item.CategoryTitle) && !string.IsNullOrWhiteSpace(item.CategoryId))
+                    item.CategoryTitle = _categories.FirstOrDefault(x => x.CategoryId == item.CategoryId)?.Title ?? "قسم غير موجود";
+                _videos.Add(item);
+            }
             EpisodeVideoPicker.ItemsSource = _videos;
             CountText.Text = $"عدد ملفات الفيديو: {_videos.Count}";
-            StatusText.Text = "تم تحديث القائمة. اختر فيديو لتعديل بياناته.";
+            var incomplete = _videos.Count(x => !x.MetadataSaved);
+            StatusText.Text = incomplete == 0
+                ? $"سجل الفيديوهات جاهز: {_videos.Count} فيديو، وجميعها لها بيانات محفوظة."
+                : $"سجل الفيديوهات: {_videos.Count} فيديو. يوجد {incomplete} فيديو بانتظار استكمال بياناته وتصنيفه.";
         }
         catch (Exception ex) { StatusText.Text = "تعذر تحميل المكتبة: " + ex.Message; }
     }
@@ -711,10 +725,10 @@ public partial class MainWindow : Window
         ReleaseDateBox.Text = v.ReleaseDate ?? "";
         TagsBox.Text = v.Tags ?? "";
         SectionBox.Text = v.Section ?? "عام";
-        VideoCategoryPicker.SelectedValue = v.CategoryId;
-        SeriesCategoryPicker.SelectedValue = v.CategoryId;
-        PublishBox.IsChecked = v.IsPublished || string.IsNullOrWhiteSpace(v.CategoryId);
         KindBox.SelectedIndex = string.Equals(v.Kind, "Series", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        RefreshVideoCategoryPicker(v.CategoryId);
+        SeriesCategoryPicker.SelectedValue = v.CategoryId;
+        PublishBox.IsChecked = v.IsPublished || !v.MetadataSaved;
         PosterStatusText.Text = string.IsNullOrWhiteSpace(v.PosterPath) ? "لا يوجد غلاف لهذا العمل حالياً." : "يوجد غلاف محفوظ لهذا العمل.";
     }
 
@@ -769,6 +783,9 @@ public partial class MainWindow : Window
             runtime = parsedRuntime;
         }
         var kindItem = KindBox.SelectedItem as ComboBoxItem;
+        var previousMetadata = _videos.FirstOrDefault(v => v.Id == IdBox.Text);
+        var isNewMetadata = previousMetadata?.MetadataSaved != true;
+        var selectedCategory = VideoCategoryPicker.SelectedItem as CategoryAdmin;
         var request = new
         {
             videoId = IdBox.Text,
@@ -785,14 +802,17 @@ public partial class MainWindow : Window
             releaseDate = string.IsNullOrWhiteSpace(ReleaseDateBox.Text) ? null : ReleaseDateBox.Text.Trim(),
             tags = TagsBox.Text,
             section = string.IsNullOrWhiteSpace(SectionBox.Text) ? "عام" : SectionBox.Text.Trim(),
-            categoryId = (kindItem?.Tag?.ToString() == "Series" ? SeriesCategoryPicker.SelectedValue as string : VideoCategoryPicker.SelectedValue as string),
+            categoryId = VideoCategoryPicker.SelectedValue as string,
             isPublished = PublishBox.IsChecked == true
         };
         try
         {
             var response = await _http.PostAsJsonAsync("/api/admin/metadata", request);
             if (!response.IsSuccessStatusCode) { StatusText.Text = "لم يتم الحفظ: " + await response.Content.ReadAsStringAsync(); return; }
-            StatusText.Text = "تم حفظ بيانات الفيديو بنجاح.";
+            var videoTitle = TitleBox.Text.Trim();
+            var categoryName = selectedCategory?.Title ?? "غير مصنف";
+            var publication = PublishBox.IsChecked == true ? "منشور للعميل" : "محفوظ كمسودة";
+            StatusText.Text = $"{(isNewMetadata ? "تمت إضافة بيانات الفيديو" : "تم تحديث بيانات الفيديو")} «{videoTitle}» إلى سجل الفيديوهات. القسم: {categoryName}. الحالة: {publication}.";
             await LoadVideosAsync();
             VideosGrid.SelectedItem = _videos.FirstOrDefault(v => v.Id == IdBox.Text);
         }
@@ -806,9 +826,23 @@ public partial class MainWindow : Window
         {
             var selectedId = (SeriesPicker.SelectedItem as SeriesAdmin)?.SeriesId;
             var rows = await _http.GetFromJsonAsync<SeriesAdmin[]>("/api/admin/series") ?? Array.Empty<SeriesAdmin>();
+            foreach (var row in rows)
+            {
+                row.CategoryTitle = _categories.FirstOrDefault(x => x.CategoryId == row.CategoryId)?.Title ?? "غير مصنف";
+                row.PublishStatus = row.IsPublished ? "منشور" : "مسودة";
+            }
             SeriesPicker.ItemsSource = rows;
             SeriesPicker.SelectedItem = rows.FirstOrDefault(x => x.SeriesId == selectedId);
-            if (SeriesPicker.SelectedItem is null) { SeasonsGrid.ItemsSource = null; if (rows.Length == 0) SeriesStatusText.Text = "لا توجد مسلسلات محفوظة بعد. حدد ملفاً مصنفاً كمسلسل من قائمة الفيديو ثم اضغط «إنشاء مسلسل من الفيديو المحدد»."; }
+            if (SeriesPicker.SelectedItem is null)
+            {
+                SeasonsGrid.ItemsSource = null;
+                EpisodesGrid.ItemsSource = null;
+                if (rows.Length == 0) SeriesStatusText.Text = "سجل المسلسلات فارغ. أضف مسلسلاً جديداً أو أنشئه من فيديو موجود.";
+            }
+            else
+            {
+                SeriesStatusText.Text = $"سجل المسلسلات: {rows.Length} مسلسل. اختر أي مسلسل من الجدول لتعديل بياناته.";
+            }
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر تحميل المسلسلات: " + ex.Message; }
     }
@@ -985,8 +1019,10 @@ public partial class MainWindow : Window
         {
             var response = await _http.PostAsJsonAsync("/api/admin/series", request);
             if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "لم يتم حفظ المسلسل: " + await response.Content.ReadAsStringAsync(); return; }
+            var wasNewSeries = !((SeriesPicker.ItemsSource as SeriesAdmin[]) ?? Array.Empty<SeriesAdmin>()).Any(x => x.SeriesId == id);
             SeriesIdBox.Text = id;
-            SeriesStatusText.Text = "تم حفظ بيانات المسلسل.";
+            var seriesCategoryName = (SeriesCategoryPicker.SelectedItem as CategoryAdmin)?.Title ?? "غير مصنف";
+            SeriesStatusText.Text = $"{(wasNewSeries ? "تمت إضافة المسلسل" : "تم تحديث المسلسل")} «{SeriesTitleBox.Text.Trim()}» إلى سجل المسلسلات. القسم: {seriesCategoryName}. الحالة: {(SeriesPublishBox.IsChecked == true ? "منشور" : "مسودة")}.";
             await LoadSeriesAsync();
             SeriesPicker.SelectedItem = (SeriesPicker.ItemsSource as SeriesAdmin[])?.FirstOrDefault(x => x.SeriesId == id);
             if (SeriesPicker.SelectedItem is null) await LoadSeasonsAsync(id);
