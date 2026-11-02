@@ -338,69 +338,60 @@ public partial class MainWindow : Window
         }
     }
 
+    private AdminVideo[] GetSelectedVideos() => VideosGrid.SelectedItems.Cast<object>().OfType<AdminVideo>().ToArray();
+
+    private void SelectAllVideos_Click(object sender, RoutedEventArgs e)
+    {
+        VideosGrid.SelectAll();
+        StatusText.Text = $"تم تحديد جميع الملفات: {VideosGrid.SelectedItems.Count}.";
+    }
+
+    private void ClearVideoSelection_Click(object sender, RoutedEventArgs e)
+    {
+        VideosGrid.UnselectAll();
+        StatusText.Text = "تم إلغاء تحديد الملفات.";
+    }
+
     private async void RemoveVideoFromLibrary_Click(object sender, RoutedEventArgs e)
     {
-        if (VideosGrid.SelectedItem is not AdminVideo video)
-        {
-            StatusText.Text = "حدد ملف فيديو من القائمة أولاً.";
-            return;
-        }
+        var selected = GetSelectedVideos();
+        if (selected.Length == 0) { StatusText.Text = "حدد ملفاً واحداً أو عدة ملفات أولاً."; return; }
         var confirm = MessageBox.Show(
-            $"سيتم إخفاء الفيديو من مكتبة المشاهدة فقط، ولن يُحذف الملف الأصلي من القرص. يمكنك إضافته مجدداً لاحقاً.\n\nالملف: {video.Title}\n\nهل تريد المتابعة؟",
-            "إزالة من المكتبة فقط", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            $"سيتم إخفاء {selected.Length} ملفاً من مكتبة المشاهدة فقط. لن تُحذف الملفات الأصلية من القرص، ويمكن إضافتها مجدداً لاحقاً.\n\nهل تريد المتابعة؟",
+            "إزالة الملفات المحددة من المكتبة", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (confirm != MessageBoxResult.Yes) return;
         try
         {
-            var response = await _http.PostAsync("/api/admin/library/" + Uri.EscapeDataString(video.Id) + "/remove", null);
-            if (!response.IsSuccessStatusCode)
-            {
-                StatusText.Text = "تعذرت إزالة الفيديو من المكتبة: " + await response.Content.ReadAsStringAsync();
-                return;
-            }
-            VideosGrid.SelectedItem = null;
+            var response = await _http.PostAsJsonAsync("/api/admin/library/bulk-remove", new { ids = selected.Select(x => x.Id).ToArray() });
+            if (!response.IsSuccessStatusCode) { StatusText.Text = "تعذرت الإزالة: " + await response.Content.ReadAsStringAsync(); return; }
+            VideosGrid.UnselectAll();
             await LoadVideosAsync();
-            StatusText.Text = "تمت إزالة الفيديو من المكتبة، والملف الأصلي ما زال محفوظاً في مكانه.";
+            StatusText.Text = $"تمت إزالة {selected.Length} ملفاً من المكتبة، والملفات الأصلية محفوظة.";
         }
-        catch (Exception ex) { StatusText.Text = "تعذرت إزالة الفيديو: " + ex.Message; }
+        catch (Exception ex) { StatusText.Text = "تعذرت إزالة الملفات: " + ex.Message; }
     }
 
     private async void DeleteVideo_Click(object sender, RoutedEventArgs e)
     {
-        if (VideosGrid.SelectedItem is not AdminVideo video)
-        {
-            StatusText.Text = "حدد ملف فيديو من القائمة أولاً.";
-            return;
-        }
-
+        var selected = GetSelectedVideos();
+        if (selected.Length == 0) { StatusText.Text = "حدد ملفاً واحداً أو عدة ملفات أولاً."; return; }
         var confirm = MessageBox.Show(
-            $"تحذير: سيتم حذف ملف الفيديو الأصلي نهائياً من القرص ولا يمكن التراجع عن ذلك.\n\nالملف: {video.Title}\n\nسيتم حذف بياناته وسجل المشاهدة أيضاً. إذا كان مربوطاً بحلقة مسلسل فستبقى الحلقة مسجلة كملف مفقود ويمكن إعادة ربطها لاحقاً.\n\nهل أنت متأكد؟",
-            "تأكيد حذف ملف الفيديو نهائياً",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+            $"تحذير: سيتم حذف {selected.Length} ملف فيديو نهائياً من القرص ولا يمكن التراجع عن ذلك.\n\nسيتم حذف بياناتها وسجلات مشاهدتها أيضاً. إذا كانت مرتبطة بحلقات فستبقى الحلقات مسجلة كملفات مفقودة ويمكن إعادة ربطها لاحقاً.\n\nهل أنت متأكد؟",
+            "تأكيد الحذف النهائي للملفات المحددة", MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (confirm != MessageBoxResult.Yes) return;
-
         try
         {
-            StatusText.Text = "جارٍ حذف ملف الفيديو من الجهاز...";
-            var response = await _http.DeleteAsync("/api/admin/library/" + Uri.EscapeDataString(video.Id));
-            if (!response.IsSuccessStatusCode)
-            {
-                var detail = await response.Content.ReadAsStringAsync();
-                StatusText.Text = "تعذر حذف الفيديو: " + detail;
-                return;
-            }
-
-            VideosGrid.SelectedItem = null;
+            StatusText.Text = $"جارٍ حذف {selected.Length} ملفاً من الجهاز...";
+            var response = await _http.PostAsJsonAsync("/api/admin/library/bulk-delete", new { ids = selected.Select(x => x.Id).ToArray() });
+            if (!response.IsSuccessStatusCode) { StatusText.Text = "تعذر حذف الملفات: " + await response.Content.ReadAsStringAsync(); return; }
+            VideosGrid.UnselectAll();
             IdBox.Clear(); TitleBox.Clear(); DescriptionBox.Clear(); YearBox.Clear(); GenreBox.Clear();
             DirectorBox.Clear(); CastBox.Clear(); RatingBox.Clear(); RuntimeBox.Clear(); ReleaseDateBox.Clear(); TagsBox.Clear();
             await LoadVideosAsync();
             await LoadMissingEpisodesAsync();
-            StatusText.Text = "تم حذف ملف الفيديو نهائياً من القرص وتحديث المكتبة.";
+            StatusText.Text = $"تم حذف {selected.Length} ملفاً نهائياً من القرص وتحديث المكتبة.";
         }
-        catch (Exception ex)
-        {
-            StatusText.Text = "تعذر حذف الفيديو: " + ex.Message;
-        }
+        catch (Exception ex) { StatusText.Text = "تعذر حذف الملفات: " + ex.Message; }
     }
 
     private async System.Threading.Tasks.Task LoadVideosAsync()
