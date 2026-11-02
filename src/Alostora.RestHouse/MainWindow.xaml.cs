@@ -742,7 +742,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void VideosGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void VideosGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (VideosGrid.SelectedItem is not AdminVideo v) return;
         IdBox.Text = v.Id;
@@ -761,8 +761,42 @@ public partial class MainWindow : Window
         var selectedVideoCategory = _categories.FirstOrDefault(x => x.CategoryId == v.CategoryId);
         VideoMainCategoryPicker.SelectedValue = selectedVideoCategory?.ParentId;
         RefreshVideoCategoryPicker(v.CategoryId);
+        VideoSeriesPicker.SelectedValue = v.LinkedSeriesId;
+        await LoadVideoSeasonsForLinkAsync(v.LinkedSeriesId, v.LinkedSeasonId);
+        VideoEpisodeNumberBox.Text = v.LinkedEpisodeNumber?.ToString() ?? "";
+        VideoEpisodeTitleBox.Text = v.LinkedEpisodeTitle ?? "";
         PublishBox.IsChecked = v.IsPublished || !v.MetadataSaved;
         PosterStatusText.Text = string.IsNullOrWhiteSpace(v.PosterPath) ? "لا يوجد غلاف لهذا العمل حالياً." : "يوجد غلاف محفوظ لهذا العمل.";
+    }
+
+    private async void VideoSeriesPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        var seriesId = VideoSeriesPicker.SelectedValue as string;
+        await LoadVideoSeasonsForLinkAsync(seriesId);
+    }
+
+    private async System.Threading.Tasks.Task LoadVideoSeasonsForLinkAsync(string? seriesId, long? selectedSeasonId = null)
+    {
+        VideoSeasonPicker.ItemsSource = null;
+        if (string.IsNullOrWhiteSpace(seriesId))
+        {
+            VideoPlacementStatusText.Text = "اختر مسلسلاً لعرض مواسمه أو أجزائه، أو اتركه فارغاً إذا كان الفيديو فيلماً مستقلاً.";
+            return;
+        }
+        try
+        {
+            var url = "/api/admin/seasons?seriesId=" + Uri.EscapeDataString(seriesId);
+            var rows = await _http.GetFromJsonAsync<SeasonAdmin[]>(url) ?? Array.Empty<SeasonAdmin>();
+            var selectedSeries = (VideoSeriesPicker.ItemsSource as SeriesAdmin[])?.FirstOrDefault(x => x.SeriesId == seriesId);
+            var label = selectedSeries?.OrganizationType == "Parts" ? "الجزء" : "الموسم";
+            foreach (var row in rows) row.DisplayTitle = row.Title.Length > 0 ? $"{label} {row.SeasonNumber} — {row.Title}" : $"{label} {row.SeasonNumber}";
+            VideoSeasonPicker.ItemsSource = rows;
+            VideoSeasonPicker.SelectedValue = selectedSeasonId;
+            VideoPlacementStatusText.Text = rows.Length == 0
+                ? "لا توجد مواسم أو أجزاء لهذا المسلسل. يمكنك ربط الفيديو بالمسلسل مباشرة، أو أضف موسماً/جزءاً من إدارة المسلسلات."
+                : $"تم تحميل {rows.Length} {label}. اختر واحداً لربط الفيديو به، أو اترك الاختيار فارغاً لربطه بالمسلسل مباشرة.";
+        }
+        catch (Exception ex) { VideoPlacementStatusText.Text = "تعذر تحميل مواسم/أجزاء المسلسل: " + ex.Message; }
     }
 
     private async void UploadPoster_Click(object sender, RoutedEventArgs e)
@@ -819,6 +853,13 @@ public partial class MainWindow : Window
         var previousMetadata = _videos.FirstOrDefault(v => v.Id == IdBox.Text);
         var isNewMetadata = previousMetadata?.MetadataSaved != true;
         var selectedCategory = VideoCategoryPicker.SelectedItem as CategoryAdmin;
+        int? linkedEpisodeNumber = null;
+        if (VideoSeasonPicker.SelectedValue is not null)
+        {
+            if (!int.TryParse(VideoEpisodeNumberBox.Text, out var parsedEpisode) || parsedEpisode < 1 || parsedEpisode > 10000)
+            { StatusText.Text = "أدخل رقم الحلقة أو الفيديو داخل الموسم/الجزء."; return; }
+            linkedEpisodeNumber = parsedEpisode;
+        }
         var request = new
         {
             videoId = IdBox.Text,
@@ -836,7 +877,11 @@ public partial class MainWindow : Window
             tags = TagsBox.Text,
             section = string.IsNullOrWhiteSpace(SectionBox.Text) ? "عام" : SectionBox.Text.Trim(),
             categoryId = VideoCategoryPicker.SelectedValue as string,
-            isPublished = PublishBox.IsChecked == true
+            isPublished = PublishBox.IsChecked == true,
+            seriesId = (VideoSeriesPicker.SelectedValue as string),
+            seasonId = VideoSeasonPicker.SelectedValue is long seasonId ? seasonId : (long?)null,
+            episodeNumber = linkedEpisodeNumber,
+            episodeTitle = string.IsNullOrWhiteSpace(VideoEpisodeTitleBox.Text) ? TitleBox.Text.Trim() : VideoEpisodeTitleBox.Text.Trim()
         };
         try
         {
@@ -865,6 +910,9 @@ public partial class MainWindow : Window
                 row.PublishStatus = row.IsPublished ? "منشور" : "مسودة";
             }
             SeriesPicker.ItemsSource = rows;
+            var linkedSeriesId = VideoSeriesPicker.SelectedValue as string;
+            VideoSeriesPicker.ItemsSource = rows;
+            VideoSeriesPicker.SelectedValue = linkedSeriesId;
             SeriesPicker.SelectedItem = rows.FirstOrDefault(x => x.SeriesId == selectedId);
             if (SeriesPicker.SelectedItem is null)
             {
@@ -880,6 +928,25 @@ public partial class MainWindow : Window
         catch (Exception ex) { SeriesStatusText.Text = "تعذر تحميل المسلسلات: " + ex.Message; }
     }
 
+    private void SeriesStructureBox_SelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateSeriesStructureLabels();
+
+    private void UpdateSeriesStructureLabels()
+    {
+        if (SeriesStructureBox is null || SeasonSectionTitle is null) return;
+        var type = (SeriesStructureBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Seasons";
+        var isParts = type == "Parts";
+        var isNone = type == "None";
+        SeasonSectionTitle.Text = isParts ? "الأجزاء" : "المواسم";
+        AddSeasonButton.Content = isParts ? "إضافة الجزء" : "إضافة الموسم";
+        if (SeasonNumberBox is not null) SeasonNumberBox.ToolTip = isParts ? "رقم الجزء" : "رقم الموسم";
+        if (SeasonTitleBox is not null) SeasonTitleBox.ToolTip = isParts ? "اسم الجزء (اختياري)" : "اسم الموسم (اختياري)";
+        if (SeasonsGrid.Columns.Count >= 2) { SeasonsGrid.Columns[0].Header = isParts ? "رقم الجزء" : "رقم الموسم"; SeasonsGrid.Columns[1].Header = isParts ? "اسم الجزء" : "اسم الموسم"; }
+        if (MissingEpisodesGrid.Columns.Count >= 2) MissingEpisodesGrid.Columns[1].Header = isParts ? "الجزء" : "الموسم";
+        VideoPlacementStatusText.Text = isNone
+            ? "هذا البرنامج لا يستخدم مواسم أو أجزاء؛ اربط الفيديوهات به مباشرة من بيانات الفيديو."
+            : isParts ? "يمكنك إضافة أجزاء متعددة، ثم ربط كل فيديو بالجزء ورقم الحلقة المناسب." : "يمكنك إضافة مواسم متعددة، ثم ربط كل فيديو بالموسم ورقم الحلقة المناسب.";
+    }
+
     private void NewSeries_Click(object sender, RoutedEventArgs e)
     {
         SeriesPicker.SelectedIndex = -1;
@@ -889,6 +956,8 @@ public partial class MainWindow : Window
         SeriesYearBox.Clear();
         SeriesGenreBox.Clear();
         SeriesSectionBox.Text = "عام";
+        SeriesStructureBox.SelectedIndex = 1;
+        UpdateSeriesStructureLabels();
         var defaultParent = _categories.FirstOrDefault(x => x.ParentId is null && x.ContentKind == "Group" && x.IsPublished);
         SeriesMainCategoryPicker.SelectedValue = defaultParent?.CategoryId;
         RefreshSeriesCategoryPicker();
@@ -964,6 +1033,8 @@ public partial class MainWindow : Window
         SeriesPublishBox.IsChecked = s.IsPublished;
         SeriesPosterPathBox.Text = s.PosterPath ?? "";
         SeriesFolderPathBox.Text = s.FolderPath ?? "";
+        SeriesStructureBox.SelectedItem = SeriesStructureBox.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == s.OrganizationType);
+        UpdateSeriesStructureLabels();
         await LoadSeasonsAsync(s.SeriesId);
     }
 
@@ -1052,7 +1123,7 @@ public partial class MainWindow : Window
         var id = string.IsNullOrWhiteSpace(SeriesIdBox.Text) ? "series-" + Guid.NewGuid().ToString("N") : SeriesIdBox.Text.Trim();
         var folderPath = string.IsNullOrWhiteSpace(SeriesFolderPathBox.Text) ? null : Path.GetFullPath(SeriesFolderPathBox.Text.Trim());
         if (folderPath is not null && !Directory.Exists(folderPath)) { SeriesStatusText.Text = "مجلد المسلسل المحدد غير موجود."; return; }
-        var request = new { seriesId = id, title = SeriesTitleBox.Text.Trim(), description = SeriesDescriptionBox.Text, year, genre = SeriesGenreBox.Text, posterPath = string.IsNullOrWhiteSpace(SeriesPosterPathBox.Text) ? null : SeriesPosterPathBox.Text.Trim(), folderPath, section = string.IsNullOrWhiteSpace(SeriesSectionBox.Text) ? "عام" : SeriesSectionBox.Text.Trim(), categoryId = SeriesCategoryPicker.SelectedValue as string, isPublished = SeriesPublishBox.IsChecked == true };
+        var request = new { seriesId = id, title = SeriesTitleBox.Text.Trim(), description = SeriesDescriptionBox.Text, year, genre = SeriesGenreBox.Text, posterPath = string.IsNullOrWhiteSpace(SeriesPosterPathBox.Text) ? null : SeriesPosterPathBox.Text.Trim(), folderPath, section = string.IsNullOrWhiteSpace(SeriesSectionBox.Text) ? "عام" : SeriesSectionBox.Text.Trim(), categoryId = SeriesCategoryPicker.SelectedValue as string, isPublished = SeriesPublishBox.IsChecked == true, organizationType = (SeriesStructureBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Seasons" };
         try
         {
             var response = await _http.PostAsJsonAsync("/api/admin/series", request);
@@ -1765,6 +1836,7 @@ public partial class MainWindow : Window
         public bool IsPublished { get; set; }
         public string CategoryTitle { get; set; } = "غير مصنف";
         public string PublishStatus { get; set; } = "";
+        public string OrganizationType { get; set; } = "Seasons";
     }
     private sealed class SeasonAdmin
     {
@@ -1773,6 +1845,7 @@ public partial class MainWindow : Window
         public int SeasonNumber { get; set; }
         public string Title { get; set; } = "";
         public string? FolderPath { get; set; }
+        public string DisplayTitle { get; set; } = "";
     }
     private sealed class EpisodeAdmin
     {
@@ -1839,6 +1912,10 @@ public partial class MainWindow : Window
         public bool IsPublished { get; set; }
         public bool MetadataSaved { get; set; }
         public string? CategoryTitle { get; set; }
+        public string? LinkedSeriesId { get; set; }
+        public long? LinkedSeasonId { get; set; }
+        public int? LinkedEpisodeNumber { get; set; }
+        public string? LinkedEpisodeTitle { get; set; }
         public int ViewCount { get; set; }
         public string KindLabel => string.Equals(Kind, "Series", StringComparison.OrdinalIgnoreCase) ? "مسلسل" : "فيلم";
         public string MetadataStatus => MetadataSaved ? "بيانات محفوظة" : "بانتظار البيانات";
