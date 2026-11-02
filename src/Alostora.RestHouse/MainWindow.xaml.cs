@@ -151,6 +151,95 @@ public partial class MainWindow : Window
         }
     }
 
+    private async System.Threading.Tasks.Task LoadBrandProfileAsync()
+    {
+        try
+        {
+            var profile = await _http.GetFromJsonAsync<RestHouseProfileAdmin>("/api/admin/profile");
+            if (profile is null) return;
+            RestHouseNameBox.Text = profile.RestHouseName;
+            NetworkNameBox.Text = profile.NetworkName;
+            BrandLogoPathBox.Text = profile.LogoPath ?? "";
+            BrandLogoPreview.Source = null;
+            if (!string.IsNullOrWhiteSpace(profile.LogoPath))
+            {
+                var image = new BitmapImage();
+                image.BeginInit();
+                image.CacheOption = BitmapCacheOption.OnLoad;
+                image.UriSource = new Uri(_http.BaseAddress!, profile.LogoPath);
+                image.EndInit();
+                image.Freeze();
+                BrandLogoPreview.Source = image;
+            }
+            BrandProfileStatusText.Text = "تم تحميل هوية الاستراحة والشبكة.";
+        }
+        catch (Exception ex)
+        {
+            BrandProfileStatusText.Text = "تعذر تحميل بيانات الهوية: " + ex.Message;
+        }
+    }
+
+    private async void SaveBrandProfile_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(RestHouseNameBox.Text) || string.IsNullOrWhiteSpace(NetworkNameBox.Text))
+        {
+            BrandProfileStatusText.Text = "اكتب اسم الاستراحة واسم الشبكة أولاً.";
+            return;
+        }
+        try
+        {
+            var response = await _http.PostAsJsonAsync("/api/admin/profile", new
+            {
+                restHouseName = RestHouseNameBox.Text.Trim(),
+                networkName = NetworkNameBox.Text.Trim(),
+                logoPath = string.IsNullOrWhiteSpace(BrandLogoPathBox.Text) ? null : BrandLogoPathBox.Text.Trim()
+            });
+            if (!response.IsSuccessStatusCode)
+            {
+                BrandProfileStatusText.Text = "تعذر حفظ الهوية: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            BrandProfileStatusText.Text = $"تم حفظ الهوية: {RestHouseNameBox.Text.Trim()} — {NetworkNameBox.Text.Trim()}.";
+        }
+        catch (Exception ex) { BrandProfileStatusText.Text = "تعذر حفظ الهوية: " + ex.Message; }
+    }
+
+    private async void ChooseBrandLogo_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختر شعار أو صورة الاستراحة والشبكة",
+            Filter = "صور مدعومة|*.jpg;*.jpeg;*.png;*.webp",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        var extension = Path.GetExtension(dialog.FileName).ToLowerInvariant();
+        var contentType = extension switch { ".jpg" or ".jpeg" => "image/jpeg", ".png" => "image/png", ".webp" => "image/webp", _ => "" };
+        var info = new FileInfo(dialog.FileName);
+        if (contentType.Length == 0 || info.Length == 0 || info.Length > 5_242_880)
+        {
+            BrandProfileStatusText.Text = "اختر صورة JPG أو PNG أو WEBP لا يتجاوز حجمها 5 ميجابايت.";
+            return;
+        }
+        try
+        {
+            BrandProfileStatusText.Text = "جارٍ رفع شعار الشبكة...";
+            using var bytes = new ByteArrayContent(await File.ReadAllBytesAsync(dialog.FileName));
+            bytes.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            var response = await _http.PostAsync("/api/admin/profile/logo", bytes);
+            if (!response.IsSuccessStatusCode)
+            {
+                BrandProfileStatusText.Text = "تعذر رفع الشعار: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            var result = await response.Content.ReadFromJsonAsync<BrandLogoUploadResult>();
+            BrandLogoPathBox.Text = result?.LogoPath ?? "";
+            await LoadBrandProfileAsync();
+            BrandProfileStatusText.Text = "تم رفع الشعار وحفظه. سيظهر في واجهة العملاء.";
+        }
+        catch (Exception ex) { BrandProfileStatusText.Text = "تعذر رفع الشعار: " + ex.Message; }
+    }
+
     private void ChooseMediaFolder_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFolderDialog
