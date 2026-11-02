@@ -529,50 +529,82 @@ public partial class MainWindow : Window
         {
             var rows = await _http.GetFromJsonAsync<CategoryAdmin[]>("/api/admin/catalog-categories") ?? Array.Empty<CategoryAdmin>();
             _categories = rows;
-            var parents = rows.Where(x => x.ParentId is null).ToDictionary(x => x.CategoryId, x => x.Title);
+            var parents = rows.Where(x => x.ParentId is null && x.ContentKind == "Group").ToArray();
+            var parentNames = parents.ToDictionary(x => x.CategoryId, x => x.Title, StringComparer.OrdinalIgnoreCase);
             foreach (var row in rows)
             {
-                row.DisplayTitle = row.ParentId is not null && parents.TryGetValue(row.ParentId, out var parent) ? parent + "  ←  " + row.Title : row.Title;
-                row.ContentKindLabel = row.ContentKind switch { "Group" => "رئيسي", "Movie" => "أفلام", "Series" => "مسلسلات", _ => "محتوى آخر" };
+                row.DisplayTitle = row.ParentId is not null && parentNames.TryGetValue(row.ParentId, out var parent)
+                    ? parent + "  ←  " + row.Title : row.Title;
+                row.ContentKindLabel = row.ContentKind switch { "Group" => "قسم رئيسي", "Movie" => "أفلام", "Series" => "مسلسلات", _ => "محتوى آخر" };
             }
             CategoriesGrid.ItemsSource = rows;
-            CategoryParentPicker.ItemsSource = rows.Where(x => x.ParentId is null && x.ContentKind == "Group").ToArray();
-            var publishedParents = rows.Where(x => x.ParentId is null && x.ContentKind == "Group" && x.IsPublished)
-                .Select(x => x.CategoryId).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var subcategories = rows.Where(x => x.ParentId is not null && x.IsPublished && publishedParents.Contains(x.ParentId)).ToArray();
-            SeriesCategoryPicker.ItemsSource = subcategories.Where(x => x.ContentKind == "Series").ToArray();
-            RefreshVideoCategoryPicker();
-            var seriesCount = ((CategoryAdmin[])SeriesCategoryPicker.ItemsSource).Length;
-            SeriesCategoryStatusText.Text = seriesCount == 0
-                ? "لا توجد أقسام فرعية منشورة للمسلسلات. أضف قسماً رئيسياً منشوراً ثم قسماً فرعياً من نوع مسلسلات."
-                : $"الأقسام الفرعية المتاحة للمسلسلات: {seriesCount}.";
+            CategoryParentPicker.ItemsSource = parents;
+            VideoMainCategoryPicker.ItemsSource = parents;
+            SeriesMainCategoryPicker.ItemsSource = parents;
+
+            if (VideoMainCategoryPicker.SelectedIndex < 0)
+                VideoMainCategoryPicker.SelectedValue = parents.FirstOrDefault(x => x.IsPublished)?.CategoryId;
+            if (SeriesMainCategoryPicker.SelectedIndex < 0)
+                SeriesMainCategoryPicker.SelectedValue = parents.FirstOrDefault(x => x.IsPublished)?.CategoryId;
+
+            RefreshSeriesCategoryPicker(SeriesCategoryPicker.SelectedValue as string);
+            RefreshVideoCategoryPicker(VideoCategoryPicker.SelectedValue as string);
         }
         catch (Exception ex) { CategoryStatusText.Text = "تعذر تحميل الأقسام: " + ex.Message; }
     }
 
-    private void KindBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void SeriesMainCategoryPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (SeriesCategoryPicker is null) return;
+        RefreshSeriesCategoryPicker();
+    }
+
+    private void VideoMainCategoryPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (VideoCategoryPicker is null) return;
-        var selected = VideoCategoryPicker.SelectedValue as string;
-        RefreshVideoCategoryPicker(selected);
+        RefreshVideoCategoryPicker();
+    }
+
+    private void RefreshSeriesCategoryPicker(string? selectedCategoryId = null)
+    {
+        if (SeriesCategoryPicker is null || SeriesCategoryStatusText is null) return;
+        var parentId = SeriesMainCategoryPicker.SelectedValue as string;
+        var rows = string.IsNullOrWhiteSpace(parentId)
+            ? Array.Empty<CategoryAdmin>()
+            : _categories.Where(x => x.ParentId == parentId && x.ContentKind == "Series").ToArray();
+        SeriesCategoryPicker.ItemsSource = rows;
+        SeriesCategoryPicker.SelectedValue = selectedCategoryId;
+        SeriesCategoryStatusText.Text = string.IsNullOrWhiteSpace(parentId)
+            ? "اختر القسم الرئيسي أولاً لتظهر الأقسام الفرعية التابعة له."
+            : rows.Length == 0
+                ? "لا توجد أقسام فرعية من نوع «مسلسلات» تحت هذا القسم الرئيسي. أضف قسماً فرعياً من إدارة الأقسام واختر نوع «مسلسلات»."
+                : $"القسم الرئيسي المحدد يحتوي على {rows.Length} قسم فرعي للمسلسلات. اختر القسم المناسب.";
+    }
+
+    private void KindBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (VideoCategoryPicker is null || VideoMainCategoryPicker is null) return;
+        RefreshVideoCategoryPicker(VideoCategoryPicker.SelectedValue as string);
     }
 
     private void RefreshVideoCategoryPicker(string? selectedCategoryId = null)
     {
-        if (VideoCategoryPicker is null || VideoCategoryStatusText is null) return;
+        if (VideoCategoryPicker is null || VideoCategoryStatusText is null || VideoMainCategoryPicker is null) return;
+        var parentId = VideoMainCategoryPicker.SelectedValue as string;
         var kind = (KindBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Movie";
-        var parentIds = _categories.Where(x => x.ParentId is null && x.ContentKind == "Group" && x.IsPublished)
-            .Select(x => x.CategoryId).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var allowedKinds = kind == "Series" ? new[] { "Series" } : new[] { "Movie", "Other" };
-        var rows = _categories.Where(x => x.ParentId is not null && x.IsPublished &&
-            parentIds.Contains(x.ParentId) && allowedKinds.Contains(x.ContentKind, StringComparer.Ordinal)).ToArray();
+        var rows = string.IsNullOrWhiteSpace(parentId)
+            ? Array.Empty<CategoryAdmin>()
+            : _categories.Where(x => x.ParentId == parentId && allowedKinds.Contains(x.ContentKind, StringComparer.Ordinal)).ToArray();
         VideoCategoryPicker.ItemsSource = rows;
         VideoCategoryPicker.SelectedValue = selectedCategoryId;
-        VideoCategoryStatusText.Text = rows.Length == 0
-            ? kind == "Series"
-                ? "لا توجد أقسام مسلسلات منشورة. أنشئ قسماً رئيسياً منشوراً ثم قسماً فرعياً من نوع مسلسلات."
-                : "لا توجد أقسام أفلام منشورة. أنشئ قسماً رئيسياً منشوراً ثم قسماً فرعياً من نوع أفلام."
-            : $"تم العثور على {rows.Length} قسم فرعي مناسب. اختر القسم الذي سيظهر فيه الفيديو.";
+        VideoCategoryStatusText.Text = string.IsNullOrWhiteSpace(parentId)
+            ? "اختر القسم الرئيسي أولاً لتظهر الأقسام الفرعية التابعة له."
+            : rows.Length == 0
+                ? kind == "Series"
+                    ? "لا توجد أقسام مسلسلات تحت هذا القسم الرئيسي. أضف قسماً فرعياً من نوع «مسلسلات»."
+                    : "لا توجد أقسام أفلام تحت هذا القسم الرئيسي. أضف قسماً فرعياً من نوع «أفلام» أو «محتوى آخر»."
+                : $"القسم الرئيسي المحدد يحتوي على {rows.Length} قسم فرعي مناسب. اختر القسم الذي سيظهر فيه الفيديو.";
     }
 
     private void NewCategory_Click(object sender, RoutedEventArgs e)
@@ -726,8 +758,9 @@ public partial class MainWindow : Window
         TagsBox.Text = v.Tags ?? "";
         SectionBox.Text = v.Section ?? "عام";
         KindBox.SelectedIndex = string.Equals(v.Kind, "Series", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        var selectedVideoCategory = _categories.FirstOrDefault(x => x.CategoryId == v.CategoryId);
+        VideoMainCategoryPicker.SelectedValue = selectedVideoCategory?.ParentId;
         RefreshVideoCategoryPicker(v.CategoryId);
-        SeriesCategoryPicker.SelectedValue = v.CategoryId;
         PublishBox.IsChecked = v.IsPublished || !v.MetadataSaved;
         PosterStatusText.Text = string.IsNullOrWhiteSpace(v.PosterPath) ? "لا يوجد غلاف لهذا العمل حالياً." : "يوجد غلاف محفوظ لهذا العمل.";
     }
@@ -856,6 +889,9 @@ public partial class MainWindow : Window
         SeriesYearBox.Clear();
         SeriesGenreBox.Clear();
         SeriesSectionBox.Text = "عام";
+        var defaultParent = _categories.FirstOrDefault(x => x.ParentId is null && x.ContentKind == "Group" && x.IsPublished);
+        SeriesMainCategoryPicker.SelectedValue = defaultParent?.CategoryId;
+        RefreshSeriesCategoryPicker();
         SeriesCategoryPicker.SelectedIndex = -1;
         SeriesPublishBox.IsChecked = true;
         SeriesPosterPathBox.Clear();
@@ -922,7 +958,9 @@ public partial class MainWindow : Window
         SeriesYearBox.Text = s.Year?.ToString() ?? "";
         SeriesGenreBox.Text = s.Genre ?? "";
         SeriesSectionBox.Text = s.Section ?? "عام";
-        SeriesCategoryPicker.SelectedValue = s.CategoryId;
+        var selectedSeriesCategory = _categories.FirstOrDefault(x => x.CategoryId == s.CategoryId);
+        SeriesMainCategoryPicker.SelectedValue = selectedSeriesCategory?.ParentId;
+        RefreshSeriesCategoryPicker(s.CategoryId);
         SeriesPublishBox.IsChecked = s.IsPublished;
         SeriesPosterPathBox.Text = s.PosterPath ?? "";
         SeriesFolderPathBox.Text = s.FolderPath ?? "";
@@ -1482,6 +1520,7 @@ public partial class MainWindow : Window
             var rows = await _http.GetFromJsonAsync<CustomerMessageAdmin[]>("/api/admin/messages") ?? Array.Empty<CustomerMessageAdmin>();
             _suppressCustomerMessagePopup = true;
             CustomerMessagesGrid.ItemsSource = rows;
+            LogoReportsGrid.ItemsSource = rows.Where(x => string.Equals(x.Category, "بلاغ شعار أو علامة تجارية", StringComparison.OrdinalIgnoreCase)).ToArray();
             if (selectedId is not null)
                 CustomerMessagesGrid.SelectedItem = rows.FirstOrDefault(x => x.Id == selectedId);
             _suppressCustomerMessagePopup = false;
@@ -1500,6 +1539,21 @@ public partial class MainWindow : Window
         if (_suppressCustomerMessagePopup || CustomerMessagesGrid.SelectedItem is not CustomerMessageAdmin message)
             return;
         ShowCustomerMessagePopup(message);
+    }
+
+    private void CustomerMessagesGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (CustomerMessagesGrid.SelectedItem is CustomerMessageAdmin message) ShowCustomerMessagePopup(message);
+    }
+
+    private void LogoReportsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_suppressCustomerMessagePopup && LogoReportsGrid.SelectedItem is CustomerMessageAdmin message) ShowCustomerMessagePopup(message);
+    }
+
+    private void LogoReportsGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (LogoReportsGrid.SelectedItem is CustomerMessageAdmin message) ShowCustomerMessagePopup(message);
     }
 
     private void ShowCustomerMessagePopup(CustomerMessageAdmin message)
@@ -1785,6 +1839,7 @@ public partial class MainWindow : Window
         public bool IsPublished { get; set; }
         public bool MetadataSaved { get; set; }
         public string? CategoryTitle { get; set; }
+        public int ViewCount { get; set; }
         public string KindLabel => string.Equals(Kind, "Series", StringComparison.OrdinalIgnoreCase) ? "مسلسل" : "فيلم";
         public string MetadataStatus => MetadataSaved ? "بيانات محفوظة" : "بانتظار البيانات";
         public string PublishStatus => IsPublished ? "منشور" : "غير منشور";

@@ -212,3 +212,23 @@ if ($xaml -notmatch 'مساعد توافق صيغ الفيديو \(FFmpeg\) — 
     throw "The FFmpeg purpose and optional status must be explained in the advanced settings."
 }
 Write-Host "PASS: FFmpeg is documented as an optional non-destructive playback helper."
+
+
+# Regression checks for hierarchical category selection, logo reports, and view counts.
+if ($xaml -notmatch 'VideoMainCategoryPicker' -or $xaml -notmatch 'SeriesMainCategoryPicker' -or
+    $code -notmatch 'RefreshSeriesCategoryPicker\(' -or $code -notmatch 'RefreshVideoCategoryPicker\(') {
+    throw "Main-category and dependent subcategory selectors are incomplete."
+}
+if ($xaml -notmatch 'LogoReportsGrid' -or $html -notmatch 'بلاغ شعار أو علامة تجارية' -or
+    $app -notmatch 'بلاغ شعار أو علامة تجارية' -or $code -notmatch 'LogoReportsGrid_SelectionChanged') {
+    throw "Logo and trademark reports are not exposed in the customer and admin interfaces."
+}
+if ($code -notmatch 'CustomerMessagesGrid_MouseDoubleClick' -or $code -notmatch 'LogoReportsGrid_MouseDoubleClick') {
+    throw "Customer messages must support reopening details by double-clicking."
+}
+if ($app -notmatch 'viewCount=viewCounts' -or $html -notmatch 'المشاهدات: ' -or
+    (Get-Content (Join-Path $root "src/Alostora.RestHouse/WatchProgressService.cs") -Raw) -notmatch 'GetViewCounts') {
+    throw "Per-video viewer counts are not wired from storage to the customer catalog."
+}
+if ($html -notmatch 'تصميم وبرمجة: محمد النظاري') { throw "Developer attribution footer is missing." }
+Write-Host "PASS: hierarchical categories, logo reports, reopenable messages, view counts, and developer attribution are wired."

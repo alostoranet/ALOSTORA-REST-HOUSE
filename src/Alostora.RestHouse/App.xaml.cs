@@ -94,7 +94,7 @@ public partial class App : Application
    _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
    _server.MapGet("/api/profile",(RestHouseProfileService profile)=>Results.Ok(profile.Load()));
    _server.MapPost("/api/messages",(CreateCustomerMessageRequest request,CustomerMessageService messages)=>{
-    var allowed=new[]{"طلب مسلسل","الإبلاغ عن مشكلة","اقتراح","أخرى"};
+    var allowed=new[]{"طلب مسلسل","الإبلاغ عن مشكلة","اقتراح","بلاغ شعار أو علامة تجارية","أخرى"};
     if(request is null||!allowed.Contains(request.Category)||string.IsNullOrWhiteSpace(request.Title)||request.Title.Trim().Length<3||request.Title.Length>120||string.IsNullOrWhiteSpace(request.Details)||request.Details.Trim().Length<8||request.Details.Length>2500||(request.Contact?.Length??0)>100||(request.ViewerId?.Length??0)>100)
      return Results.BadRequest(new{error="تحقق من نوع الرسالة والعنوان والتفاصيل. الحد الأقصى للتفاصيل 2500 حرف."});
     var id=messages.Create(request);
@@ -198,7 +198,7 @@ public partial class App : Application
     return path is null?Results.NotFound():Results.File(path,"video/mp4",enableRangeProcessing:true);
    });
 
-   _server.MapGet("/api/library",(HttpContext c,LibraryService svc,VideoMetadataService meta,SeriesCatalogService catalog,CatalogCategoryService categories,PublicCatalogAccessService publicCatalog)=>
+   _server.MapGet("/api/library",(HttpContext c,LibraryService svc,VideoMetadataService meta,SeriesCatalogService catalog,CatalogCategoryService categories,PublicCatalogAccessService publicCatalog,WatchProgressService watchProgress)=>
    {
     var isLocal=IsLocal(c);
     IReadOnlySet<string>? visibleVideoIds=isLocal?null:publicCatalog.GetPublishedVideoIds();
@@ -209,6 +209,7 @@ public partial class App : Application
       if(!string.IsNullOrWhiteSpace(seasonRow.FolderPath)&&Directory.Exists(seasonRow.FolderPath)) svc.EnsureFolderRegistered(seasonRow.FolderPath);
     }
     var metadataById=meta.List().ToDictionary(x=>x.VideoId);
+    var viewCounts=watchProgress.GetViewCounts();
     var categoryById=categories.List().ToDictionary(x=>x.CategoryId,x=>x.Title,StringComparer.OrdinalIgnoreCase);
     var posterLookup=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
     try
@@ -236,7 +237,7 @@ public partial class App : Application
        posterPath="/posters/"+string.Join("/",relative.Split('/').Select(Uri.EscapeDataString));
       }
      }
-     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,addedUtc,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags,categoryId=m?.CategoryId,categoryTitle=m is not null&&m.CategoryId is not null&&categoryById.TryGetValue(m.CategoryId,out var categoryTitle)?categoryTitle:null,metadataSaved=m is not null,section=m?.Section??"عام",isPublished=m?.IsPublished??false};
+     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,addedUtc,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags,categoryId=m?.CategoryId,categoryTitle=m is not null&&m.CategoryId is not null&&categoryById.TryGetValue(m.CategoryId,out var categoryTitle)?categoryTitle:null,viewCount=viewCounts.TryGetValue(v.Id,out var viewCount)?viewCount:0,metadataSaved=m is not null,section=m?.Section??"عام",isPublished=m?.IsPublished??false};
     });
     return Results.Ok(result);
    });
