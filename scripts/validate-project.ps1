@@ -57,3 +57,15 @@ foreach ($match in $scripts) {
     if ($LASTEXITCODE -ne 0) { throw ("Viewer JavaScript syntax check failed for inline script {0}." -f $index) }
 }
 Write-Host ("PASS: {0} inline viewer script block(s) passed Node.js syntax validation." -f $scripts.Count)
+
+# The metadata List projection must match the ordinal layout consumed by VideoMetadataService.Read.
+$metadataPath = Join-Path $root "src/Alostora.RestHouse/VideoMetadataService.cs"
+$metadata = Get-Content $metadataPath -Raw
+$listQuery = [regex]::Match($metadata, '(?s)public IReadOnlyList<VideoMetadata> List\(\).*?cmd\.CommandText\s*=\s*"""(.*?)"""')
+if (-not $listQuery.Success -or $listQuery.Groups[1].Value -notmatch '\bCategoryId\b') {
+    throw "VideoMetadataService.List must select CategoryId before Section and IsPublished."
+}
+if ($metadata -notmatch 'r\.IsDBNull\(13\)\s*\?\s*null\s*:\s*r\.GetString\(13\),\s*r\.GetString\(14\),\s*r\.GetInt32\(15\)') {
+    throw "VideoMetadataService.Read ordinal mapping changed; review the List projection."
+}
+Write-Host "PASS: metadata List query includes CategoryId and matches the reader column layout."
