@@ -79,3 +79,22 @@ if ($categoryService -notmatch 'ParentId=\$id AND IsPublished=1' -or
     throw "Catalog category integrity checks are missing."
 }
 Write-Host "PASS: category publication and linked-content integrity checks are present."
+
+# Public catalog and media routes must enforce publication on the server, not only in browser JavaScript.
+$publicAccessPath = Join-Path $root "src/Alostora.RestHouse/PublicCatalogAccessService.cs"
+$publicAccess = Get-Content $publicAccessPath -Raw
+$seriesPath = Join-Path $root "src/Alostora.RestHouse/SeriesCatalogService.cs"
+$series = Get-Content $seriesPath -Raw
+$mediaPath = Join-Path $root "src/Alostora.RestHouse/MediaConversionService.cs"
+$media = Get-Content $mediaPath -Raw
+if ($publicAccess -notmatch 'GetPublishedVideoIds' -or
+    $publicAccess -notmatch 'GetPublishedSeriesIds' -or
+    $publicAccess -notmatch 'IsVideoPublished' -or
+    $app -notmatch 'publicCatalog\.IsVideoPublished' -or
+    $app -notmatch 'publicCatalog\.GetPublishedVideoIds\(\)' -or
+    $app -notmatch 'publicCatalog\.GetPublishedSeriesIds\(\)' -or
+    $series -notmatch 'allowedSeriesIds' -or
+    $media -notmatch 'GetSourceVideoId') {
+    throw "Public catalog, media, subtitle, or conversion routes are missing publication guards."
+}
+Write-Host "PASS: public catalog, media, subtitle, and conversion routes enforce publication."
