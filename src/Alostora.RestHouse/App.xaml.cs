@@ -42,6 +42,7 @@ public partial class App : Application
    builder.Services.AddSingleton(new VideoMetadataService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new SeriesCatalogService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new CatalogCategoryService(Path.Combine(root,"resthouse.db")));
+   builder.Services.AddSingleton(new PublicCatalogAccessService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddHostedService(provider => new ScheduledBackupService(root,posters,provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ScheduledBackupService>>()));
    _server=builder.Build();
    static bool IsLanAddress(IPAddress? address)
@@ -113,21 +114,35 @@ public partial class App : Application
    });
 
    _server.MapGet("/api/media-tools",(HttpContext c,MediaConversionService media)=>IsLocal(c)?Results.Ok(media.GetToolStatus()):Results.NotFound());
-   _server.MapGet("/api/playback/{id}/tracks",async (string id,MediaConversionService media)=>Results.Ok(await media.ProbeAsync(id)));
-   _server.MapPost("/api/playback/{id}/prepare",async (string id,PreparePlaybackRequest request,MediaConversionService media)=>
+   _server.MapGet("/api/playback/{id}/tracks",async (string id,MediaConversionService media,LibraryService files,PublicCatalogAccessService publicCatalog)=>
    {
+    if(files.Resolve(id) is null||!publicCatalog.IsVideoPublished(id))return Results.NotFound();
+    return Results.Ok(await media.ProbeAsync(id));
+   });
+   _server.MapPost("/api/playback/{id}/prepare",async (string id,PreparePlaybackRequest request,MediaConversionService media,LibraryService files,PublicCatalogAccessService publicCatalog)=>
+   {
+    if(files.Resolve(id) is null||!publicCatalog.IsVideoPublished(id))return Results.NotFound();
     var result=await media.StartConversionAsync(id,request.AudioStreamIndex);
     return result.State=="failed"?Results.BadRequest(result):Results.Accepted("/api/playback/jobs/"+result.JobId,result);
    });
-   _server.MapGet("/api/playback/jobs/{jobId}",(string jobId,MediaConversionService media)=>Results.Ok(media.GetJob(jobId)));
-   _server.MapGet("/stream-cache/{jobId}.mp4",(string jobId,MediaConversionService media)=>
+   _server.MapGet("/api/playback/jobs/{jobId}",(string jobId,MediaConversionService media,LibraryService files,PublicCatalogAccessService publicCatalog)=>
    {
+    var videoId=media.GetSourceVideoId(jobId);
+    if(videoId is null||files.Resolve(videoId) is null||!publicCatalog.IsVideoPublished(videoId))return Results.NotFound();
+    return Results.Ok(media.GetJob(jobId));
+   });
+   _server.MapGet("/stream-cache/{jobId}.mp4",(string jobId,MediaConversionService media,LibraryService files,PublicCatalogAccessService publicCatalog)=>
+   {
+    var videoId=media.GetSourceVideoId(jobId);
+    if(videoId is null||files.Resolve(videoId) is null||!publicCatalog.IsVideoPublished(videoId))return Results.NotFound();
     var path=media.ResolveCachedFile(jobId);
     return path is null?Results.NotFound():Results.File(path,"video/mp4",enableRangeProcessing:true);
    });
 
-   _server.MapGet("/api/library",(LibraryService svc,VideoMetadataService meta,SeriesCatalogService catalog)=>
+   _server.MapGet("/api/library",(HttpContext c,LibraryService svc,VideoMetadataService meta,SeriesCatalogService catalog,PublicCatalogAccessService publicCatalog)=>
    {
+    var isLocal=IsLocal(c);
+    IReadOnlySet<string>? visibleVideoIds=isLocal?null:publicCatalog.GetPublishedVideoIds();
     foreach(var seriesRow in catalog.ListSeries())
     {
      if(!string.IsNullOrWhiteSpace(seriesRow.FolderPath)&&Directory.Exists(seriesRow.FolderPath)) svc.EnsureFolderRegistered(seriesRow.FolderPath);
@@ -146,7 +161,7 @@ public partial class App : Application
      }
     }
     catch { }
-    var result=svc.List().Select(v=>
+    var result=svc.List().Where(v=>isLocal||visibleVideoIds!.Contains(v.Id)).Select(v=>
     {
      metadataById.TryGetValue(v.Id,out var m);
      var resolvedVideo=svc.Resolve(v.Id);
@@ -165,15 +180,16 @@ public partial class App : Application
     });
     return Results.Ok(result);
    });
-   _server.MapGet("/api/series",(SeriesCatalogService series,LibraryService files,VideoMetadataService meta)=>
+   _server.MapGet("/api/series",(HttpContext c,SeriesCatalogService series,LibraryService files,VideoMetadataService meta,PublicCatalogAccessService publicCatalog)=>
    {
-    foreach(var seriesRow in series.ListSeries())
+    IReadOnlySet<string>? allowedSeriesIds=IsLocal(c)?null:publicCatalog.GetPublishedSeriesIds();
+    foreach(var seriesRow in series.ListSeries().Where(row=>allowedSeriesIds is null||allowedSeriesIds.Contains(row.SeriesId)))
     {
      if(!string.IsNullOrWhiteSpace(seriesRow.FolderPath)&&Directory.Exists(seriesRow.FolderPath)) files.EnsureFolderRegistered(seriesRow.FolderPath);
      foreach(var seasonRow in series.ListSeasons(seriesRow.SeriesId))
       if(!string.IsNullOrWhiteSpace(seasonRow.FolderPath)&&Directory.Exists(seasonRow.FolderPath)) files.EnsureFolderRegistered(seasonRow.FolderPath);
     }
-    return Results.Ok(series.GetCatalog(files,meta));
+    return Results.Ok(series.GetCatalog(files,meta,allowedSeriesIds));
    });
    _server.MapGet("/api/admin/series",(HttpContext c,SeriesCatalogService series,LibraryService files)=>{ if(!IsLocal(c)) return Results.NotFound(); var rows=series.ListSeries(); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.EnsureFolderRegistered(row.FolderPath); return Results.Ok(rows); });
    _server.MapDelete("/api/admin/series/{seriesId}",(HttpContext c,string seriesId,SeriesCatalogService series)=>
@@ -418,18 +434,20 @@ public partial class App : Application
     catch(Exception ex) { return Results.Problem("تعذر حذف ملف الفيديو: "+ex.Message); }
    });
    _server.MapGet("/api/progress/{viewerId}",(string viewerId,WatchProgressService db)=>viewerId.Length<=80?Results.Ok(db.Get(viewerId)):Results.BadRequest());
-   _server.MapPost("/api/progress",(WatchProgressRequest request,WatchProgressService db,LibraryService svc)=>{if(string.IsNullOrWhiteSpace(request.ViewerId)||request.ViewerId.Length>80||string.IsNullOrWhiteSpace(request.VideoId)||svc.Resolve(request.VideoId) is null||!double.IsFinite(request.PositionSeconds)||!double.IsFinite(request.DurationSeconds)||request.PositionSeconds<0||request.DurationSeconds<=0||request.PositionSeconds>request.DurationSeconds+5||request.PositionSeconds>864000||request.DurationSeconds>864000)return Results.BadRequest();db.Save(request);return Results.Ok(new{saved=true});});
-      _server.MapGet("/api/subtitles/{id}",(string id,LibraryService svc)=>svc.Resolve(id) is null?Results.NotFound():Results.Ok(svc.ListSubtitles(id)));
-   _server.MapGet("/api/subtitles/{id}/{fileName}",(string id,string fileName,LibraryService svc)=>{
+   _server.MapPost("/api/progress",(WatchProgressRequest request,WatchProgressService db,LibraryService svc,PublicCatalogAccessService publicCatalog)=>{if(string.IsNullOrWhiteSpace(request.ViewerId)||request.ViewerId.Length>80||string.IsNullOrWhiteSpace(request.VideoId)||svc.Resolve(request.VideoId) is null||!publicCatalog.IsVideoPublished(request.VideoId)||!double.IsFinite(request.PositionSeconds)||!double.IsFinite(request.DurationSeconds)||request.PositionSeconds<0||request.DurationSeconds<=0||request.PositionSeconds>request.DurationSeconds+5||request.PositionSeconds>864000||request.DurationSeconds>864000)return Results.BadRequest();db.Save(request);return Results.Ok(new{saved=true});});
+   _server.MapGet("/api/subtitles/{id}",(string id,LibraryService svc,PublicCatalogAccessService publicCatalog)=>svc.Resolve(id) is null||!publicCatalog.IsVideoPublished(id)?Results.NotFound():Results.Ok(svc.ListSubtitles(id)));
+   _server.MapGet("/api/subtitles/{id}/{fileName}",(string id,string fileName,LibraryService svc,PublicCatalogAccessService publicCatalog)=>{
+    if(svc.Resolve(id) is null||!publicCatalog.IsVideoPublished(id))return Results.NotFound();
     var content=svc.ReadSubtitle(id,fileName);
     return content is null?Results.NotFound():Results.Text(content,"text/vtt; charset=utf-8");
    });
-   _server.MapGet("/api/subtitles/{id}/embedded/{streamIndex:int}",async (string id,int streamIndex,MediaConversionService media)=>
+   _server.MapGet("/api/subtitles/{id}/embedded/{streamIndex:int}",async (string id,int streamIndex,MediaConversionService media,LibraryService files,PublicCatalogAccessService publicCatalog)=>
    {
+    if(files.Resolve(id) is null||!publicCatalog.IsVideoPublished(id))return Results.NotFound();
     var content=await media.ReadEmbeddedSubtitleAsync(id,streamIndex);
     return content is null?Results.NotFound():Results.Text(content,"text/vtt; charset=utf-8");
    });
-   _server.MapGet("/media/{id}",(string id,LibraryService svc)=>{var item=svc.Resolve(id);return item is null?Results.NotFound():Results.File(item.FullPath,item.ContentType,enableRangeProcessing:true);});
+   _server.MapGet("/media/{id}",(string id,LibraryService svc,PublicCatalogAccessService publicCatalog)=>{var item=svc.Resolve(id);return item is null||!publicCatalog.IsVideoPublished(id)?Results.NotFound():Results.File(item.FullPath,item.ContentType,enableRangeProcessing:true);});
    await _server.StartAsync(); new MainWindow(root,library,posters,settings.FfmpegPath).Show();
   } catch(Exception ex){MessageBox.Show("تعذر تشغيل السيرفر:\n"+ex.Message,"استراحة الأسطورة",MessageBoxButton.OK,MessageBoxImage.Error);Shutdown(1);}
  }
