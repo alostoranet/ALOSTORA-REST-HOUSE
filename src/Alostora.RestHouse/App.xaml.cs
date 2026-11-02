@@ -236,7 +236,7 @@ public partial class App : Application
        posterPath="/posters/"+string.Join("/",relative.Split('/').Select(Uri.EscapeDataString));
       }
      }
-     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,addedUtc,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags,categoryId=m?.CategoryId,categoryTitle=m?.CategoryId is not null&&categoryById.TryGetValue(m.CategoryId,out var categoryTitle)?categoryTitle:null,metadataSaved=m is not null,section=m?.Section??"عام",isPublished=m?.IsPublished??false};
+     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,addedUtc,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags,categoryId=m?.CategoryId,categoryTitle=m is not null&&m.CategoryId is not null&&categoryById.TryGetValue(m.CategoryId,out var categoryTitle)?categoryTitle:null,metadataSaved=m is not null,section=m?.Section??"عام",isPublished=m?.IsPublished??false};
     });
     return Results.Ok(result);
    });
