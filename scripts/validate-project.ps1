@@ -115,7 +115,7 @@ if (-not (Test-Path $seriesTestsPath)) {
     throw "Series catalog regression tests are missing."
 }
 $seriesTests = Get-Content $seriesTestsPath -Raw
-foreach ($testName in @("UpdateEpisodeChangesNumberAndTitleWithoutChangingVideoLink", "UnlinkEpisodeRemovesOnlyTheSeriesLinkAndKeepsOriginalVideoFile", "DuplicateEpisodeNumberAndDuplicateVideoLinksAreRejected")) {
+foreach ($testName in @("UpdateEpisodeChangesNumberAndTitleWithoutChangingVideoLink", "UnlinkEpisodeRemovesOnlyTheSeriesLinkAndKeepsOriginalVideoFile", "MissingPhysicalVideoFileIsReportedWithoutRemovingEpisodeRecord", "DuplicateEpisodeNumberAndDuplicateVideoLinksAreRejected")) {
     if (-not $seriesTests.Contains($testName)) { throw ("Missing regression test: " + $testName) }
 }
 Write-Host "PASS: episode editing, non-destructive unlinking, and duplicate-link regression tests are present."
@@ -130,3 +130,13 @@ if ($manualWorkflow -notmatch 'uses:\s*\./\.github/workflows/build\.yml' -or
     throw "Windows build workflows are not using one canonical build definition."
 }
 Write-Host "PASS: manual and automatic Windows builds share one workflow."
+
+if (Test-Path (Join-Path $root "Mo")) {
+    throw "The confirmed empty placeholder file Mo should not be present."
+}
+if ($series -notmatch 'seasonCount = seasons\.Length' -or
+    $series -notmatch 'episodeCount = seasons\.Sum' -or
+    $series -notmatch 'rating = ratings\.Length') {
+    throw "Series cards are missing their season count, episode count, or average episode rating."
+}
+Write-Host "PASS: series catalog exposes counts and average rating; empty placeholder is absent."
