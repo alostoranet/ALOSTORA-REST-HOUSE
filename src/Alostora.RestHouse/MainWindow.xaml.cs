@@ -29,6 +29,7 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<EpisodeCandidate> _episodeCandidates = new();
     private CategoryAdmin[] _categories = Array.Empty<CategoryAdmin>();
     private bool _suppressCustomerMessagePopup;
+    private bool _suppressVideoSeriesPickerEvent;
     private readonly DispatcherTimer _messageRefreshTimer = new() { Interval = TimeSpan.FromSeconds(30) };
 
     public MainWindow(string root, string library, string posters, string? ffmpegPath)
@@ -761,7 +762,9 @@ public partial class MainWindow : Window
         var selectedVideoCategory = _categories.FirstOrDefault(x => x.CategoryId == v.CategoryId);
         VideoMainCategoryPicker.SelectedValue = selectedVideoCategory?.ParentId;
         RefreshVideoCategoryPicker(v.CategoryId);
+        _suppressVideoSeriesPickerEvent = true;
         VideoSeriesPicker.SelectedValue = v.LinkedSeriesId;
+        _suppressVideoSeriesPickerEvent = false;
         await LoadVideoSeasonsForLinkAsync(v.LinkedSeriesId, v.LinkedSeasonId);
         VideoEpisodeNumberBox.Text = v.LinkedEpisodeNumber?.ToString() ?? "";
         VideoEpisodeTitleBox.Text = v.LinkedEpisodeTitle ?? "";
@@ -771,7 +774,15 @@ public partial class MainWindow : Window
 
     private async void VideoSeriesPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_suppressVideoSeriesPickerEvent) return;
         var seriesId = VideoSeriesPicker.SelectedValue as string;
+        if (!string.IsNullOrWhiteSpace(seriesId) && VideoSeriesPicker.SelectedItem is SeriesAdmin selectedSeries)
+        {
+            KindBox.SelectedIndex = 1;
+            var category = _categories.FirstOrDefault(x => x.CategoryId == selectedSeries.CategoryId);
+            VideoMainCategoryPicker.SelectedValue = category?.ParentId;
+            RefreshVideoCategoryPicker(selectedSeries.CategoryId);
+        }
         await LoadVideoSeasonsForLinkAsync(seriesId);
     }
 
