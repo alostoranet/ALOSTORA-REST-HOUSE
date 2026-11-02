@@ -17,7 +17,8 @@ public sealed record RegisterSelectedFilesRequest(string FolderPath, List<string
 public sealed record RegisterFilesRequest(List<string> FilePaths);
 public sealed record DetectedEpisodeLink(string VideoId, int EpisodeNumber, string? Title, bool Selected);
 public sealed record LinkDetectedEpisodesRequest(List<DetectedEpisodeLink> Episodes);
-public sealed record RelinkEpisodeRequest(string VideoId);\npublic sealed record UpdateEpisodeRequest(int EpisodeNumber, string? Title);
+public sealed record RelinkEpisodeRequest(string VideoId);
+public sealed record UpdateEpisodeRequest(int EpisodeNumber, string? Title);
 public sealed record PreparePlaybackRequest(int? AudioStreamIndex);
 
 public partial class App : Application
