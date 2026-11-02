@@ -1634,6 +1634,9 @@ public partial class MainWindow : Window
         await SetCustomerMessageStatusAsync(message.Id, status);
     }
 
+    private async void RefreshCustomerMessages_Click(object sender, RoutedEventArgs e) =>
+        await LoadCustomerMessagesAsync();
+
     private async void MarkCustomerMessageInProgress_Click(object sender, RoutedEventArgs e) =>
         await SetSelectedCustomerMessageStatusAsync("قيد المتابعة");
 
