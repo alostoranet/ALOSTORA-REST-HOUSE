@@ -101,6 +101,68 @@ public sealed class PublicCatalogAccessTests : IDisposable
     }
 
     [Fact]
+    public void RegisterFilesAddsExternalVideoWithoutMovingTheOriginalFile()
+    {
+        var libraryRoot = Path.Combine(_root, "library");
+        var externalFolder = Path.Combine(_root, "external-files");
+        Directory.CreateDirectory(externalFolder);
+        var sourcePath = Path.Combine(externalFolder, "sample.mp4");
+        var originalBytes = new byte[] { 0, 1, 2, 3, 4, 5, 6 };
+        File.WriteAllBytes(sourcePath, originalBytes);
+
+        using var library = new LibraryService(libraryRoot, _databasePath);
+        Assert.Equal(1, library.RegisterFiles(new[] { sourcePath }));
+
+        var item = Assert.Single(library.List());
+        Assert.Equal("sample.mp4", item.FileName);
+        Assert.Equal(Path.GetFullPath(sourcePath), Path.GetFullPath(library.Resolve(item.Id)!.FullPath));
+        Assert.Equal(originalBytes, File.ReadAllBytes(sourcePath));
+    }
+
+    [Fact]
+    public void RegisterSelectedFilesAddsOnlyFilesChosenFromExternalFolder()
+    {
+        var libraryRoot = Path.Combine(_root, "library");
+        var externalFolder = Path.Combine(_root, "selected-folder");
+        Directory.CreateDirectory(externalFolder);
+        var selectedPath = Path.Combine(externalFolder, "selected.mp4");
+        var ignoredPath = Path.Combine(externalFolder, "not-selected.mkv");
+        File.WriteAllBytes(selectedPath, new byte[] { 1, 2, 3 });
+        File.WriteAllBytes(ignoredPath, new byte[] { 4, 5, 6 });
+
+        using var library = new LibraryService(libraryRoot, _databasePath);
+        Assert.Equal(1, library.RegisterSelectedFiles(externalFolder, new[] { selectedPath }));
+
+        var item = Assert.Single(library.List());
+        Assert.Equal("selected.mp4", item.FileName);
+        Assert.True(File.Exists(ignoredPath));
+    }
+
+    [Fact]
+    public void MetadataListPreservesCategoryAndPublicationFields()
+    {
+        CreateRootAndMovieCategory();
+        const string videoId = "dddddddddddddddddddddddd";
+        SaveMovie(videoId, isPublished: true);
+
+        var row = Assert.Single(_metadata.List());
+        Assert.Equal(videoId, row.VideoId);
+        Assert.Equal("movies", row.CategoryId);
+        Assert.True(row.IsPublished);
+    }
+
+    [Fact]
+    public void CategoryCannotBeDeletedWhileItIsReferencedByVideoMetadata()
+    {
+        CreateRootAndMovieCategory();
+        const string videoId = "eeeeeeeeeeeeeeeeeeeeeeee";
+        SaveMovie(videoId, isPublished: true);
+
+        Assert.Throws<InvalidOperationException>(() => _categories.Delete("movies"));
+        Assert.NotNull(_categories.Get("movies"));
+    }
+
+    [Fact]
     public void UnpublishedOrUncategorizedSeriesAreNotIncludedInPublicSeriesList()
     {
         CreateRootAndSeriesCategory();
