@@ -22,6 +22,10 @@ jobs:
       - name: Restore Windows x64 dependencies
         run: dotnet restore src/Alostora.RestHouse/Alostora.RestHouse.csproj --runtime win-x64
 
+      - name: Validate UI wiring, API routes, and viewer scripts
+        shell: pwsh
+        run: ./scripts/validate-project.ps1
+
       - name: Build
         run: dotnet build src/Alostora.RestHouse/Alostora.RestHouse.csproj --configuration Release --runtime win-x64 --no-restore
 
