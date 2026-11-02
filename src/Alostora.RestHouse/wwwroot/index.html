@@ -70,7 +70,7 @@ function render(){
   if(selected&&selected!==main.categoryId&&!subs.some(x=>x.categoryId===selected))continue;
   const mainWrap=document.createElement('section');mainWrap.className='main-category';
   const mainHead=document.createElement('div');mainHead.className='main-category-head';
-  const mainPoster=makePoster(main.posterPath,main.title);if(mainPoster){mainPoster.className='category-poster';mainHead.append(mainPoster);}
+  const mainPoster=makePoster(main.posterPath,main.title);if(mainPoster){mainPoster.className=mainPoster.tagName==='IMG'?'category-poster':'poster-empty category-poster';mainHead.append(mainPoster);}
   const mainTitle=document.createElement('h2');mainTitle.textContent=main.title;mainHead.append(mainTitle);
   if(isNew(main.createdUtc))mainHead.append(makeNewBadge());
   mainWrap.append(mainHead);
@@ -83,7 +83,7 @@ function render(){
    visibleCategoryIds.add(sub.categoryId);
    const section=document.createElement('section');section.className='sub-category';
    const heading=document.createElement('div');heading.className='sub-category-head';
-   const poster=makePoster(sub.posterPath,sub.title);if(poster){poster.className='sub-category-poster';heading.append(poster);}
+   const poster=makePoster(sub.posterPath,sub.title);if(poster){poster.className=poster.tagName==='IMG'?'sub-category-poster':'poster-empty sub-category-poster';heading.append(poster);}
    const title=document.createElement('h3');title.textContent=sub.title;heading.append(title);
    if(isNew(sub.createdUtc))heading.append(makeNewBadge());
    section.append(heading);
