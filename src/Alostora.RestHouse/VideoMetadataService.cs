@@ -10,7 +10,8 @@ public sealed record VideoMetadata(
 public sealed record SaveVideoMetadataRequest(
     string VideoId, string Title, string? Description, int? Year, string? Genre, string? Kind, string? PosterPath,
     string? Director = null, string? Cast = null, double? Rating = null, int? RuntimeMinutes = null,
-    string? ReleaseDate = null, string? Tags = null, string? Section = null, bool IsPublished = false, string? CategoryId = null);
+    string? ReleaseDate = null, string? Tags = null, string? Section = null, bool IsPublished = false, string? CategoryId = null,
+    string? SeriesId = null, long? SeasonId = null, int? EpisodeNumber = null, string? EpisodeTitle = null);
 
 public sealed class VideoMetadataService
 {
