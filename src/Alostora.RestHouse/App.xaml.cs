@@ -237,7 +237,8 @@ public partial class App : Application
        posterPath="/posters/"+string.Join("/",relative.Split('/').Select(Uri.EscapeDataString));
       }
      }
-     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,addedUtc,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags,categoryId=m?.CategoryId,categoryTitle=m is not null&&m.CategoryId is not null&&categoryById.TryGetValue(m.CategoryId,out var categoryTitle)?categoryTitle:null,viewCount=viewCounts.TryGetValue(v.Id,out var viewCount)?viewCount:0,metadataSaved=m is not null,section=m?.Section??"عام",isPublished=m?.IsPublished??false};
+     var placement=catalog.GetVideoPlacement(v.Id);
+     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,addedUtc,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags,categoryId=m?.CategoryId,categoryTitle=m is not null&&m.CategoryId is not null&&categoryById.TryGetValue(m.CategoryId,out var categoryTitle)?categoryTitle:null,linkedSeriesId=placement?.SeriesId,linkedSeasonId=placement?.SeasonId,linkedEpisodeNumber=placement?.EpisodeNumber,linkedEpisodeTitle=placement?.Title,viewCount=viewCounts.TryGetValue(v.Id,out var viewCount)?viewCount:0,metadataSaved=m is not null,section=m?.Section??"عام",isPublished=m?.IsPublished??false};
     });
     return Results.Ok(result);
    });
@@ -250,7 +251,7 @@ public partial class App : Application
      foreach(var seasonRow in series.ListSeasons(seriesRow.SeriesId))
       if(!string.IsNullOrWhiteSpace(seasonRow.FolderPath)&&Directory.Exists(seasonRow.FolderPath)) files.EnsureFolderRegistered(seasonRow.FolderPath);
     }
-    return Results.Ok(series.GetCatalog(files,meta,allowedSeriesIds));
+    return Results.Ok(series.GetCatalog(files,meta,allowedSeriesIds,IsLocal(c)?null:publicCatalog.GetPublishedVideoIds()));
    });
    _server.MapGet("/api/admin/series",(HttpContext c,SeriesCatalogService series,LibraryService files)=>{ if(!IsLocal(c)) return Results.NotFound(); var rows=series.ListSeries(); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.EnsureFolderRegistered(row.FolderPath); return Results.Ok(rows); });
    _server.MapDelete("/api/admin/series/{seriesId}",(HttpContext c,string seriesId,SeriesCatalogService series)=>
@@ -268,7 +269,8 @@ public partial class App : Application
    });
    _server.MapPost("/api/admin/series",(HttpContext c,SaveSeriesRequest request,SeriesCatalogService series,LibraryService files,CatalogCategoryService categories)=>{
     if(!IsLocal(c)) return Results.NotFound();
-    if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeriesId.Length>80||string.IsNullOrWhiteSpace(request.Title)||request.Title.Length>160||(request.Description?.Length??0)>2000||(request.Genre?.Length??0)>80||(request.Year is not null&&(request.Year<1888||request.Year>DateTime.UtcNow.Year+5))||(request.PosterPath?.Length??0)>200||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="تحقق من بيانات المسلسل"});
+    if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeriesId.Length>80||string.IsNullOrWhiteSpace(request.Title)||request.Title.Length>160||(request.Description?.Length??0)>2000||(request.Genre?.Length??0)>80||(request.Year is not null&&(request.Year<1888||request.Year>DateTime.UtcNow.Year+5))||(request.PosterPath?.Length??0)>200||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))||request.OrganizationType is not ("None" or "Seasons" or "Parts")) return Results.BadRequest(new{error="تحقق من بيانات المسلسل وطريقة تنظيمه"});
+    if(request.OrganizationType=="None"&&series.ListSeasons(request.SeriesId).Count>0)return Results.BadRequest(new{error="هذا المسلسل يحتوي على مواسم أو أجزاء مسجلة. لا يمكن تحويله إلى تنظيم مباشر قبل نقل محتواها."});
     if(request.IsPublished)
     {
      var previous=series.GetSeries(request.SeriesId);
@@ -283,7 +285,10 @@ public partial class App : Application
    _server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalogService series,LibraryService files)=>{ if(!IsLocal(c)) return Results.NotFound(); var rows=series.ListSeasons(seriesId); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.RegisterFolder(row.FolderPath); return Results.Ok(rows); });
    _server.MapPost("/api/admin/seasons",(HttpContext c,SaveSeasonRequest request,SeriesCatalogService series,LibraryService files)=>{
     if(!IsLocal(c)) return Results.NotFound();
-    if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeasonNumber<1||request.SeasonNumber>500||(request.Title?.Length??0)>120||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="بيانات الموسم غير صحيحة أو مجلد الموسم غير موجود"});
+    if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeasonNumber<1||request.SeasonNumber>500||(request.Title?.Length??0)>120||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="بيانات الموسم أو الجزء غير صحيحة أو مجلده غير موجود"});
+    var ownerSeries=series.GetSeries(request.SeriesId);
+    if(ownerSeries is null)return Results.NotFound(new{error="المسلسل غير موجود"});
+    if(ownerSeries.OrganizationType=="None")return Results.BadRequest(new{error="هذا البرنامج مضبوط على فيديوهات مباشرة ولا يستخدم مواسم أو أجزاء."});
     try { var id=series.AddSeason(request); if(!string.IsNullOrWhiteSpace(request.FolderPath)) files.RegisterFolder(request.FolderPath); return Results.Ok(new{seasonId=id}); } catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="المسلسل غير موجود أو رقم الموسم مكرر"}); }
    });
    _server.MapPost("/api/admin/seasons/{seasonId:long}/folder",(HttpContext c,long seasonId,UpdateSeasonFolderRequest request,SeriesCatalogService series)=>{
@@ -390,7 +395,7 @@ public partial class App : Application
     catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="هذا الملف مربوط بحلقة أخرى بالفعل"}); }
    });
    _server.MapGet("/api/admin/metadata",(HttpContext c,VideoMetadataService meta)=>IsLocal(c)?Results.Ok(meta.List()):Results.NotFound());
-   _server.MapPost("/api/admin/metadata",(HttpContext c,SaveVideoMetadataRequest request,LibraryService librarySvc,VideoMetadataService meta,CatalogCategoryService categories)=>{
+   _server.MapPost("/api/admin/metadata",(HttpContext c,SaveVideoMetadataRequest request,LibraryService librarySvc,VideoMetadataService meta,CatalogCategoryService categories,SeriesCatalogService series)=>{
     if(!IsLocal(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.VideoId)||request.VideoId.Length!=24||!request.VideoId.All(Uri.IsHexDigit)||librarySvc.Resolve(request.VideoId) is null) return Results.BadRequest(new{error="الفيديو غير موجود"});
     if(string.IsNullOrWhiteSpace(request.Title)||request.Title.Length>160||(request.Description?.Length??0)>2000||(request.Genre?.Length??0)>80||(request.Year is not null&&(request.Year<1888||request.Year>DateTime.UtcNow.Year+5))||(request.PosterPath?.Length??0)>200||(request.Director?.Length??0)>160||(request.Cast?.Length??0)>1000||(request.Tags?.Length??0)>500||(request.Rating is <0 or >10)||(request.RuntimeMinutes is <1 or >1000)||(request.ReleaseDate?.Length??0)>10) return Results.BadRequest(new{error="تحقق من البيانات المدخلة"});
@@ -404,7 +409,28 @@ public partial class App : Application
      if(!string.IsNullOrWhiteSpace(poster)&&!PosterExists(poster,posters))return Results.BadRequest(new{error="مسار غلاف الفيديو غير صالح أو أن ملف الصورة غير موجود"});
      if(category is null||(category.ContentKind!=expectedKind&&category.ContentKind!="Other")||!category.IsPublished||parent is null||!parent.IsPublished)return Results.BadRequest(new{error="اختر تصنيفاً فرعياً منشوراً من قسم رئيسي منشور"});
     }
-    meta.Save(request); return Results.Ok(new{saved=true});
+    if(!string.IsNullOrWhiteSpace(request.SeriesId))
+    {
+     var selectedSeries=series.GetSeries(request.SeriesId);
+     if(selectedSeries is null||request.Kind!="Series")return Results.BadRequest(new{error="اختر مسلسلاً صحيحاً لربط هذا الفيديو به."});
+     if(!string.Equals(selectedSeries.CategoryId,request.CategoryId,StringComparison.OrdinalIgnoreCase))
+      return Results.BadRequest(new{error="قسم الفيديو يجب أن يطابق قسم المسلسل. تم اختيار قسم المسلسل تلقائياً عند تحديده."});
+     if(request.SeasonId is not null)
+     {
+      var selectedSeason=series.GetSeason(request.SeasonId.Value);
+      if(selectedSeason is null||selectedSeason.SeriesId!=request.SeriesId)return Results.BadRequest(new{error="الموسم أو الجزء المختار لا يتبع المسلسل المحدد."});
+      if(request.EpisodeNumber is null or <1 or >10000)return Results.BadRequest(new{error="أدخل رقم الحلقة أو الفيديو داخل الموسم/الجزء."});
+     }
+    }
+    else if(request.SeasonId is not null)return Results.BadRequest(new{error="اختر المسلسل قبل اختيار الموسم أو الجزء."});
+    try
+    {
+     meta.Save(request);
+     series.SetVideoPlacement(request.SeriesId,request.SeasonId,request.VideoId,request.EpisodeNumber,request.EpisodeTitle??request.Title);
+     return Results.Ok(new{saved=true});
+    }
+    catch(Microsoft.Data.Sqlite.SqliteException){return Results.Conflict(new{error="تعذر ربط الفيديو: قد يكون رقم الحلقة مستخدماً بالفعل في هذا الموسم أو الجزء."});}
+    catch(Exception ex) when(ex is ArgumentException or InvalidOperationException or KeyNotFoundException){return Results.BadRequest(new{error=ex.Message});}
    });
    _server.MapPost("/api/admin/poster/{videoId}",async (HttpContext c,string videoId,LibraryService librarySvc,VideoMetadataService meta)=>{
     if(!IsLocal(c)) return Results.NotFound();
