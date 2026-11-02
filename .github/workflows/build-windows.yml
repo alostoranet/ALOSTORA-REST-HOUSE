@@ -28,6 +28,13 @@ jobs:
           [System.IO.File]::WriteAllText($scriptPath, $match.Groups[1].Value, [System.Text.UTF8Encoding]::new($false))
           node --check $scriptPath
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Validate UI wiring, API routes, and viewer scripts
+        shell: pwsh
+        run: ./scripts/validate-project.ps1
+      - name: Restore SQLite test dependencies
+        run: dotnet restore tests/Alostora.RestHouse.Tests/Alostora.RestHouse.Tests.csproj
+      - name: Run SQLite publication and catalog tests
+        run: dotnet test tests/Alostora.RestHouse.Tests/Alostora.RestHouse.Tests.csproj --configuration Release --no-restore
       - name: Build
         run: dotnet build src/Alostora.RestHouse/Alostora.RestHouse.csproj --configuration Release --no-restore
       - name: Publish Windows x64
