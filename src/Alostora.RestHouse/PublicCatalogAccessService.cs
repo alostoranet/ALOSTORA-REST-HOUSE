@@ -47,10 +47,8 @@ public sealed class PublicCatalogAccessService
                   AND parent.IsPublished=1
                   AND parent.ContentKind='Group'
                   AND child.IsPublished=1
-                  AND (
-                    (vm.Kind='Movie' AND child.ContentKind IN ('Movie','Other'))
-                    OR (vm.Kind='Other' AND child.ContentKind='Other')
-                  )
+                  AND vm.Kind<>'Series'
+                  AND child.ContentKind IN ('Movie','Other')
               )
               OR
               EXISTS(
@@ -85,10 +83,8 @@ public sealed class PublicCatalogAccessService
               AND parent.IsPublished=1
               AND parent.ContentKind='Group'
               AND child.IsPublished=1
-              AND (
-                (vm.Kind='Movie' AND child.ContentKind IN ('Movie','Other'))
-                OR (vm.Kind='Other' AND child.ContentKind='Other')
-              )
+              AND vm.Kind<>'Series'
+              AND child.ContentKind IN ('Movie','Other')
             UNION
             SELECT episode.VideoId
             FROM SeriesEpisodes episode
