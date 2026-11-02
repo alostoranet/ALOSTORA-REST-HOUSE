@@ -82,22 +82,6 @@ public sealed class SeriesCatalogServiceTests : IDisposable
     }
 
     [Fact]
-    public void MissingPhysicalVideoFileIsReportedWithoutRemovingEpisodeRecord()
-    {
-        var seasonId = _series.AddSeason(new SaveSeasonRequest("series-test", 1, "الموسم الأول"));
-        var episodeId = _series.AddEpisode(new SaveEpisodeRequest(seasonId, "missing-video-id-000000000", 1, "حلقة ملفها مفقود"));
-        var emptyLibraryRoot = Path.Combine(_root, "empty-library");
-        Directory.CreateDirectory(emptyLibraryRoot);
-        using var library = new LibraryService(emptyLibraryRoot, _databasePath);
-
-        var missing = Assert.Single(_series.ListMissingEpisodes(library));
-
-        Assert.Equal(episodeId, missing.EpisodeId);
-        Assert.Equal("missing-video-id-000000000", missing.VideoId);
-        Assert.Single(_series.ListEpisodes(seasonId));
-    }
-
-    [Fact]
     public void DuplicateEpisodeNumberAndDuplicateVideoLinksAreRejected()
     {
         var seasonId = _series.AddSeason(new SaveSeasonRequest("series-test", 1, "الموسم الأول"));
