@@ -40,7 +40,7 @@ public partial class MainWindow : Window
         AddressBox.Text = $"رابط المشاهدة: http://{GetLanAddress()}:8096";
         VideosGrid.ItemsSource = _videos;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await CheckMediaToolsAsync(); };
+        Loaded += async (_, _) => { await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await CheckMediaToolsAsync(); };
     }
 
     private async void RefreshLibrary_Click(object sender, RoutedEventArgs e)
@@ -394,6 +394,94 @@ public partial class MainWindow : Window
         catch (Exception ex) { StatusText.Text = "تعذر حذف الملفات: " + ex.Message; }
     }
 
+    private async System.Threading.Tasks.Task LoadCategoriesAsync()
+    {
+        try
+        {
+            var rows = await _http.GetFromJsonAsync<CategoryAdmin[]>("/api/admin/catalog-categories") ?? Array.Empty<CategoryAdmin>();
+            var parents = rows.Where(x => x.ParentId is null).ToDictionary(x => x.CategoryId, x => x.Title);
+            foreach (var row in rows)
+            {
+                row.DisplayTitle = row.ParentId is not null && parents.TryGetValue(row.ParentId, out var parent) ? parent + "  ←  " + row.Title : row.Title;
+                row.ContentKindLabel = row.ContentKind switch { "Group" => "رئيسي", "Movie" => "أفلام", "Series" => "مسلسلات", _ => "محتوى آخر" };
+            }
+            CategoriesGrid.ItemsSource = rows;
+            CategoryParentPicker.ItemsSource = rows.Where(x => x.ParentId is null && x.ContentKind == "Group").ToArray();
+            var subcategories = rows.Where(x => x.ParentId is not null).ToArray();
+            VideoCategoryPicker.ItemsSource = subcategories.Where(x => x.ContentKind is "Movie" or "Other").ToArray();
+            SeriesCategoryPicker.ItemsSource = subcategories.Where(x => x.ContentKind == "Series").ToArray();
+        }
+        catch (Exception ex) { CategoryStatusText.Text = "تعذر تحميل الأقسام: " + ex.Message; }
+    }
+
+    private void CategoriesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (CategoriesGrid.SelectedItem is not CategoryAdmin row) return;
+        CategoryIdBox.Text = row.CategoryId;
+        CategoryTitleBox.Text = row.Title;
+        CategoryParentPicker.SelectedValue = row.ParentId;
+        CategoryKindPicker.SelectedItem = CategoryKindPicker.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == row.ContentKind);
+        CategoryPosterPathBox.Text = row.PosterPath ?? "";
+        CategoryPublishBox.IsChecked = row.IsPublished;
+        CategoryPosterStatusText.Text = string.IsNullOrWhiteSpace(row.PosterPath) ? "لا يوجد غلاف. ارفع الغلاف قبل النشر." : "تم حفظ غلاف هذا القسم.";
+    }
+
+    private async void SaveCategory_Click(object sender, RoutedEventArgs e)
+    {
+        var kind = (CategoryKindPicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Group";
+        var parentId = CategoryParentPicker.SelectedValue as string;
+        if (string.IsNullOrWhiteSpace(CategoryTitleBox.Text)) { CategoryStatusText.Text = "اكتب اسم القسم أولاً."; return; }
+        if (kind == "Group") parentId = null;
+        else if (string.IsNullOrWhiteSpace(parentId)) { CategoryStatusText.Text = "اختر القسم الرئيسي الذي سيندرج تحته هذا القسم."; return; }
+        if (CategoryPublishBox.IsChecked == true && string.IsNullOrWhiteSpace(CategoryPosterPathBox.Text))
+        { CategoryStatusText.Text = "الغلاف إلزامي قبل نشر القسم. احفظه أولاً دون نشر، ثم ارفع الغلاف وأعد الحفظ."; return; }
+        var id = string.IsNullOrWhiteSpace(CategoryIdBox.Text) ? Guid.NewGuid().ToString("N") : CategoryIdBox.Text.Trim();
+        try
+        {
+            var response = await _http.PostAsJsonAsync("/api/admin/catalog-categories", new { categoryId = id, parentId, title = CategoryTitleBox.Text.Trim(), contentKind = kind, posterPath = string.IsNullOrWhiteSpace(CategoryPosterPathBox.Text) ? null : CategoryPosterPathBox.Text.Trim(), isPublished = CategoryPublishBox.IsChecked == true });
+            if (!response.IsSuccessStatusCode) { CategoryStatusText.Text = "تعذر حفظ القسم: " + await response.Content.ReadAsStringAsync(); return; }
+            CategoryIdBox.Text = id;
+            CategoryStatusText.Text = "تم حفظ القسم. ارفع غلافه إذا لم يكن موجوداً، ثم فعّل النشر.";
+            await LoadCategoriesAsync();
+            CategoriesGrid.SelectedItem = (CategoriesGrid.ItemsSource as CategoryAdmin[])?.FirstOrDefault(x => x.CategoryId == id);
+        }
+        catch (Exception ex) { CategoryStatusText.Text = "تعذر حفظ القسم: " + ex.Message; }
+    }
+
+    private async void UploadCategoryPoster_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(CategoryIdBox.Text)) { CategoryStatusText.Text = "احفظ القسم أولاً ثم ارفع غلافه."; return; }
+        var dialog = new OpenFileDialog { Title = "اختر غلاف القسم", Filter = "صور مدعومة|*.jpg;*.jpeg;*.png;*.webp", CheckFileExists = true };
+        if (dialog.ShowDialog(this) != true) return;
+        var ext = Path.GetExtension(dialog.FileName).ToLowerInvariant();
+        var type = ext switch { ".jpg" or ".jpeg" => "image/jpeg", ".png" => "image/png", ".webp" => "image/webp", _ => "" };
+        var info = new FileInfo(dialog.FileName);
+        if (type.Length == 0 || info.Length == 0 || info.Length > 5_242_880) { CategoryStatusText.Text = "اختر صورة JPG أو PNG أو WEBP لا تتجاوز 5 ميجابايت."; return; }
+        try
+        {
+            using var bytes = new ByteArrayContent(await File.ReadAllBytesAsync(dialog.FileName));
+            bytes.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(type);
+            var response = await _http.PostAsync("/api/admin/catalog-categories/" + Uri.EscapeDataString(CategoryIdBox.Text.Trim()) + "/poster", bytes);
+            if (!response.IsSuccessStatusCode) { CategoryStatusText.Text = "تعذر رفع الغلاف: " + await response.Content.ReadAsStringAsync(); return; }
+            var result = await response.Content.ReadFromJsonAsync<PosterUploadResult>();
+            CategoryPosterPathBox.Text = result?.PosterPath ?? "";
+            CategoryPosterStatusText.Text = "تم رفع الغلاف. أعد حفظ القسم مع تفعيل النشر.";
+            await LoadCategoriesAsync();
+        }
+        catch (Exception ex) { CategoryStatusText.Text = "تعذر رفع الغلاف: " + ex.Message; }
+    }
+
+    private async void DeleteCategory_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(CategoryIdBox.Text)) { CategoryStatusText.Text = "اختر قسماً من القائمة أولاً."; return; }
+        if (MessageBox.Show("سيتم حذف القسم وأقسامه الفرعية. لن تُحذف ملفات الفيديو الأصلية. هل تريد المتابعة؟", "تأكيد حذف القسم", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        var response = await _http.DeleteAsync("/api/admin/catalog-categories/" + Uri.EscapeDataString(CategoryIdBox.Text.Trim()));
+        if (!response.IsSuccessStatusCode) { CategoryStatusText.Text = "تعذر حذف القسم: " + await response.Content.ReadAsStringAsync(); return; }
+        CategoryIdBox.Clear(); CategoryTitleBox.Clear(); CategoryPosterPathBox.Clear();
+        await LoadCategoriesAsync();
+        CategoryStatusText.Text = "تم حذف القسم.";
+    }
+
     private async System.Threading.Tasks.Task LoadVideosAsync()
     {
         try
@@ -440,6 +528,7 @@ public partial class MainWindow : Window
         ReleaseDateBox.Text = v.ReleaseDate ?? "";
         TagsBox.Text = v.Tags ?? "";
         SectionBox.Text = v.Section ?? "عام";
+        VideoCategoryPicker.SelectedValue = v.CategoryId;
         PublishBox.IsChecked = v.IsPublished;
         KindBox.SelectedIndex = string.Equals(v.Kind, "Series", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         PosterStatusText.Text = string.IsNullOrWhiteSpace(v.PosterPath) ? "لا يوجد غلاف لهذا العمل حالياً." : "يوجد غلاف محفوظ لهذا العمل.";
@@ -512,6 +601,7 @@ public partial class MainWindow : Window
             releaseDate = string.IsNullOrWhiteSpace(ReleaseDateBox.Text) ? null : ReleaseDateBox.Text.Trim(),
             tags = TagsBox.Text,
             section = string.IsNullOrWhiteSpace(SectionBox.Text) ? "عام" : SectionBox.Text.Trim(),
+            categoryId = VideoCategoryPicker.SelectedValue as string,
             isPublished = PublishBox.IsChecked == true
         };
         try
@@ -563,6 +653,7 @@ public partial class MainWindow : Window
                 genre = video.Genre ?? "",
                 posterPath = video.PosterPath,
                 folderPath = (string?)null,
+                categoryId = video.CategoryId,
                 section = video.Section,
                 isPublished = video.IsPublished
             });
@@ -587,6 +678,7 @@ public partial class MainWindow : Window
         SeriesYearBox.Text = s.Year?.ToString() ?? "";
         SeriesGenreBox.Text = s.Genre ?? "";
         SeriesSectionBox.Text = s.Section ?? "عام";
+        SeriesCategoryPicker.SelectedValue = s.CategoryId;
         SeriesPublishBox.IsChecked = s.IsPublished;
         SeriesPosterPathBox.Text = s.PosterPath ?? "";
         SeriesFolderPathBox.Text = s.FolderPath ?? "";
@@ -667,7 +759,7 @@ public partial class MainWindow : Window
         var id = string.IsNullOrWhiteSpace(SeriesIdBox.Text) ? "series-" + Guid.NewGuid().ToString("N") : SeriesIdBox.Text.Trim();
         var folderPath = string.IsNullOrWhiteSpace(SeriesFolderPathBox.Text) ? null : Path.GetFullPath(SeriesFolderPathBox.Text.Trim());
         if (folderPath is not null && !Directory.Exists(folderPath)) { SeriesStatusText.Text = "مجلد المسلسل المحدد غير موجود."; return; }
-        var request = new { seriesId = id, title = SeriesTitleBox.Text.Trim(), description = SeriesDescriptionBox.Text, year, genre = SeriesGenreBox.Text, posterPath = string.IsNullOrWhiteSpace(SeriesPosterPathBox.Text) ? null : SeriesPosterPathBox.Text.Trim(), folderPath, section = string.IsNullOrWhiteSpace(SeriesSectionBox.Text) ? "عام" : SeriesSectionBox.Text.Trim(), isPublished = SeriesPublishBox.IsChecked == true };
+        var request = new { seriesId = id, title = SeriesTitleBox.Text.Trim(), description = SeriesDescriptionBox.Text, year, genre = SeriesGenreBox.Text, posterPath = string.IsNullOrWhiteSpace(SeriesPosterPathBox.Text) ? null : SeriesPosterPathBox.Text.Trim(), folderPath, section = string.IsNullOrWhiteSpace(SeriesSectionBox.Text) ? "عام" : SeriesSectionBox.Text.Trim(), categoryId = SeriesCategoryPicker.SelectedValue as string, isPublished = SeriesPublishBox.IsChecked == true };
         try
         {
             var response = await _http.PostAsJsonAsync("/api/admin/series", request);
@@ -1044,6 +1136,7 @@ public partial class MainWindow : Window
         public string Genre { get; set; } = "";
         public string? PosterPath { get; set; }
         public string? FolderPath { get; set; }
+        public string? CategoryId { get; set; }
         public string Section { get; set; } = "عام";
         public bool IsPublished { get; set; }
     }
@@ -1079,6 +1172,18 @@ public partial class MainWindow : Window
         public string Status { get; set; } = "";
     }
     private sealed class FolderScanResult { public bool Registered { get; set; } public int VideoCount { get; set; } }
+    private sealed class CategoryAdmin
+    {
+        public string CategoryId { get; set; } = "";
+        public string? ParentId { get; set; }
+        public string Title { get; set; } = "";
+        public string ContentKind { get; set; } = "Group";
+        public string? PosterPath { get; set; }
+        public bool IsPublished { get; set; }
+        public string CreatedUtc { get; set; } = "";
+        public string DisplayTitle { get; set; } = "";
+        public string ContentKindLabel { get; set; } = "";
+    }
     private sealed class AdminVideo
     {
         public string Id { get; set; } = "";
@@ -1094,6 +1199,7 @@ public partial class MainWindow : Window
         public int? RuntimeMinutes { get; set; }
         public string? ReleaseDate { get; set; }
         public string? Tags { get; set; }
+        public string? CategoryId { get; set; }
         public string Section { get; set; } = "عام";
         public bool IsPublished { get; set; }
     }
