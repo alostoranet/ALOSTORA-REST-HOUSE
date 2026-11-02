@@ -409,6 +409,8 @@ public partial class App : Application
     {
      var selectedSeries=series.GetSeries(request.SeriesId);
      if(selectedSeries is null||request.Kind!="Series")return Results.BadRequest(new{error="اختر مسلسلاً صحيحاً لربط هذا الفيديو به."});
+     if(!string.Equals(selectedSeries.CategoryId,request.CategoryId,StringComparison.OrdinalIgnoreCase))
+      return Results.BadRequest(new{error="قسم الفيديو يجب أن يطابق قسم المسلسل. تم اختيار قسم المسلسل تلقائياً عند تحديده."});
      if(request.SeasonId is not null)
      {
       var selectedSeason=series.GetSeason(request.SeasonId.Value);
