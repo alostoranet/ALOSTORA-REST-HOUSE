@@ -17,7 +17,7 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - name: Restore
-        run: dotnet restore src/Alostora.RestHouse/Alostora.RestHouse.csproj
+        run: dotnet restore src/Alostora.RestHouse/Alostora.RestHouse.csproj --runtime win-x64
       - name: Validate viewer JavaScript
         shell: pwsh
         run: |
@@ -32,13 +32,13 @@ jobs:
         shell: pwsh
         run: ./scripts/validate-project.ps1
       - name: Restore SQLite test dependencies
-        run: dotnet restore tests/Alostora.RestHouse.Tests/Alostora.RestHouse.Tests.csproj
+        run: dotnet restore tests/Alostora.RestHouse.Tests/Alostora.RestHouse.Tests.csproj --runtime win-x64
       - name: Run SQLite publication and catalog tests
-        run: dotnet test tests/Alostora.RestHouse.Tests/Alostora.RestHouse.Tests.csproj --configuration Release --no-restore
+        run: dotnet test tests/Alostora.RestHouse.Tests/Alostora.RestHouse.Tests.csproj --configuration Release --runtime win-x64 --no-restore
       - name: Build
-        run: dotnet build src/Alostora.RestHouse/Alostora.RestHouse.csproj --configuration Release --no-restore
+        run: dotnet build src/Alostora.RestHouse/Alostora.RestHouse.csproj --configuration Release --runtime win-x64 --no-restore
       - name: Publish Windows x64
-        run: dotnet publish src/Alostora.RestHouse/Alostora.RestHouse.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false --output ./publish/win-x64
+        run: dotnet publish src/Alostora.RestHouse/Alostora.RestHouse.csproj --configuration Release --runtime win-x64 --self-contained true --no-restore -p:PublishSingleFile=false --output ./publish/win-x64
       - name: Upload Windows build
         uses: actions/upload-artifact@v4
         with:
