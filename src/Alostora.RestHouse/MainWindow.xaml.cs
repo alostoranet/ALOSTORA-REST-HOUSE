@@ -765,9 +765,20 @@ public partial class MainWindow : Window
     {
         try
         {
+            var selectedSeasonId = (SeasonsGrid.SelectedItem as SeasonAdmin)?.SeasonId;
             var url = "/api/admin/seasons?seriesId=" + Uri.EscapeDataString(seriesId);
             var rows = await _http.GetFromJsonAsync<SeasonAdmin[]>(url) ?? Array.Empty<SeasonAdmin>();
             SeasonsGrid.ItemsSource = rows;
+            var selected = rows.FirstOrDefault(x => x.SeasonId == selectedSeasonId && x.SeriesId == seriesId);
+            if (selected is not null)
+            {
+                SeasonsGrid.SelectedItem = selected;
+                await LoadEpisodesAsync(selected.SeasonId);
+            }
+            else
+            {
+                EpisodesGrid.ItemsSource = null;
+            }
             SeriesStatusText.Text = $"تم تحميل {rows.Length} موسم/مواسم.";
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر تحميل المواسم: " + ex.Message; }
