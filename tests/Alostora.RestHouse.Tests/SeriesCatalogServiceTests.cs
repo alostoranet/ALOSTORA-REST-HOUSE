@@ -57,6 +57,31 @@ public sealed class SeriesCatalogServiceTests : IDisposable
     }
 
     [Fact]
+    public void MissingPhysicalVideoFileIsReportedWithoutRemovingEpisodeRecord()
+    {
+        var libraryRoot = Path.Combine(_root, "library");
+        Directory.CreateDirectory(libraryRoot);
+        var videoPath = Path.Combine(libraryRoot, "missing-later.mp4");
+        File.WriteAllBytes(videoPath, new byte[] { 9, 8, 7 });
+
+        string videoId;
+        var seasonId = _series.AddSeason(new SaveSeasonRequest("series-test", 1, "الموسم الأول"));
+        using (var initialLibrary = new LibraryService(libraryRoot, _databasePath))
+        {
+            videoId = Assert.Single(initialLibrary.List()).Id;
+            _series.AddEpisode(new SaveEpisodeRequest(seasonId, videoId, 3, "حلقة ملفها مفقود"));
+        }
+
+        File.Delete(videoPath);
+        using var rescannedLibrary = new LibraryService(libraryRoot, _databasePath);
+        var missing = Assert.Single(_series.ListMissingEpisodes(rescannedLibrary));
+
+        Assert.Equal(videoId, missing.VideoId);
+        Assert.Equal(3, missing.EpisodeNumber);
+        Assert.Single(_series.ListEpisodes(seasonId));
+    }
+
+    [Fact]
     public void DuplicateEpisodeNumberAndDuplicateVideoLinksAreRejected()
     {
         var seasonId = _series.AddSeason(new SaveSeasonRequest("series-test", 1, "الموسم الأول"));
