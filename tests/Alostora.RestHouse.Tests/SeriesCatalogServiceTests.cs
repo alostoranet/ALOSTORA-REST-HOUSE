@@ -45,7 +45,7 @@ public sealed class SeriesCatalogServiceTests : IDisposable
         const string videoId = "bbbbbbbbbbbbbbbbbbbbbbbb";
 
         _series.SetVideoPlacement("series-test", null, videoId, null, "مقدمة");
-        _series.SetVideoPlacement("series-test", seasonId, videoId, 3, "الحلقة الثالثة");
+        _series.AddEpisode(new SaveEpisodeRequest(seasonId, videoId, 3, "الحلقة الثالثة"));
 
         var placement = _series.GetVideoPlacement(videoId);
         Assert.NotNull(placement);
