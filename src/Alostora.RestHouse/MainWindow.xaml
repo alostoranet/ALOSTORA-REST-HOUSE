@@ -31,7 +31,7 @@
 <TabItem Header="إدارة المسلسلات"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
 <TextBlock Text="إدارة المسلسلات والمواسم والحلقات" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,14"/>
 <TextBlock Text="اختر مسلسلًا موجودًا أو اكتب بيانات مسلسل جديد."/>
-<DockPanel Margin="0,5,0,10"><Button DockPanel.Dock="Left" Content="إنشاء مسلسل من الفيديو المحدد" Click="CreateSeriesFromVideo_Click" Padding="10,7" Margin="0,0,6,0"/><ComboBox x:Name="SeriesPicker" DisplayMemberPath="Title" SelectionChanged="SeriesPicker_SelectionChanged" Padding="8" /></DockPanel>
+<DockPanel Margin="0,5,0,10"><Button DockPanel.Dock="Left" Content="مسلسل جديد" Click="NewSeries_Click" Padding="10,7" Margin="0,0,6,0"/><Button DockPanel.Dock="Left" Content="إنشاء مسلسل من الفيديو المحدد" Click="CreateSeriesFromVideo_Click" Padding="10,7" Margin="0,0,6,0"/><ComboBox x:Name="SeriesPicker" DisplayMemberPath="Title" SelectionChanged="SeriesPicker_SelectionChanged" Padding="8" /></DockPanel>
 <TextBlock Text="معرّف المسلسل (اتركه فارغًا لإنشاء معرّف تلقائي)"/><TextBox x:Name="SeriesIdBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="اسم المسلسل"/><TextBox x:Name="SeriesTitleBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="الوصف"/><TextBox x:Name="SeriesDescriptionBox" Padding="8" Margin="0,4,0,8" Height="65" AcceptsReturn="True" TextWrapping="Wrap"/>
@@ -79,7 +79,7 @@
 <TextBlock Text="معرّف القسم (يُنشأ تلقائياً عند تركه فارغاً)"/><TextBox x:Name="CategoryIdBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="مسار الغلاف"/><TextBox x:Name="CategoryPosterPathBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock x:Name="CategoryPosterStatusText" Text="الغلاف إلزامي للنشر." Foreground="#64748B" Margin="0,0,0,8"/>
-<WrapPanel Margin="0,0,0,10"><Button Content="حفظ القسم" Click="SaveCategory_Click" Padding="12,8" Background="#C93640" Foreground="White" Margin="0,0,6,0"/><Button Content="رفع غلاف القسم" Click="UploadCategoryPoster_Click" Padding="12,8" Margin="0,0,6,0"/><Button Content="حذف القسم المحدد" Click="DeleteCategory_Click" Padding="12,8" Background="#FCE8E8" Foreground="#9F2630"/></WrapPanel>
+<WrapPanel Margin="0,0,0,10"><Button Content="قسم جديد" Click="NewCategory_Click" Padding="12,8" Margin="0,0,6,0"/><Button Content="حفظ القسم" Click="SaveCategory_Click" Padding="12,8" Background="#C93640" Foreground="White" Margin="0,0,6,0"/><Button Content="رفع غلاف القسم" Click="UploadCategoryPoster_Click" Padding="12,8" Margin="0,0,6,0"/><Button Content="حذف القسم المحدد" Click="DeleteCategory_Click" Padding="12,8" Background="#FCE8E8" Foreground="#9F2630"/></WrapPanel>
 <CheckBox x:Name="CategoryPublishBox" Content="نشر القسم للعميل (يتطلب غلافاً)" IsChecked="False" Margin="0,0,0,12"/>
 <DataGrid x:Name="CategoriesGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="CategoriesGrid_SelectionChanged" CanUserAddRows="False" Height="260">
 <DataGrid.Columns><DataGridTextColumn Header="القسم" Binding="{Binding DisplayTitle}" Width="*"/><DataGridTextColumn Header="النوع" Binding="{Binding ContentKindLabel}" Width="100"/><DataGridCheckBoxColumn Header="منشور" Binding="{Binding IsPublished}" Width="65"/><DataGridTextColumn Header="الغلاف" Binding="{Binding PosterPath}" Width="*"/></DataGrid.Columns>
