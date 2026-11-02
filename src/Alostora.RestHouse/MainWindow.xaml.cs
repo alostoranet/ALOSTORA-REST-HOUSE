@@ -459,8 +459,8 @@ public partial class MainWindow : Window
         CategoryParentPicker.SelectedIndex = -1;
         CategoryKindPicker.SelectedIndex = 0;
         CategoryPosterPathBox.Clear();
-        CategoryPublishBox.IsChecked = false;
-        CategoryPosterStatusText.Text = "اختر غلافاً بعد حفظ القسم، ثم فعّل النشر.";
+        CategoryPublishBox.IsChecked = true;
+        CategoryPosterStatusText.Text = "الغلاف اختياري. القسم سينشر ويظهر للعميل بعد الحفظ.";
         CategoryStatusText.Text = "نموذج قسم جديد. اكتب الاسم واختر نوع القسم.";
     }
 
@@ -473,7 +473,7 @@ public partial class MainWindow : Window
         CategoryKindPicker.SelectedItem = CategoryKindPicker.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == row.ContentKind);
         CategoryPosterPathBox.Text = row.PosterPath ?? "";
         CategoryPublishBox.IsChecked = row.IsPublished;
-        CategoryPosterStatusText.Text = string.IsNullOrWhiteSpace(row.PosterPath) ? "لا يوجد غلاف. ارفع الغلاف قبل النشر." : "تم حفظ غلاف هذا القسم.";
+        CategoryPosterStatusText.Text = string.IsNullOrWhiteSpace(row.PosterPath) ? "لا يوجد غلاف. يمكنك نشر القسم بدونه أو رفع غلاف اختياري." : "تم حفظ غلاف هذا القسم.";
     }
 
     private async void SaveCategory_Click(object sender, RoutedEventArgs e)
@@ -483,19 +483,28 @@ public partial class MainWindow : Window
         if (string.IsNullOrWhiteSpace(CategoryTitleBox.Text)) { CategoryStatusText.Text = "اكتب اسم القسم أولاً."; return; }
         if (kind == "Group") parentId = null;
         else if (string.IsNullOrWhiteSpace(parentId)) { CategoryStatusText.Text = "اختر القسم الرئيسي الذي سيندرج تحته هذا القسم."; return; }
-        if (CategoryPublishBox.IsChecked == true && string.IsNullOrWhiteSpace(CategoryPosterPathBox.Text))
-        { CategoryStatusText.Text = "الغلاف إلزامي قبل نشر القسم. احفظه أولاً دون نشر، ثم ارفع الغلاف وأعد الحفظ."; return; }
         var id = string.IsNullOrWhiteSpace(CategoryIdBox.Text) ? Guid.NewGuid().ToString("N") : CategoryIdBox.Text.Trim();
         try
         {
             var response = await _http.PostAsJsonAsync("/api/admin/catalog-categories", new { categoryId = id, parentId, title = CategoryTitleBox.Text.Trim(), contentKind = kind, posterPath = string.IsNullOrWhiteSpace(CategoryPosterPathBox.Text) ? null : CategoryPosterPathBox.Text.Trim(), isPublished = CategoryPublishBox.IsChecked == true });
             if (!response.IsSuccessStatusCode) { CategoryStatusText.Text = "تعذر حفظ القسم: " + await response.Content.ReadAsStringAsync(); return; }
             CategoryIdBox.Text = id;
-            CategoryStatusText.Text = "تم حفظ القسم. ارفع غلافه إذا لم يكن موجوداً، ثم فعّل النشر.";
+            CategoryStatusText.Text = CategoryPublishBox.IsChecked == true ? "تم حفظ القسم ونشره. سيظهر في الواجهة الرئيسية للعميل بعد تحديث الصفحة." : "تم حفظ القسم كمسودة ولن يظهر للعميل حتى تفعّل النشر وتضغط حفظ القسم.";
             await LoadCategoriesAsync();
             CategoriesGrid.SelectedItem = (CategoriesGrid.ItemsSource as CategoryAdmin[])?.FirstOrDefault(x => x.CategoryId == id);
         }
         catch (Exception ex) { CategoryStatusText.Text = "تعذر حفظ القسم: " + ex.Message; }
+    }
+
+    private void PublishCategory_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(CategoryIdBox.Text))
+        {
+            CategoryStatusText.Text = "اختر القسم الذي تريد نشره أولاً.";
+            return;
+        }
+        CategoryPublishBox.IsChecked = true;
+        SaveCategory_Click(sender, e);
     }
 
     private async void UploadCategoryPoster_Click(object sender, RoutedEventArgs e)
@@ -515,7 +524,7 @@ public partial class MainWindow : Window
             if (!response.IsSuccessStatusCode) { CategoryStatusText.Text = "تعذر رفع الغلاف: " + await response.Content.ReadAsStringAsync(); return; }
             var result = await response.Content.ReadFromJsonAsync<PosterUploadResult>();
             CategoryPosterPathBox.Text = result?.PosterPath ?? "";
-            CategoryPosterStatusText.Text = "تم رفع الغلاف. أعد حفظ القسم مع تفعيل النشر.";
+            CategoryPosterStatusText.Text = "تم رفع الغلاف. اضغط حفظ القسم لتحديث بياناته.";
             await LoadCategoriesAsync();
         }
         catch (Exception ex) { CategoryStatusText.Text = "تعذر رفع الغلاف: " + ex.Message; }
@@ -580,7 +589,7 @@ public partial class MainWindow : Window
         SectionBox.Text = v.Section ?? "عام";
         VideoCategoryPicker.SelectedValue = v.CategoryId;
         SeriesCategoryPicker.SelectedValue = v.CategoryId;
-        PublishBox.IsChecked = v.IsPublished;
+        PublishBox.IsChecked = v.IsPublished || string.IsNullOrWhiteSpace(v.CategoryId);
         KindBox.SelectedIndex = string.Equals(v.Kind, "Series", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         PosterStatusText.Text = string.IsNullOrWhiteSpace(v.PosterPath) ? "لا يوجد غلاف لهذا العمل حالياً." : "يوجد غلاف محفوظ لهذا العمل.";
     }
@@ -690,7 +699,7 @@ public partial class MainWindow : Window
         SeriesGenreBox.Clear();
         SeriesSectionBox.Text = "عام";
         SeriesCategoryPicker.SelectedIndex = -1;
-        SeriesPublishBox.IsChecked = false;
+        SeriesPublishBox.IsChecked = true;
         SeriesPosterPathBox.Clear();
         SeriesFolderPathBox.Clear();
         SeasonsGrid.ItemsSource = null;
