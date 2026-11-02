@@ -3,7 +3,7 @@
 <title>استراحة الأسطورة نت</title>
 <style>
 :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#0c1727;color:#f5f7fb;font-family:Tahoma,Arial}
-header{background:#142d4a;padding:25px 5%;border-bottom:3px solid #c93640}h1{margin:0;font-size:27px}header p{color:#d4e3f1;margin:8px 0 0}
+header{background:#142d4a;padding:25px 5%;border-bottom:3px solid #c93640}h1{margin:0;font-size:27px}header p{color:#d4e3f1;margin:8px 0 0}.brand-bar{display:flex;align-items:center;gap:14px;min-height:62px}.brand-logo{width:64px;height:64px;object-fit:contain;border-radius:12px;background:#fff;padding:4px}.brand-logo[hidden]{display:none!important}
 .customer-nav{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.nav-button{border:1px solid #526b85;background:#1b3550;color:#f5f7fb;border-radius:9px;padding:11px 18px;font:inherit;font-weight:700;cursor:pointer}.nav-button.active{background:#c93640;border-color:#c93640}.nav-button:focus-visible{outline:3px solid #f2c56b;outline-offset:2px}
 
 main{max-width:1200px;margin:auto;padding:24px}h2{font-size:22px}
@@ -18,7 +18,7 @@ main{max-width:1200px;margin:auto;padding:24px}h2{font-size:22px}
 .contact-box[hidden]{display:none!important}.contact-box{background:#14283e;border:1px solid #38516d;border-radius:14px;padding:16px;margin:16px 0 20px}.contact-box h2{margin:0 0 7px}.contact-box p{color:#c4d2e1;font-size:13px;line-height:1.7}.contact-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.contact-form input,.contact-form select,.contact-form textarea{width:100%;background:#0c1727;color:#fff;border:1px solid #526b85;border-radius:8px;padding:11px;font:inherit;min-width:0}.contact-form textarea{grid-column:1/-1;min-height:105px;resize:vertical}.contact-form button{justify-self:start;background:#c93640;color:white;border:0;border-radius:8px;padding:11px 20px;font-weight:bold;cursor:pointer}.contact-form button:disabled{opacity:.6;cursor:wait}#contactFeedback{margin:8px 0 0;font-weight:bold;min-height:20px}@media(max-width:600px){.contact-form{grid-template-columns:1fr}.contact-form textarea{grid-column:auto}}
 @media(max-width:600px){main{padding:16px}.series-head{display:block}.series-head img,.series-head .poster-empty{width:110px;height:145px;float:right;margin:0 0 10px 12px}.episode{align-items:flex-start}.episode button{white-space:nowrap;padding:9px 12px}}
 </style></head><body>
-<header><h1>ALOSTORA REST HOUSE</h1><p>استراحة الأسطورة نت — مكتبة المشاهدة</p><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">إدارة الاستراحة</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button></nav></header>
+<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">إدارة الاستراحة</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button></nav></header>
 <main><section id="homeView"><h2>الأقسام الرئيسية</h2>
 <div class="toolbar"><input id="search" type="search" placeholder="ابحث عن فيلم أو مسلسل..."><select id="categoryFilter" aria-label="اختر القسم"><option value="">كل الأقسام</option></select><select id="collection"><option value="">كل الأعمال المنشورة</option><option value="favorites">المفضلة</option></select><select id="sort" aria-label="ترتيب المكتبة"><option value="title">ترتيب حسب الاسم</option><option value="year">الأحدث إنتاجاً</option><option value="rating">الأعلى تقييماً</option></select></div>
 <p id="message">يتم تحميل المكتبة...</p><section id="continueSection"><h2>متابعة المشاهدة</h2><p id="continueEmpty">جارٍ تحميل سجل المشاهدة...</p><div id="continueGrid"></div></section><section id="playerSection" aria-live="polite"><h2 id="nowPlayingTitle">المشغل</h2><video id="player" controls playsinline preload="metadata"></video><div id="audioControls" hidden><label for="audioTrack">المسار الصوتي:</label><select id="audioTrack"></select><button id="applyAudio" type="button">تشغيل بالصوت المحدد</button></div><p id="playbackHint"></p><p id="subtitleHint" class="meta">تُكتشف الترجمات الخارجية تلقائياً بجانب ملف الفيديو (SRT أو VTT أو ASS أو SSA)، ويمكن استخراج الترجمات النصية المدمجة عند توفر FFmpeg.</p></section><section id="seriesDetails" aria-live="polite"></section><section id="movieDetails" aria-live="polite"></section><section id="library"></section></section>
@@ -254,6 +254,21 @@ async function load(){try{
  for(const sub of categories.filter(x=>x.parentId!=null&&x.isPublished)){const parent=categories.find(x=>x.categoryId===sub.parentId);const option=document.createElement('option');option.value=sub.categoryId;option.textContent=(parent?parent.title+' / ':'')+sub.title;select.append(option);}
  render();await loadProgress();
  }catch(error){document.querySelector('#message').textContent=error.message||'تعذر الاتصال بالسيرفر أو تحميل بيانات المكتبة.';document.querySelector('#continueEmpty').textContent='تعذر تحميل سجل المشاهدة.';}}
+async function loadBrandProfile(){
+ try{
+  const response=await fetch('/api/profile');
+  if(!response.ok)return;
+  const profile=await response.json();
+  const restHouse=profile.restHouseName||'استراحة الأسطورة';
+  const network=profile.networkName||'';
+  document.querySelector('#brandRestHouse').textContent=restHouse;
+  document.querySelector('#brandNetwork').textContent=network+' — مكتبة المشاهدة';
+  document.title=restHouse+' | مكتبة المشاهدة';
+  const logo=document.querySelector('#brandLogo');
+  if(profile.logoPath){logo.src=profile.logoPath;logo.hidden=false;logo.onerror=()=>{logo.hidden=true;};}
+  else{logo.hidden=true;logo.removeAttribute('src');}
+ }catch{}
+}
 function showCustomerView(view){
  const home=view==='home',homeView=document.querySelector('#homeView'),contactView=document.querySelector('#contactView');
  homeView.hidden=!home;contactView.hidden=home;
@@ -265,5 +280,5 @@ function showCustomerView(view){
 }
 document.querySelector('#homeNav').addEventListener('click',()=>showCustomerView('home'));
 document.querySelector('#contactNav').addEventListener('click',()=>showCustomerView('contact'));
-for(const id of ['search','categoryFilter','collection','sort'])document.getElementById(id).addEventListener(id==='search'?'input':'change',render);load();
+for(const id of ['search','categoryFilter','collection','sort'])document.getElementById(id).addEventListener(id==='search'?'input':'change',render);loadBrandProfile();load();
 </script></body></html>
