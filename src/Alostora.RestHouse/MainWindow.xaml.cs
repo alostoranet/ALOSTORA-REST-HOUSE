@@ -446,6 +446,19 @@ public partial class MainWindow : Window
         catch (Exception ex) { CategoryStatusText.Text = "تعذر تحميل الأقسام: " + ex.Message; }
     }
 
+    private void NewCategory_Click(object sender, RoutedEventArgs e)
+    {
+        CategoriesGrid.UnselectAll();
+        CategoryIdBox.Clear();
+        CategoryTitleBox.Clear();
+        CategoryParentPicker.SelectedIndex = -1;
+        CategoryKindPicker.SelectedIndex = 0;
+        CategoryPosterPathBox.Clear();
+        CategoryPublishBox.IsChecked = false;
+        CategoryPosterStatusText.Text = "اختر غلافاً بعد حفظ القسم، ثم فعّل النشر.";
+        CategoryStatusText.Text = "نموذج قسم جديد. اكتب الاسم واختر نوع القسم.";
+    }
+
     private void CategoriesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (CategoriesGrid.SelectedItem is not CategoryAdmin row) return;
@@ -660,6 +673,31 @@ public partial class MainWindow : Window
             if (SeriesPicker.SelectedItem is null) { SeasonsGrid.ItemsSource = null; if (rows.Length == 0) SeriesStatusText.Text = "لا توجد مسلسلات محفوظة بعد. حدد ملفاً مصنفاً كمسلسل من قائمة الفيديو ثم اضغط «إنشاء مسلسل من الفيديو المحدد»."; }
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر تحميل المسلسلات: " + ex.Message; }
+    }
+
+    private void NewSeries_Click(object sender, RoutedEventArgs e)
+    {
+        SeriesPicker.SelectedIndex = -1;
+        SeriesIdBox.Clear();
+        SeriesTitleBox.Clear();
+        SeriesDescriptionBox.Clear();
+        SeriesYearBox.Clear();
+        SeriesGenreBox.Clear();
+        SeriesSectionBox.Text = "عام";
+        SeriesCategoryPicker.SelectedIndex = -1;
+        SeriesPublishBox.IsChecked = false;
+        SeriesPosterPathBox.Clear();
+        SeriesFolderPathBox.Clear();
+        SeasonsGrid.ItemsSource = null;
+        SeasonTitleBox.Clear();
+        SeasonNumberBox.Text = "1";
+        SeasonFolderPathBox.Clear();
+        EpisodeVideoPicker.SelectedIndex = -1;
+        EpisodeTitleBox.Clear();
+        EpisodeNumberBox.Text = "1";
+        _episodeCandidates.Clear();
+        MissingEpisodesGrid.SelectedIndex = -1;
+        SeriesStatusText.Text = "نموذج مسلسل جديد. أدخل بياناته واحفظه أولاً.";
     }
 
     private async void CreateSeriesFromVideo_Click(object sender, RoutedEventArgs e)
