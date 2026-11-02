@@ -1,0 +1,59 @@
+using Alostora.RestHouse;
+using Xunit;
+
+namespace Alostora.RestHouse.Tests;
+
+public sealed class CatalogCategoryServiceTests : IDisposable
+{
+    private readonly string _root;
+    private readonly CatalogCategoryService _categories;
+
+    public CatalogCategoryServiceTests()
+    {
+        _root = Path.Combine(Path.GetTempPath(), "alostora-categories-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_root);
+        _categories = new CatalogCategoryService(Path.Combine(_root, "categories.db"));
+    }
+
+    [Fact]
+    public void PublishedMainAndChildCategoriesAppearWithoutPosterImages()
+    {
+        _categories.Save(new SaveCatalogCategoryRequest(null, null, "إدارة الاستراحة", "Group", null, true));
+        var main = Assert.Single(_categories.List());
+        _categories.Save(new SaveCatalogCategoryRequest(null, main.CategoryId, "الأفلام", "Movie", null, true));
+
+        var visible = _categories.List(publishedOnly: true);
+
+        Assert.Equal(2, visible.Count);
+        Assert.Contains(visible, x => x.Title == "إدارة الاستراحة" && x.ParentId is null);
+        Assert.Contains(visible, x => x.Title == "الأفلام" && x.ParentId == main.CategoryId);
+        Assert.All(visible, x => Assert.Null(x.PosterPath));
+    }
+
+    [Fact]
+    public void UnpublishedCategoriesDoNotAppearInCustomerCatalog()
+    {
+        _categories.Save(new SaveCatalogCategoryRequest(null, null, "قسم مسودة", "Group", null, false));
+        var draft = Assert.Single(_categories.List());
+
+        Assert.Empty(_categories.List(publishedOnly: true));
+        Assert.False(draft.IsPublished);
+    }
+
+    [Fact]
+    public void PublishedChildOfUnpublishedParentIsNotExposed()
+    {
+        _categories.Save(new SaveCatalogCategoryRequest(null, null, "قسم مخفي", "Group", null, false));
+        var main = Assert.Single(_categories.List());
+        _categories.Save(new SaveCatalogCategoryRequest(null, main.CategoryId, "أفلام مخفية", "Movie", null, true));
+
+        Assert.Empty(_categories.List(publishedOnly: true));
+    }
+
+    public void Dispose()
+    {
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        try { Directory.Delete(_root, recursive: true); }
+        catch { }
+    }
+}
