@@ -529,6 +529,7 @@ public partial class MainWindow : Window
         TagsBox.Text = v.Tags ?? "";
         SectionBox.Text = v.Section ?? "عام";
         VideoCategoryPicker.SelectedValue = v.CategoryId;
+        SeriesCategoryPicker.SelectedValue = v.CategoryId;
         PublishBox.IsChecked = v.IsPublished;
         KindBox.SelectedIndex = string.Equals(v.Kind, "Series", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         PosterStatusText.Text = string.IsNullOrWhiteSpace(v.PosterPath) ? "لا يوجد غلاف لهذا العمل حالياً." : "يوجد غلاف محفوظ لهذا العمل.";
