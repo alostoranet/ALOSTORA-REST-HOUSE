@@ -73,13 +73,25 @@ public partial class App : Application
     if(address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
     return IPAddress.IsLoopback(address);
    }
+   static bool PosterExists(string? posterPath,string postersRoot)
+   {
+    if(string.IsNullOrWhiteSpace(posterPath)||!posterPath.StartsWith("/posters/",StringComparison.OrdinalIgnoreCase))return false;
+    try
+    {
+     var relative=Uri.UnescapeDataString(posterPath["/posters/".Length..]).Replace('/',Path.DirectorySeparatorChar);
+     var rootPath=Path.GetFullPath(postersRoot).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar)+Path.DirectorySeparatorChar;
+     var fullPath=Path.GetFullPath(Path.Combine(rootPath,relative));
+     return fullPath.StartsWith(rootPath,StringComparison.OrdinalIgnoreCase)&&File.Exists(fullPath);
+    }
+    catch{return false;}
+   }
    _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
    _server.MapGet("/api/catalog-categories",(CatalogCategoryService categories)=>Results.Ok(categories.List(publishedOnly:true)));
    _server.MapGet("/api/admin/catalog-categories",(HttpContext c,CatalogCategoryService categories)=>IsLocal(c)?Results.Ok(categories.List()):Results.NotFound());
    _server.MapPost("/api/admin/catalog-categories",(HttpContext c,SaveCatalogCategoryRequest request,CatalogCategoryService categories)=>{
     if(!IsLocal(c))return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.Title)||(request.Title?.Length??0)>100||(request.PosterPath?.Length??0)>240)return Results.BadRequest(new{error="اسم القسم أو الغلاف غير صالح"});
-    if(request.IsPublished&&string.IsNullOrWhiteSpace(request.PosterPath))return Results.BadRequest(new{error="لا يمكن نشر القسم قبل رفع غلافه"});
+    if(request.IsPublished&&!PosterExists(request.PosterPath,posters))return Results.BadRequest(new{error="لا يمكن نشر القسم قبل رفع غلاف صالح موجود فعلياً"});
     if(request.ParentId is not null){var parent=categories.Get(request.ParentId);if(parent is null||parent.ParentId is not null||parent.ContentKind!="Group")return Results.BadRequest(new{error="اختر قسماً رئيسياً صحيحاً"});
      if(request.IsPublished&&!parent.IsPublished)return Results.BadRequest(new{error="يجب نشر القسم الرئيسي أولاً قبل نشر القسم الفرعي"});}
     try{categories.Save(request);return Results.Ok(new{saved=true});}catch(Exception ex) when(ex is ArgumentException or Microsoft.Data.Sqlite.SqliteException){return Results.BadRequest(new{error=ex.Message});}
@@ -185,7 +197,7 @@ public partial class App : Application
      var poster=request.PosterPath??previous?.PosterPath;
      var category=string.IsNullOrWhiteSpace(request.CategoryId)?null:categories.Get(request.CategoryId);
      var parent=category?.ParentId is null?null:categories.Get(category.ParentId);
-     if(string.IsNullOrWhiteSpace(poster))return Results.BadRequest(new{error="غلاف المسلسل إلزامي قبل النشر"});
+     if(!PosterExists(poster,posters))return Results.BadRequest(new{error="غلاف المسلسل إلزامي ويجب أن يكون ملف الصورة موجوداً فعلياً"});
      if(category is null||category.ContentKind!="Series"||!category.IsPublished||parent is null||!parent.IsPublished)return Results.BadRequest(new{error="اختر تصنيف مسلسلات منشوراً تابعاً لقسم رئيسي منشور"});
     }
     series.SaveSeries(request); if(!string.IsNullOrWhiteSpace(request.FolderPath)) files.RegisterFolder(request.FolderPath); return Results.Ok(new{saved=true});
@@ -285,7 +297,7 @@ public partial class App : Application
      var category=string.IsNullOrWhiteSpace(request.CategoryId)?null:categories.Get(request.CategoryId);
      var parent=category?.ParentId is null?null:categories.Get(category.ParentId);
      var expectedKind=request.Kind=="Series"?"Series":"Movie";
-     if(string.IsNullOrWhiteSpace(poster))return Results.BadRequest(new{error="غلاف الفيديو إلزامي قبل النشر"});
+     if(!PosterExists(poster,posters))return Results.BadRequest(new{error="غلاف الفيديو إلزامي ويجب أن يكون ملف الصورة موجوداً فعلياً"});
      if(category is null||(category.ContentKind!=expectedKind&&category.ContentKind!="Other")||!category.IsPublished||parent is null||!parent.IsPublished)return Results.BadRequest(new{error="اختر تصنيفاً فرعياً منشوراً من قسم رئيسي منشور"});
     }
     meta.Save(request); return Results.Ok(new{saved=true});
