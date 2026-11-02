@@ -49,7 +49,7 @@
 <TextBlock Text="السنة"/><TextBox x:Name="SeriesYearBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="التصنيف"/><TextBox x:Name="SeriesGenreBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="قسم العرض النصي (اختياري)"/><TextBox x:Name="SeriesSectionBox" Padding="8" Margin="0,4,0,8" Text="عام"/>
-<TextBlock Text="تصنيف المسلسل"/><ComboBox x:Name="SeriesCategoryPicker" DisplayMemberPath="DisplayTitle" SelectedValuePath="CategoryId" Padding="8" Margin="0,4,0,8"/>
+<TextBlock Text="تصنيف المسلسل"/><ComboBox x:Name="SeriesCategoryPicker" DisplayMemberPath="DisplayTitle" SelectedValuePath="CategoryId" Padding="8" Margin="0,4,0,3"/><TextBlock x:Name="SeriesCategoryStatusText" Text="يتم تحميل الأقسام الفرعية للمسلسلات..." Foreground="#64748B" FontSize="11" Margin="0,0,0,8"/>
 <CheckBox x:Name="SeriesPublishBox" Content="نشر المسلسل في واجهة العميل (بعد اختيار القسم)" IsChecked="True" Margin="0,0,0,10" FontWeight="Bold" Foreground="#16834A"/>
 <TextBlock Text="مجلد ملفات المسلسل (اختياري)"/><DockPanel Margin="0,4,0,8"><Button DockPanel.Dock="Left" Content="اختيار مجلد" Click="ChooseSeriesFolder_Click" Padding="10,6" Margin="6,0,0,0"/><TextBox x:Name="SeriesFolderPathBox" Padding="8" FlowDirection="LeftToRight"/></DockPanel>
 <TextBlock Text="مسار الغلاف (اختياري)"/><TextBox x:Name="SeriesPosterPathBox" Padding="8" Margin="0,4,0,8"/><Button Content="اختيار ورفع غلاف المسلسل" Click="UploadSeriesPoster_Click" Padding="10,8" HorizontalAlignment="Right" Margin="0,0,0,10"/>
