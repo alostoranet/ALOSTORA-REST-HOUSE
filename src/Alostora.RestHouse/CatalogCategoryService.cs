@@ -31,7 +31,22 @@ public sealed class CatalogCategoryService
     public IReadOnlyList<CatalogCategory> List(bool publishedOnly=false)
     {
         using var c=Open();using var cmd=c.CreateCommand();
-        cmd.CommandText="SELECT CategoryId,ParentId,Title,ContentKind,PosterPath,IsPublished,CreatedUtc FROM CatalogCategories "+(publishedOnly?"WHERE IsPublished=1 ":"")+"ORDER BY CreatedUtc DESC,Title COLLATE NOCASE";
+        cmd.CommandText = publishedOnly
+            ? """
+              SELECT c.CategoryId,c.ParentId,c.Title,c.ContentKind,c.PosterPath,c.IsPublished,c.CreatedUtc
+              FROM CatalogCategories c
+              WHERE c.IsPublished=1
+                AND (c.ParentId IS NULL OR EXISTS(
+                  SELECT 1 FROM CatalogCategories p
+                  WHERE p.CategoryId=c.ParentId AND p.IsPublished=1 AND p.ContentKind='Group'
+                ))
+              ORDER BY c.CreatedUtc DESC,c.Title COLLATE NOCASE
+              """
+            : """
+              SELECT CategoryId,ParentId,Title,ContentKind,PosterPath,IsPublished,CreatedUtc
+              FROM CatalogCategories
+              ORDER BY CreatedUtc DESC,Title COLLATE NOCASE
+              """;
         using var r=cmd.ExecuteReader();var rows=new List<CatalogCategory>();
         while(r.Read())rows.Add(new(r.GetString(0),r.IsDBNull(1)?null:r.GetString(1),r.GetString(2),r.GetString(3),r.IsDBNull(4)?null:r.GetString(4),r.GetInt32(5)!=0,r.GetString(6)));
         return rows;
