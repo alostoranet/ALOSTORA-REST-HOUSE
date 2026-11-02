@@ -439,6 +439,8 @@ public partial class MainWindow : Window
         RuntimeBox.Text = v.RuntimeMinutes?.ToString() ?? "";
         ReleaseDateBox.Text = v.ReleaseDate ?? "";
         TagsBox.Text = v.Tags ?? "";
+        SectionBox.Text = v.Section ?? "عام";
+        PublishBox.IsChecked = v.IsPublished;
         KindBox.SelectedIndex = string.Equals(v.Kind, "Series", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         PosterStatusText.Text = string.IsNullOrWhiteSpace(v.PosterPath) ? "لا يوجد غلاف لهذا العمل حالياً." : "يوجد غلاف محفوظ لهذا العمل.";
     }
@@ -508,7 +510,9 @@ public partial class MainWindow : Window
             rating,
             runtimeMinutes = runtime,
             releaseDate = string.IsNullOrWhiteSpace(ReleaseDateBox.Text) ? null : ReleaseDateBox.Text.Trim(),
-            tags = TagsBox.Text
+            tags = TagsBox.Text,
+            section = string.IsNullOrWhiteSpace(SectionBox.Text) ? "عام" : SectionBox.Text.Trim(),
+            isPublished = PublishBox.IsChecked == true
         };
         try
         {
@@ -558,7 +562,9 @@ public partial class MainWindow : Window
                 year = video.Year,
                 genre = video.Genre ?? "",
                 posterPath = video.PosterPath,
-                folderPath = (string?)null
+                folderPath = (string?)null,
+                section = video.Section,
+                isPublished = video.IsPublished
             });
             if (!response.IsSuccessStatusCode)
             {
@@ -580,6 +586,8 @@ public partial class MainWindow : Window
         SeriesDescriptionBox.Text = s.Description ?? "";
         SeriesYearBox.Text = s.Year?.ToString() ?? "";
         SeriesGenreBox.Text = s.Genre ?? "";
+        SeriesSectionBox.Text = s.Section ?? "عام";
+        SeriesPublishBox.IsChecked = s.IsPublished;
         SeriesPosterPathBox.Text = s.PosterPath ?? "";
         SeriesFolderPathBox.Text = s.FolderPath ?? "";
         await LoadSeasonsAsync(s.SeriesId);
@@ -659,7 +667,7 @@ public partial class MainWindow : Window
         var id = string.IsNullOrWhiteSpace(SeriesIdBox.Text) ? "series-" + Guid.NewGuid().ToString("N") : SeriesIdBox.Text.Trim();
         var folderPath = string.IsNullOrWhiteSpace(SeriesFolderPathBox.Text) ? null : Path.GetFullPath(SeriesFolderPathBox.Text.Trim());
         if (folderPath is not null && !Directory.Exists(folderPath)) { SeriesStatusText.Text = "مجلد المسلسل المحدد غير موجود."; return; }
-        var request = new { seriesId = id, title = SeriesTitleBox.Text.Trim(), description = SeriesDescriptionBox.Text, year, genre = SeriesGenreBox.Text, posterPath = string.IsNullOrWhiteSpace(SeriesPosterPathBox.Text) ? null : SeriesPosterPathBox.Text.Trim(), folderPath };
+        var request = new { seriesId = id, title = SeriesTitleBox.Text.Trim(), description = SeriesDescriptionBox.Text, year, genre = SeriesGenreBox.Text, posterPath = string.IsNullOrWhiteSpace(SeriesPosterPathBox.Text) ? null : SeriesPosterPathBox.Text.Trim(), folderPath, section = string.IsNullOrWhiteSpace(SeriesSectionBox.Text) ? "عام" : SeriesSectionBox.Text.Trim(), isPublished = SeriesPublishBox.IsChecked == true };
         try
         {
             var response = await _http.PostAsJsonAsync("/api/admin/series", request);
@@ -1036,6 +1044,8 @@ public partial class MainWindow : Window
         public string Genre { get; set; } = "";
         public string? PosterPath { get; set; }
         public string? FolderPath { get; set; }
+        public string Section { get; set; } = "عام";
+        public bool IsPublished { get; set; }
     }
     private sealed class SeasonAdmin
     {
@@ -1084,6 +1094,8 @@ public partial class MainWindow : Window
         public int? RuntimeMinutes { get; set; }
         public string? ReleaseDate { get; set; }
         public string? Tags { get; set; }
+        public string Section { get; set; } = "عام";
+        public bool IsPublished { get; set; }
     }
 }
 
