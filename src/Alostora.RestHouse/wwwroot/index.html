@@ -6,7 +6,7 @@
 header{background:#142d4a;padding:25px 5%;border-bottom:3px solid #c93640}h1{margin:0;font-size:27px}header p{color:#d4e3f1;margin:8px 0 0}
 main{max-width:1200px;margin:auto;padding:24px}h2{font-size:22px}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.toolbar input,.toolbar select{background:#172a40;color:#fff;border:1px solid #38516d;border-radius:9px;padding:12px;font:inherit;min-width:180px}
-#library{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+#library{display:grid;gap:22px}.content-section h2{margin:0 0 12px;padding-bottom:9px;border-bottom:1px solid #38516d}.content-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}.poster-empty{display:flex;width:100%;height:245px;align-items:center;justify-content:center;text-align:center;border-radius:9px;background:#24384d;color:#b7c6d8;font-size:14px;font-weight:bold;margin-bottom:10px;border:1px dashed #526b85}
 .movie{background:#1a2b40;border:1px solid #2c4058;border-radius:13px;padding:16px;min-width:0}.poster{display:block;width:100%;height:245px;object-fit:cover;border-radius:9px;background:#0b1420;margin-bottom:10px}.movie h3{overflow-wrap:anywhere;font-size:17px;margin:8px 0}.movie p{color:#c4d2e1;font-size:13px;line-height:1.7;margin:8px 0}
 .meta{font-size:12px;color:#e5b6b9;margin:5px 0 12px}.movie button,.action{background:#c93640;color:white;border:0;border-radius:8px;padding:11px 18px;cursor:pointer;font-weight:bold}.movie button.secondary{background:#315577}
 #continueGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin:12px 0 24px}.continue-card{background:#172d45;border:1px solid #38516d;border-radius:11px;padding:14px}.continue-card strong{display:block;margin-bottom:7px}.continue-card p{font-size:12px;color:#c4d2e1;margin:5px 0 10px}.progress-track{height:7px;background:#30445a;border-radius:8px;overflow:hidden;margin:10px 0}.progress-fill{height:100%;background:#c93640}#continueSection{margin:20px 0 26px}#continueSection h2{margin-bottom:8px}#continueEmpty{color:#bdcadd;font-size:13px}.continue-card button{background:#c93640;color:white;border:0;border-radius:7px;padding:9px 14px;cursor:pointer;font-weight:bold}#seriesDetails,#movieDetails{display:none;background:#14283e;border:1px solid #38516d;border-radius:14px;padding:18px;margin:18px 0 22px}
@@ -17,7 +17,7 @@ main{max-width:1200px;margin:auto;padding:24px}h2{font-size:22px}
 </style></head><body>
 <header><h1>ALOSTORA REST HOUSE</h1><p>استراحة الأسطورة نت — مكتبة المشاهدة</p></header>
 <main><h2>مكتبة الأفلام والمسلسلات</h2>
-<div class="toolbar"><input id="search" type="search" placeholder="ابحث عن فيلم أو مسلسل..."><select id="kind"><option value="">كل المحتوى</option><option value="Movie">أفلام</option><option value="Series">مسلسلات</option></select><select id="genre"><option value="">كل التصنيفات</option></select><select id="collection"><option value="">كل المكتبة</option><option value="favorites">المفضلة</option></select><select id="sort" aria-label="ترتيب المكتبة"><option value="title">ترتيب حسب الاسم</option><option value="year">الأحدث إنتاجاً</option><option value="rating">الأعلى تقييماً</option></select></div>
+<div class="toolbar"><input id="search" type="search" placeholder="ابحث عن فيلم أو مسلسل..."><select id="sectionFilter" aria-label="اختر قسم العرض"><option value="">كل الأقسام</option></select><select id="collection"><option value="">كل الأعمال المنشورة</option><option value="favorites">المفضلة</option></select><select id="sort" aria-label="ترتيب المكتبة"><option value="title">ترتيب حسب الاسم</option><option value="year">الأحدث إنتاجاً</option><option value="rating">الأعلى تقييماً</option></select></div>
 <p id="message">يتم تحميل المكتبة...</p><section id="continueSection"><h2>متابعة المشاهدة</h2><p id="continueEmpty">جارٍ تحميل سجل المشاهدة...</p><div id="continueGrid"></div></section><section id="playerSection" aria-live="polite"><h2 id="nowPlayingTitle">المشغل</h2><video id="player" controls playsinline preload="metadata"></video><div id="audioControls" hidden><label for="audioTrack">المسار الصوتي:</label><select id="audioTrack"></select><button id="applyAudio" type="button">تشغيل بالصوت المحدد</button></div><p id="playbackHint"></p><p id="subtitleHint" class="meta">تُكتشف الترجمات الخارجية تلقائياً بجانب ملف الفيديو (SRT أو VTT أو ASS أو SSA)، ويمكن استخراج الترجمات النصية المدمجة عند توفر FFmpeg.</p></section><section id="seriesDetails" aria-live="polite"></section><section id="movieDetails" aria-live="polite"></section><section id="library"></section></main>
 <script>
 function createViewerId(){try{if(window.crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();if(window.crypto&&crypto.getRandomValues){const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}}catch{}return 'viewer-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);}
@@ -34,14 +34,20 @@ function formatTime(value){if(!Number.isFinite(value)||value<=0)return '0:00';co
 player.addEventListener('timeupdate',()=>{if(!saveTimer&&activeVideo){const snapshot=activeVideo,generation=playbackGeneration;saveTimer=setTimeout(()=>{saveTimer=null;if(generation===playbackGeneration)saveProgress(snapshot);},10000);}});
 player.addEventListener('pause',()=>{if(activeVideo)saveProgress(activeVideo,true);});
 player.addEventListener('ended',()=>{if(activeVideo)saveProgress(activeVideo,true);});
-function makePoster(path,title){if(!path)return null;const img=document.createElement('img');img.className='poster';img.src=path;img.alt='غلاف '+title;img.loading='lazy';return img;}
+function makePoster(path,title){
+ const placeholder=()=>{const empty=document.createElement('div');empty.className='poster-empty';empty.textContent='الغلاف غير متوفر';empty.setAttribute('role','img');empty.setAttribute('aria-label','لا يوجد غلاف لـ '+title);return empty;};
+ if(!path)return placeholder();
+ const img=document.createElement('img');img.className='poster';img.alt='غلاف '+title;img.loading='lazy';img.decoding='async';
+ img.onerror=()=>{const empty=placeholder();empty.style.flex=img.style.flex;img.replaceWith(empty);};
+ img.src=path;return img;
+}
 function favoriteKey(item){return item.seriesId?'series:'+item.seriesId:item.id?'video:'+item.id:'';}
 function toggleFavorite(item){const key=favoriteKey(item);if(!key)return;if(favorites.has(key))favorites.delete(key);else favorites.add(key);try{localStorage.setItem('alostora-favorites',JSON.stringify([...favorites]));}catch{}render();}
 function addFavoriteButton(card,item){const button=document.createElement('button');button.className='secondary';button.textContent=favorites.has(favoriteKey(item))?'★ إزالة من المفضلة':'☆ أضف للمفضلة';button.onclick=()=>toggleFavorite(item);card.append(button);}
 function render(){
  const box=document.querySelector('#library'),msg=document.querySelector('#message');
  const q=document.querySelector('#search').value.trim().toLocaleLowerCase('ar');
- const kind=document.querySelector('#kind').value,genre=document.querySelector('#genre').value;
+ const selectedSection=document.querySelector('#sectionFilter').value;
  const collection=document.querySelector('#collection').value,sort=document.querySelector('#sort').value;
  const matchesCollection=item=>!collection||(collection==='favorites'&&favorites.has(favoriteKey(item)));
  const sortItems=rows=>rows.sort((a,b)=>{
@@ -50,32 +56,42 @@ function render(){
   return String(a.title||'').localeCompare(String(b.title||''),'ar',{sensitivity:'base'});
  });
  const linkedEpisodeIds=new Set();
- for(const show of seriesItems)for(const season of show.seasons||[])for(const ep of season.episodes||[])linkedEpisodeIds.add(ep.videoId);
- const movies=items.filter(x=>x.kind!=='Series'&&!linkedEpisodeIds.has(x.id)&&matchesCollection(x)&&(!kind||kind==='Movie')&&(!genre||x.genre===genre)&&[x.title,x.description,x.genre].join(' ').toLocaleLowerCase('ar').includes(q));
- const series=seriesItems.filter(x=>matchesCollection(x)&&(!kind||kind==='Series')&&(!genre||x.genre===genre)&&[x.title,x.description,x.genre].join(' ').toLocaleLowerCase('ar').includes(q));
+ for(const show of seriesItems)if(show.isPublished!==false)for(const season of show.seasons||[])for(const ep of season.episodes||[])linkedEpisodeIds.add(ep.videoId);
+ const movies=items.filter(x=>x.isPublished===true&&x.kind!=='Series'&&!linkedEpisodeIds.has(x.id)&&matchesCollection(x)&&(!selectedSection||(x.section||'عام')===selectedSection)&&[x.title,x.description,x.genre,x.section].join(' ').toLocaleLowerCase('ar').includes(q));
+ const series=seriesItems.filter(x=>x.isPublished===true&&matchesCollection(x)&&(!selectedSection||(x.section||'عام')===selectedSection)&&[x.title,x.description,x.genre,x.section].join(' ').toLocaleLowerCase('ar').includes(q));
  box.replaceChildren();
  const count=movies.length+series.length;
- msg.textContent=count?'عدد الأعمال: '+count:(items.length||seriesItems.length?'لا توجد نتائج مطابقة.':'المكتبة فارغة حالياً. أضف الأفلام والمسلسلات من برنامج الإدارة.');
- for(const item of sortItems([...series])){
-  const card=document.createElement('article');card.className='movie';
-  const poster=makePoster(item.posterPath,item.title);if(poster)card.append(poster);
-  const title=document.createElement('h3');title.textContent=item.title;
-  const meta=document.createElement('div');meta.className='meta';
-  const seasonCount=(item.seasons||[]).length,episodeCount=(item.seasons||[]).reduce((total,season)=>total+(season.episodes||[]).length,0);
-  meta.textContent=['مسلسل',item.year,item.genre,seasonCount?seasonCount+' موسم':'',episodeCount?episodeCount+' حلقة':''].filter(Boolean).join(' • ');
-  const desc=document.createElement('p');desc.textContent=item.description||'مسلسل';
-  const btn=document.createElement('button');btn.textContent='فتح المسلسل';btn.onclick=()=>showSeries(item);
-  card.append(title,meta,desc,btn);addFavoriteButton(card,item);box.append(card);
- }
- for(const item of sortItems(movies)){
-  const card=document.createElement('article');card.className='movie';
-  const poster=makePoster(item.posterPath,item.title);if(poster)card.append(poster);
-  const title=document.createElement('h3');title.textContent=item.title;
-  const meta=document.createElement('div');meta.className='meta';
-  meta.textContent=[item.year,item.genre,item.rating!=null?'التقييم '+item.rating+'/10':'',item.runtimeMinutes?item.runtimeMinutes+' دقيقة':''].filter(Boolean).join(' • ')||'فيلم';
-  const desc=document.createElement('p');desc.textContent=item.description||'فيلم';
-  const btn=document.createElement('button');btn.textContent='تفاصيل الفيلم';btn.onclick=()=>showMovie(item);
-  card.append(title,meta,desc,btn);addFavoriteButton(card,item);box.append(card);
+ msg.textContent=count?'عدد الأعمال المنشورة: '+count:(items.length||seriesItems.length?'لا توجد أعمال منشورة تطابق البحث أو القسم المحدد.':'لم تُنشر أعمال للعميل بعد. أضف الفيديو من برنامج الإدارة، وحدد قسمه ثم فعّل خيار النشر.');
+ const groups=new Map();
+ for(const item of [...series,...movies]){const section=(item.section||'عام').trim()||'عام';if(!groups.has(section))groups.set(section,[]);groups.get(section).push(item);}
+ for(const [section,rows] of [...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0],'ar'))){
+  const wrap=document.createElement('section');wrap.className='content-section';
+  const heading=document.createElement('h2');heading.textContent=section;
+  const grid=document.createElement('div');grid.className='content-grid';wrap.append(heading,grid);
+  const shows=sortItems(rows.filter(x=>Array.isArray(x.seasons)));
+  const films=sortItems(rows.filter(x=>!Array.isArray(x.seasons)));
+  for(const item of shows){
+   const card=document.createElement('article');card.className='movie';
+   const poster=makePoster(item.posterPath,item.title);if(poster)card.append(poster);
+   const title=document.createElement('h3');title.textContent=item.title;
+   const meta=document.createElement('div');meta.className='meta';
+   const seasonCount=(item.seasons||[]).length,episodeCount=(item.seasons||[]).reduce((total,season)=>total+(season.episodes||[]).length,0);
+   meta.textContent=['مسلسل',item.year,item.genre,seasonCount?seasonCount+' موسم':'',episodeCount?episodeCount+' حلقة':''].filter(Boolean).join(' • ');
+   const desc=document.createElement('p');desc.textContent=item.description||'مسلسل';
+   const btn=document.createElement('button');btn.textContent='فتح المسلسل';btn.onclick=()=>showSeries(item);
+   card.append(title,meta,desc,btn);addFavoriteButton(card,item);grid.append(card);
+  }
+  for(const item of films){
+   const card=document.createElement('article');card.className='movie';
+   const poster=makePoster(item.posterPath,item.title);if(poster)card.append(poster);
+   const title=document.createElement('h3');title.textContent=item.title;
+   const meta=document.createElement('div');meta.className='meta';
+   meta.textContent=[item.year,item.genre,item.rating!=null?'التقييم '+item.rating+'/10':'',item.runtimeMinutes?item.runtimeMinutes+' دقيقة':''].filter(Boolean).join(' • ')||'فيلم';
+   const desc=document.createElement('p');desc.textContent=item.description||'فيلم';
+   const btn=document.createElement('button');btn.textContent='تفاصيل الفيلم';btn.onclick=()=>showMovie(item);
+   card.append(title,meta,desc,btn);addFavoriteButton(card,item);grid.append(card);
+  }
+  box.append(wrap);
  }
 }
 function showMovie(item){
@@ -173,6 +189,15 @@ document.querySelector('#applyAudio').addEventListener('click',async()=>{
  if(generation!==playbackGeneration)return;
  try{await startTranscodedPlayback(item,selected,generation,saved);}catch(ex){if(generation===playbackGeneration)document.querySelector('#playbackHint').textContent='تعذر تغيير المسار الصوتي: '+ex.message;}
 });
-async function load(){try{const [libraryResponse,seriesResponse]=await Promise.all([fetch('/api/library'),fetch('/api/series')]);if(!libraryResponse.ok||!seriesResponse.ok)throw Error();items=await libraryResponse.json();seriesItems=await seriesResponse.json();const genres=[...new Set([...items,...seriesItems].map(x=>x.genre).filter(Boolean))].sort();const select=document.querySelector('#genre');for(const g of genres){const o=document.createElement('option');o.value=g;o.textContent=g;select.append(o);}render();await loadProgress();}catch{document.querySelector('#message').textContent='تعذر الاتصال بالسيرفر أو تحميل بيانات المسلسلات.';document.querySelector('#continueEmpty').textContent='تعذر تحميل سجل المشاهدة.';}}
-for(const id of ['search','kind','genre','collection','sort'])document.getElementById(id).addEventListener(id==='search'?'input':'change',render);load();
+async function load(){try{
+ const [libraryResponse,seriesResponse]=await Promise.all([fetch('/api/library'),fetch('/api/series')]);
+ if(!libraryResponse.ok||!seriesResponse.ok)throw Error();
+ items=await libraryResponse.json();seriesItems=await seriesResponse.json();
+ const sections=[...new Set([...items.filter(x=>x.isPublished===true),...seriesItems.filter(x=>x.isPublished===true)].map(x=>(x.section||'عام').trim()||'عام'))].sort((a,b)=>a.localeCompare(b,'ar'));
+ const select=document.querySelector('#sectionFilter');select.replaceChildren();
+ const all=document.createElement('option');all.value='';all.textContent='كل الأقسام';select.append(all);
+ for(const section of sections){const option=document.createElement('option');option.value=section;option.textContent=section;select.append(option);}
+ render();await loadProgress();
+ }catch{document.querySelector('#message').textContent='تعذر الاتصال بالسيرفر أو تحميل بيانات المكتبة.';document.querySelector('#continueEmpty').textContent='تعذر تحميل سجل المشاهدة.';}}
+for(const id of ['search','sectionFilter','collection','sort'])document.getElementById(id).addEventListener(id==='search'?'input':'change',render);load();
 </script></body></html>
