@@ -36,6 +36,20 @@ public sealed class PublicCatalogAccessTests : IDisposable
         Assert.True(_access.IsVideoPublished(videoId));
         Assert.Contains(videoId, _access.GetPublishedVideoIds());
 
+        const string otherKindId = "cccccccccccccccccccccccc";
+        _metadata.Save(new SaveVideoMetadataRequest(
+            VideoId: otherKindId,
+            Title: "محتوى آخر",
+            Description: "",
+            Year: null,
+            Genre: "",
+            Kind: "Other",
+            PosterPath: null,
+            IsPublished: true,
+            CategoryId: "movies"));
+        Assert.True(_access.IsVideoPublished(otherKindId));
+        Assert.Contains(otherKindId, _access.GetPublishedVideoIds());
+
         SaveMovie(videoId, isPublished: false);
         Assert.False(_access.IsVideoPublished(videoId));
         Assert.DoesNotContain(videoId, _access.GetPublishedVideoIds());
