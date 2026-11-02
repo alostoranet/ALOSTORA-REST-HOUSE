@@ -21,10 +21,10 @@
 <TextBlock Text="وسوم إضافية"/><TextBox x:Name="TagsBox" Padding="8" Margin="0,4,0,10"/>
 <TextBlock Text="قسم العرض النصي (اختياري)"/><TextBox x:Name="SectionBox" Padding="8" Margin="0,4,0,10" Text="عام"/>
 <TextBlock Text="التصنيف الفرعي الذي سيظهر فيه العمل"/><ComboBox x:Name="VideoCategoryPicker" DisplayMemberPath="DisplayTitle" SelectedValuePath="CategoryId" Padding="8" Margin="0,4,0,10"/>
-<CheckBox x:Name="PublishBox" Content="نشر هذا العمل في واجهة العميل" IsChecked="False" Margin="0,0,0,12" FontWeight="Bold" Foreground="#16834A"/>
+<CheckBox x:Name="PublishBox" Content="نشر هذا العمل في واجهة العميل (بعد اختيار القسم)" IsChecked="True" Margin="0,0,0,12" FontWeight="Bold" Foreground="#16834A"/>
 <TextBlock Text="نوع المحتوى"/><ComboBox x:Name="KindBox" Padding="7" Margin="0,4,0,10"><ComboBoxItem Content="فيلم" Tag="Movie" IsSelected="True"/><ComboBoxItem Content="مسلسل" Tag="Series"/></ComboBox>
 <TextBlock Text="معرّف الملف" Foreground="#64748B"/><TextBox x:Name="IdBox" IsReadOnly="True" Padding="8" Margin="0,4,0,14" FlowDirection="LeftToRight"/>
-<Border Background="#F1F5F9" CornerRadius="8" Padding="10" Margin="0,0,0,12"><StackPanel><TextBlock Text="غلاف الفيلم أو المسلسل" FontWeight="Bold" Foreground="#142D4A"/><TextBlock x:Name="PosterStatusText" Text="لم يتم اختيار غلاف جديد." Foreground="#64748B" Margin="0,5,0,8" TextWrapping="Wrap"/><Button Content="اختيار ورفع الغلاف" Click="UploadPoster_Click" Padding="12,8" HorizontalAlignment="Right" Background="#245B87" Foreground="White" BorderThickness="0"/></StackPanel></Border>
+<Border Background="#F1F5F9" CornerRadius="8" Padding="10" Margin="0,0,0,12"><StackPanel><TextBlock Text="غلاف الفيلم أو المسلسل (اختياري)" FontWeight="Bold" Foreground="#142D4A"/><TextBlock x:Name="PosterStatusText" Text="لم يتم اختيار غلاف جديد." Foreground="#64748B" Margin="0,5,0,8" TextWrapping="Wrap"/><Button Content="اختيار ورفع الغلاف" Click="UploadPoster_Click" Padding="12,8" HorizontalAlignment="Right" Background="#245B87" Foreground="White" BorderThickness="0"/></StackPanel></Border>
 <Button Content="حفظ البيانات" Click="SaveMetadata_Click" Background="#C93640" Foreground="White" FontWeight="Bold" Padding="14,11" BorderThickness="0"/>
 <TextBlock x:Name="StatusText" Text="اختر فيديو من القائمة لتعديل بياناته." Foreground="#526174" TextWrapping="Wrap" Margin="0,12,0,0"/>
 </StackPanel></ScrollViewer></TabItem>
@@ -39,7 +39,7 @@
 <TextBlock Text="التصنيف"/><TextBox x:Name="SeriesGenreBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="قسم العرض النصي (اختياري)"/><TextBox x:Name="SeriesSectionBox" Padding="8" Margin="0,4,0,8" Text="عام"/>
 <TextBlock Text="تصنيف المسلسل"/><ComboBox x:Name="SeriesCategoryPicker" DisplayMemberPath="DisplayTitle" SelectedValuePath="CategoryId" Padding="8" Margin="0,4,0,8"/>
-<CheckBox x:Name="SeriesPublishBox" Content="نشر المسلسل في واجهة العميل" IsChecked="False" Margin="0,0,0,10" FontWeight="Bold" Foreground="#16834A"/>
+<CheckBox x:Name="SeriesPublishBox" Content="نشر المسلسل في واجهة العميل (بعد اختيار القسم)" IsChecked="True" Margin="0,0,0,10" FontWeight="Bold" Foreground="#16834A"/>
 <TextBlock Text="مجلد ملفات المسلسل (اختياري)"/><DockPanel Margin="0,4,0,8"><Button DockPanel.Dock="Left" Content="اختيار مجلد" Click="ChooseSeriesFolder_Click" Padding="10,6" Margin="6,0,0,0"/><TextBox x:Name="SeriesFolderPathBox" Padding="8" FlowDirection="LeftToRight"/></DockPanel>
 <TextBlock Text="مسار الغلاف (اختياري)"/><TextBox x:Name="SeriesPosterPathBox" Padding="8" Margin="0,4,0,8"/><Button Content="اختيار ورفع غلاف المسلسل" Click="UploadSeriesPoster_Click" Padding="10,8" HorizontalAlignment="Right" Margin="0,0,0,10"/>
 <WrapPanel Margin="0,3,0,14"><Button Content="حفظ بيانات المسلسل" Click="SaveSeries_Click" Background="#C93640" Foreground="White" FontWeight="Bold" Padding="12,9" BorderThickness="0" Margin="0,0,6,0"/><Button Content="حذف المسلسل وبياناته" Click="DeleteSeries_Click" Background="#FCE8E8" Foreground="#9F2630" Padding="12,9" BorderThickness="0"/></WrapPanel>
