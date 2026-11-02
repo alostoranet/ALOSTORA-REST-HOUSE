@@ -73,9 +73,14 @@ Write-Host "PASS: customer home and contact form have separate navigation states
 
 # A category may be published without a poster; new category forms default to published.
 if ($app -match 'request\.IsPublished\s*&&\s*!PosterExists\(request\.PosterPath,posters\)' -or
+    $app -match 'if\(!PosterExists\(poster,posters\)\)' -or
     $xaml -notmatch 'CategoryPublishBox"[^>]*IsChecked="True"' -or
-    $code -notmatch 'CategoryPublishBox\.IsChecked\s*=\s*true') {
-    throw "New customer categories must publish by default and must not require a poster."
+    $xaml -notmatch 'PublishBox"[^>]*IsChecked="True"' -or
+    $xaml -notmatch 'SeriesPublishBox"[^>]*IsChecked="True"' -or
+    $code -notmatch 'CategoryPublishBox\.IsChecked\s*=\s*true' -or
+    $code -notmatch 'SeriesPublishBox\.IsChecked\s*=\s*true' -or
+    $code -notmatch 'PublishBox\.IsChecked\s*=\s*v\.IsPublished\s*\|\|\s*string\.IsNullOrWhiteSpace\(v\.CategoryId\)') {
+    throw "New categories, movies, and series must publish by default without mandatory poster images."
 }
 $categoryTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/CatalogCategoryServiceTests.cs"
 if (-not (Test-Path $categoryTestsPath)) { throw "Catalog category regression tests are missing." }
