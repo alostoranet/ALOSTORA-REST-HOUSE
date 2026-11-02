@@ -13,6 +13,7 @@ public sealed record BulkLibraryRequest(List<string> Ids);
 public sealed record UpdateSeasonFolderRequest(string? FolderPath);
 public sealed record ScanFolderRequest(string FolderPath);
 public sealed record RegisterSelectedFilesRequest(string FolderPath, List<string> FilePaths);
+public sealed record RegisterFilesRequest(List<string> FilePaths);
 public sealed record DetectedEpisodeLink(string VideoId, int EpisodeNumber, string? Title, bool Selected);
 public sealed record LinkDetectedEpisodesRequest(List<DetectedEpisodeLink> Episodes);
 public sealed record RelinkEpisodeRequest(string VideoId);
@@ -255,6 +256,14 @@ public partial class App : Application
     if(!IsLocal(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(folderPath)||folderPath.Length>1000||!Directory.Exists(folderPath)) return Results.BadRequest(new{error="حدد مجلداً موجوداً ويمكن الوصول إليه"});
     try { return Results.Ok(files.PreviewFolder(folderPath)); }
+    catch(Exception ex) { return Results.BadRequest(new{error=ex.Message}); }
+   });
+   _server.MapPost("/api/admin/register-files",(HttpContext c,RegisterFilesRequest request,LibraryService files)=>
+   {
+    if(!IsLocal(c)) return Results.NotFound();
+    if(request.FilePaths is null||request.FilePaths.Count<1||request.FilePaths.Count>1000||request.FilePaths.Any(path=>string.IsNullOrWhiteSpace(path)||path.Length>2000))
+     return Results.BadRequest(new{error="اختر ملفات فيديو صحيحة، بحد أقصى 1000 ملف في المرة الواحدة"});
+    try { var count=files.RegisterFiles(request.FilePaths); return Results.Ok(new{registered=true,videoCount=count,message="تمت إضافة الملفات المحددة إلى المكتبة"}); }
     catch(Exception ex) { return Results.BadRequest(new{error=ex.Message}); }
    });
    _server.MapPost("/api/admin/register-selected-files",(HttpContext c,RegisterSelectedFilesRequest request,LibraryService files)=>
