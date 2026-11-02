@@ -173,9 +173,18 @@ public partial class App : Application
     try { series.DeleteSeason(seasonId); return Results.Ok(new{deleted=true,message="تم حذف الموسم وروابط حلقاته دون حذف ملفات الفيديو"}); }
     catch(KeyNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
    });
-   _server.MapPost("/api/admin/series",(HttpContext c,SaveSeriesRequest request,SeriesCatalogService series,LibraryService files)=>{
+   _server.MapPost("/api/admin/series",(HttpContext c,SaveSeriesRequest request,SeriesCatalogService series,LibraryService files,CatalogCategoryService categories)=>{
     if(!IsLocal(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeriesId.Length>80||string.IsNullOrWhiteSpace(request.Title)||request.Title.Length>160||(request.Description?.Length??0)>2000||(request.Genre?.Length??0)>80||(request.Year is not null&&(request.Year<1888||request.Year>DateTime.UtcNow.Year+5))||(request.PosterPath?.Length??0)>200||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="تحقق من بيانات المسلسل"});
+    if(request.IsPublished)
+    {
+     var previous=series.GetSeries(request.SeriesId);
+     var poster=request.PosterPath??previous?.PosterPath;
+     var category=string.IsNullOrWhiteSpace(request.CategoryId)?null:categories.Get(request.CategoryId);
+     var parent=category?.ParentId is null?null:categories.Get(category.ParentId);
+     if(string.IsNullOrWhiteSpace(poster))return Results.BadRequest(new{error="غلاف المسلسل إلزامي قبل النشر"});
+     if(category is null||category.ContentKind!="Series"||!category.IsPublished||parent is null||!parent.IsPublished)return Results.BadRequest(new{error="اختر تصنيف مسلسلات منشوراً تابعاً لقسم رئيسي منشور"});
+    }
     series.SaveSeries(request); if(!string.IsNullOrWhiteSpace(request.FolderPath)) files.RegisterFolder(request.FolderPath); return Results.Ok(new{saved=true});
    });
    _server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalogService series,LibraryService files)=>{ if(!IsLocal(c)) return Results.NotFound(); var rows=series.ListSeasons(seriesId); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.RegisterFolder(row.FolderPath); return Results.Ok(rows); });
@@ -262,10 +271,20 @@ public partial class App : Application
     catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="هذا الملف مربوط بحلقة أخرى بالفعل"}); }
    });
    _server.MapGet("/api/admin/metadata",(HttpContext c,VideoMetadataService meta)=>IsLocal(c)?Results.Ok(meta.List()):Results.NotFound());
-   _server.MapPost("/api/admin/metadata",(HttpContext c,SaveVideoMetadataRequest request,LibraryService librarySvc,VideoMetadataService meta)=>{
+   _server.MapPost("/api/admin/metadata",(HttpContext c,SaveVideoMetadataRequest request,LibraryService librarySvc,VideoMetadataService meta,CatalogCategoryService categories)=>{
     if(!IsLocal(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.VideoId)||request.VideoId.Length!=24||!request.VideoId.All(Uri.IsHexDigit)||librarySvc.Resolve(request.VideoId) is null) return Results.BadRequest(new{error="الفيديو غير موجود"});
     if(string.IsNullOrWhiteSpace(request.Title)||request.Title.Length>160||(request.Description?.Length??0)>2000||(request.Genre?.Length??0)>80||(request.Year is not null&&(request.Year<1888||request.Year>DateTime.UtcNow.Year+5))||(request.PosterPath?.Length??0)>200||(request.Director?.Length??0)>160||(request.Cast?.Length??0)>1000||(request.Tags?.Length??0)>500||(request.Rating is <0 or >10)||(request.RuntimeMinutes is <1 or >1000)||(request.ReleaseDate?.Length??0)>10) return Results.BadRequest(new{error="تحقق من البيانات المدخلة"});
+    if(request.IsPublished)
+    {
+     var previous=meta.Get(request.VideoId);
+     var poster=request.PosterPath??previous?.PosterPath;
+     var category=string.IsNullOrWhiteSpace(request.CategoryId)?null:categories.Get(request.CategoryId);
+     var parent=category?.ParentId is null?null:categories.Get(category.ParentId);
+     var expectedKind=request.Kind=="Series"?"Series":"Movie";
+     if(string.IsNullOrWhiteSpace(poster))return Results.BadRequest(new{error="غلاف الفيديو إلزامي قبل النشر"});
+     if(category is null||(category.ContentKind!=expectedKind&&category.ContentKind!="Other")||!category.IsPublished||parent is null||!parent.IsPublished)return Results.BadRequest(new{error="اختر تصنيفاً فرعياً منشوراً من قسم رئيسي منشور"});
+    }
     meta.Save(request); return Results.Ok(new{saved=true});
    });
    _server.MapPost("/api/admin/poster/{videoId}",async (HttpContext c,string videoId,LibraryService librarySvc,VideoMetadataService meta)=>{
