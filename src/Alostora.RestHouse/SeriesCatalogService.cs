@@ -3,11 +3,12 @@ using System.IO;
 
 namespace Alostora.RestHouse;
 
-public sealed record SeriesRecord(string SeriesId, string Title, string Description, int? Year, string Genre, string? PosterPath, string? FolderPath, string? CategoryId, string Section, bool IsPublished);
+public sealed record SeriesRecord(string SeriesId, string Title, string Description, int? Year, string Genre, string? PosterPath, string? FolderPath, string? CategoryId, string Section, bool IsPublished, string OrganizationType);
 public sealed record SeasonRecord(long SeasonId, string SeriesId, int SeasonNumber, string Title, string? FolderPath);
 public sealed record EpisodeRecord(long EpisodeId, long SeasonId, string VideoId, int EpisodeNumber, string Title);
 public sealed record MissingEpisodeRecord(long EpisodeId, string SeriesId, string SeriesTitle, int SeasonNumber, int EpisodeNumber, string Title, string VideoId);
-public sealed record SaveSeriesRequest(string SeriesId, string Title, string? Description, int? Year, string? Genre, string? PosterPath, string? FolderPath = null, string? Section = null, bool IsPublished = false, string? CategoryId = null);
+public sealed record SaveSeriesRequest(string SeriesId, string Title, string? Description, int? Year, string? Genre, string? PosterPath, string? FolderPath = null, string? Section = null, bool IsPublished = false, string? CategoryId = null, string? OrganizationType = "Seasons");
+public sealed record VideoPlacementRecord(string SeriesId, long? SeasonId, int? EpisodeNumber, string? Title);
 public sealed record SaveSeasonRequest(string SeriesId, int SeasonNumber, string? Title, string? FolderPath = null);
 public sealed record SaveEpisodeRequest(long SeasonId, string VideoId, int EpisodeNumber, string? Title);
 
@@ -38,12 +39,18 @@ public sealed class SeriesCatalogService
           );
           CREATE INDEX IF NOT EXISTS IX_SeriesSeasons_SeriesId ON SeriesSeasons(SeriesId);
           CREATE INDEX IF NOT EXISTS IX_SeriesEpisodes_SeasonId ON SeriesEpisodes(SeasonId);
+          CREATE TABLE IF NOT EXISTS SeriesDirectVideos(
+            VideoId TEXT PRIMARY KEY, SeriesId TEXT NOT NULL REFERENCES SeriesCatalog(SeriesId) ON DELETE CASCADE,
+            Title TEXT NOT NULL DEFAULT ''
+          );
+          CREATE INDEX IF NOT EXISTS IX_SeriesDirectVideos_SeriesId ON SeriesDirectVideos(SeriesId);
           """;
         cmd.ExecuteNonQuery();
         EnsureColumn(c, "SeriesCatalog", "FolderPath", "TEXT NULL");
         EnsureColumn(c, "SeriesCatalog", "CategoryId", "TEXT NULL");
         EnsureColumn(c, "SeriesCatalog", "Section", "TEXT NOT NULL DEFAULT 'عام'");
         EnsureColumn(c, "SeriesCatalog", "IsPublished", "INTEGER NOT NULL DEFAULT 1");
+        EnsureColumn(c, "SeriesCatalog", "OrganizationType", "TEXT NOT NULL DEFAULT 'Seasons'");
         EnsureColumn(c, "SeriesSeasons", "FolderPath", "TEXT NULL");
     }
     private static void EnsureColumn(SqliteConnection c, string table, string column, string type)
@@ -60,9 +67,9 @@ public sealed class SeriesCatalogService
     public IReadOnlyList<SeriesRecord> ListSeries()
     {
         using var c=Open(); using var cmd=c.CreateCommand();
-        cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath,CategoryId,Section,IsPublished FROM SeriesCatalog ORDER BY Title COLLATE NOCASE";
+        cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath,CategoryId,Section,IsPublished,OrganizationType FROM SeriesCatalog ORDER BY Title COLLATE NOCASE";
         using var r=cmd.ExecuteReader(); var rows=new List<SeriesRecord>();
-        while(r.Read()) rows.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetString(7),r.GetString(8),r.GetInt32(9)!=0));
+        while(r.Read()) rows.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetString(7),r.GetString(8),r.GetInt32(9)!=0,r.GetString(10)));
         return rows;
     }
     public IReadOnlyList<SeasonRecord> ListSeasons(string seriesId)
@@ -96,15 +103,109 @@ public sealed class SeriesCatalogService
 
     public SeriesRecord? GetSeries(string id)
     {
-        using var c=Open(); using var cmd=c.CreateCommand(); cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath,CategoryId,Section,IsPublished FROM SeriesCatalog WHERE SeriesId=$id"; cmd.Parameters.AddWithValue("$id",id);
-        using var r=cmd.ExecuteReader(); return r.Read()?new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetString(7),r.GetString(8),r.GetInt32(9)!=0):null;
+        using var c=Open(); using var cmd=c.CreateCommand(); cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath,CategoryId,Section,IsPublished,OrganizationType FROM SeriesCatalog WHERE SeriesId=$id"; cmd.Parameters.AddWithValue("$id",id);
+        using var r=cmd.ExecuteReader(); return r.Read()?new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetString(7),r.GetString(8),r.GetInt32(9)!=0,r.GetString(10)):null;
     }
     public void SaveSeries(SaveSeriesRequest x)
     {
         using var c=Open(); using var cmd=c.CreateCommand();
-        cmd.CommandText="""INSERT INTO SeriesCatalog(SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath,CategoryId,Section,IsPublished,UpdatedUtc) VALUES($id,$title,$description,$year,$genre,$poster,$folder,$categoryId,$section,$published,$updated) ON CONFLICT(SeriesId) DO UPDATE SET Title=excluded.Title,Description=excluded.Description,Year=excluded.Year,Genre=excluded.Genre,PosterPath=COALESCE(excluded.PosterPath, SeriesCatalog.PosterPath),FolderPath=excluded.FolderPath,CategoryId=excluded.CategoryId,Section=excluded.Section,IsPublished=excluded.IsPublished,UpdatedUtc=excluded.UpdatedUtc""";
-        cmd.Parameters.AddWithValue("$id",x.SeriesId); cmd.Parameters.AddWithValue("$title",x.Title.Trim()); cmd.Parameters.AddWithValue("$description",x.Description??""); cmd.Parameters.AddWithValue("$year",(object?)x.Year??DBNull.Value); cmd.Parameters.AddWithValue("$genre",x.Genre??""); cmd.Parameters.AddWithValue("$poster",(object?)x.PosterPath??DBNull.Value); cmd.Parameters.AddWithValue("$folder",(object?)x.FolderPath??DBNull.Value); cmd.Parameters.AddWithValue("$categoryId",(object?)x.CategoryId??DBNull.Value); cmd.Parameters.AddWithValue("$section",string.IsNullOrWhiteSpace(x.Section)?"عام":x.Section.Trim()); cmd.Parameters.AddWithValue("$published",x.IsPublished?1:0); cmd.Parameters.AddWithValue("$updated",DateTime.UtcNow.ToString("O")); cmd.ExecuteNonQuery();
+        cmd.CommandText="""INSERT INTO SeriesCatalog(SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath,CategoryId,Section,IsPublished,OrganizationType,UpdatedUtc) VALUES($id,$title,$description,$year,$genre,$poster,$folder,$categoryId,$section,$published,$organizationType,$updated) ON CONFLICT(SeriesId) DO UPDATE SET Title=excluded.Title,Description=excluded.Description,Year=excluded.Year,Genre=excluded.Genre,PosterPath=COALESCE(excluded.PosterPath, SeriesCatalog.PosterPath),FolderPath=excluded.FolderPath,CategoryId=excluded.CategoryId,Section=excluded.Section,IsPublished=excluded.IsPublished,OrganizationType=excluded.OrganizationType,UpdatedUtc=excluded.UpdatedUtc""";
+        cmd.Parameters.AddWithValue("$id",x.SeriesId); cmd.Parameters.AddWithValue("$title",x.Title.Trim()); cmd.Parameters.AddWithValue("$description",x.Description??""); cmd.Parameters.AddWithValue("$year",(object?)x.Year??DBNull.Value); cmd.Parameters.AddWithValue("$genre",x.Genre??""); cmd.Parameters.AddWithValue("$poster",(object?)x.PosterPath??DBNull.Value); cmd.Parameters.AddWithValue("$folder",(object?)x.FolderPath??DBNull.Value); cmd.Parameters.AddWithValue("$categoryId",(object?)x.CategoryId??DBNull.Value); cmd.Parameters.AddWithValue("$section",string.IsNullOrWhiteSpace(x.Section)?"عام":x.Section.Trim()); cmd.Parameters.AddWithValue("$published",x.IsPublished?1:0); cmd.Parameters.AddWithValue("$organizationType",x.OrganizationType is "None" or "Parts" ? x.OrganizationType : "Seasons"); cmd.Parameters.AddWithValue("$updated",DateTime.UtcNow.ToString("O")); cmd.ExecuteNonQuery();
     }
+    public VideoPlacementRecord? GetVideoPlacement(string videoId)
+    {
+        using var c = Open();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = """
+            SELECT ss.SeriesId, se.SeasonId, se.EpisodeNumber, se.Title
+            FROM SeriesEpisodes se JOIN SeriesSeasons ss ON ss.SeasonId=se.SeasonId
+            WHERE se.VideoId=$video
+            UNION ALL
+            SELECT SeriesId, NULL, NULL, Title FROM SeriesDirectVideos WHERE VideoId=$video
+            LIMIT 1
+            """;
+        cmd.Parameters.AddWithValue("$video", videoId);
+        using var r = cmd.ExecuteReader();
+        return r.Read() ? new VideoPlacementRecord(r.GetString(0), r.IsDBNull(1) ? null : r.GetInt64(1),
+            r.IsDBNull(2) ? null : r.GetInt32(2), r.IsDBNull(3) ? null : r.GetString(3)) : null;
+    }
+
+    public void SetVideoPlacement(string? seriesId, long? seasonId, string videoId, int? episodeNumber, string? title)
+    {
+        using var c = Open();
+        using var transaction = c.BeginTransaction();
+        if (string.IsNullOrWhiteSpace(seriesId))
+        {
+            using var removeEpisode = c.CreateCommand();
+            removeEpisode.Transaction = transaction;
+            removeEpisode.CommandText = "DELETE FROM SeriesEpisodes WHERE VideoId=$video";
+            removeEpisode.Parameters.AddWithValue("$video", videoId);
+            removeEpisode.ExecuteNonQuery();
+            using var removeDirect = c.CreateCommand();
+            removeDirect.Transaction = transaction;
+            removeDirect.CommandText = "DELETE FROM SeriesDirectVideos WHERE VideoId=$video";
+            removeDirect.Parameters.AddWithValue("$video", videoId);
+            removeDirect.ExecuteNonQuery();
+            transaction.Commit();
+            return;
+        }
+
+        using (var exists = c.CreateCommand())
+        {
+            exists.Transaction = transaction;
+            exists.CommandText = "SELECT COUNT(*) FROM SeriesCatalog WHERE SeriesId=$series";
+            exists.Parameters.AddWithValue("$series", seriesId);
+            if (Convert.ToInt32(exists.ExecuteScalar()) == 0) throw new KeyNotFoundException("المسلسل المحدد غير موجود.");
+        }
+
+        if (seasonId.HasValue)
+        {
+            if (episodeNumber is null or < 1 or > 10000) throw new ArgumentOutOfRangeException(nameof(episodeNumber), "رقم الحلقة أو الفيديو داخل الموسم/الجزء غير صحيح.");
+            using var season = c.CreateCommand();
+            season.Transaction = transaction;
+            season.CommandText = "SELECT COUNT(*) FROM SeriesSeasons WHERE SeasonId=$season AND SeriesId=$series";
+            season.Parameters.AddWithValue("$season", seasonId.Value);
+            season.Parameters.AddWithValue("$series", seriesId);
+            if (Convert.ToInt32(season.ExecuteScalar()) == 0) throw new InvalidOperationException("الموسم أو الجزء لا يتبع المسلسل المحدد.");
+            using var removeDirect = c.CreateCommand();
+            removeDirect.Transaction = transaction;
+            removeDirect.CommandText = "DELETE FROM SeriesDirectVideos WHERE VideoId=$video";
+            removeDirect.Parameters.AddWithValue("$video", videoId);
+            removeDirect.ExecuteNonQuery();
+            using var upsert = c.CreateCommand();
+            upsert.Transaction = transaction;
+            upsert.CommandText = """
+                INSERT INTO SeriesEpisodes(SeasonId,VideoId,EpisodeNumber,Title)
+                VALUES($season,$video,$number,$title)
+                ON CONFLICT(VideoId) DO UPDATE SET SeasonId=excluded.SeasonId,EpisodeNumber=excluded.EpisodeNumber,Title=excluded.Title
+                """;
+            upsert.Parameters.AddWithValue("$season", seasonId.Value);
+            upsert.Parameters.AddWithValue("$video", videoId);
+            upsert.Parameters.AddWithValue("$number", episodeNumber.Value);
+            upsert.Parameters.AddWithValue("$title", title?.Trim() ?? "");
+            upsert.ExecuteNonQuery();
+        }
+        else
+        {
+            using var removeEpisode = c.CreateCommand();
+            removeEpisode.Transaction = transaction;
+            removeEpisode.CommandText = "DELETE FROM SeriesEpisodes WHERE VideoId=$video";
+            removeEpisode.Parameters.AddWithValue("$video", videoId);
+            removeEpisode.ExecuteNonQuery();
+            using var direct = c.CreateCommand();
+            direct.Transaction = transaction;
+            direct.CommandText = """
+                INSERT INTO SeriesDirectVideos(VideoId,SeriesId,Title) VALUES($video,$series,$title)
+                ON CONFLICT(VideoId) DO UPDATE SET SeriesId=excluded.SeriesId,Title=excluded.Title
+                """;
+            direct.Parameters.AddWithValue("$video", videoId);
+            direct.Parameters.AddWithValue("$series", seriesId);
+            direct.Parameters.AddWithValue("$title", title?.Trim() ?? "");
+            direct.ExecuteNonQuery();
+        }
+        transaction.Commit();
+    }
+
     public long AddSeason(SaveSeasonRequest x)
     {
         using var c=Open(); using var cmd=c.CreateCommand();
@@ -245,6 +346,15 @@ public sealed class SeriesCatalogService
         if (allowedSeriesIds is not null)
             seriesRows = seriesRows.Where(x => allowedSeriesIds.Contains(x.SeriesId)).ToArray();
 
+        var directVideoMap = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        using (var c = Open())
+        using (var cmd = c.CreateCommand())
+        {
+            cmd.CommandText = "SELECT SeriesId, VideoId FROM SeriesDirectVideos ORDER BY Title COLLATE NOCASE";
+            using var r = cmd.ExecuteReader();
+            while (r.Read()) { if (!directVideoMap.TryGetValue(r.GetString(0), out var ids)) directVideoMap[r.GetString(0)] = ids = new List<string>(); ids.Add(r.GetString(1)); }
+        }
+
         var seasonMap = new Dictionary<long, (SeasonRecord Season, List<EpisodeRecord> Episodes)>();
         using (var c = Open())
         using (var cmd = c.CreateCommand())
@@ -323,6 +433,13 @@ public sealed class SeriesCatalogService
             {
                 seriesId = series.SeriesId,
                 title = series.Title,
+                organizationType = series.OrganizationType,
+                directVideos = directVideoMap.TryGetValue(series.SeriesId, out var directIds) ? directIds.Select(videoId =>
+                {
+                    var hasFile = files.TryGetValue(videoId, out var file);
+                    metadataById.TryGetValue(videoId, out var videoMetadata);
+                    return new { videoId, title = videoMetadata?.Title ?? file?.Title ?? "فيديو", url = hasFile ? file!.Url : null, isMissing = !hasFile, director = videoMetadata?.Director, cast = videoMetadata?.Cast, rating = videoMetadata?.Rating, runtimeMinutes = videoMetadata?.RuntimeMinutes, releaseDate = videoMetadata?.ReleaseDate };
+                }).ToArray() : Array.Empty<object>(),
                 description = series.Description,
                 year = series.Year,
                 genre = series.Genre,
