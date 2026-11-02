@@ -694,6 +694,7 @@ public partial class MainWindow : Window
         SeriesPosterPathBox.Clear();
         SeriesFolderPathBox.Clear();
         SeasonsGrid.ItemsSource = null;
+        EpisodesGrid.ItemsSource = null;
         SeasonTitleBox.Clear();
         SeasonNumberBox.Text = "1";
         SeasonFolderPathBox.Clear();
@@ -884,6 +885,7 @@ public partial class MainWindow : Window
             SeriesIdBox.Clear(); SeriesTitleBox.Clear(); SeriesDescriptionBox.Clear(); SeriesYearBox.Clear();
             SeriesGenreBox.Clear(); SeriesPosterPathBox.Clear(); SeriesFolderPathBox.Clear();
             SeasonsGrid.ItemsSource = null;
+            EpisodesGrid.ItemsSource = null;
             await LoadSeriesAsync();
             await LoadVideosAsync();
             await LoadMissingEpisodesAsync();
