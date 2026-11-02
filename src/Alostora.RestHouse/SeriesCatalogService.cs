@@ -336,7 +336,7 @@ public sealed class SeriesCatalogService
         return rows;
     }
 
-    public object GetCatalog(LibraryService library, VideoMetadataService metadata, IReadOnlySet<string>? allowedSeriesIds = null)
+    public object GetCatalog(LibraryService library, VideoMetadataService metadata, IReadOnlySet<string>? allowedSeriesIds = null, IReadOnlySet<string>? allowedVideoIds = null)
     {
         // Load each source into memory before composing the response. This avoids
         // opening nested SQLite readers on the same connection while one is active.
@@ -352,7 +352,7 @@ public sealed class SeriesCatalogService
         {
             cmd.CommandText = "SELECT SeriesId, VideoId FROM SeriesDirectVideos ORDER BY Title COLLATE NOCASE";
             using var r = cmd.ExecuteReader();
-            while (r.Read()) { if (!directVideoMap.TryGetValue(r.GetString(0), out var ids)) directVideoMap[r.GetString(0)] = ids = new List<string>(); ids.Add(r.GetString(1)); }
+            while (r.Read()) { var videoId = r.GetString(1); if (allowedVideoIds is not null && !allowedVideoIds.Contains(videoId)) continue; if (!directVideoMap.TryGetValue(r.GetString(0), out var ids)) directVideoMap[r.GetString(0)] = ids = new List<string>(); ids.Add(videoId); }
         }
 
         var seasonMap = new Dictionary<long, (SeasonRecord Season, List<EpisodeRecord> Episodes)>();
