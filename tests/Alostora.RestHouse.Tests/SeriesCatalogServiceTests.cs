@@ -21,6 +21,44 @@ public sealed class SeriesCatalogServiceTests : IDisposable
     }
 
     [Fact]
+    public void SeriesCanUsePartsAndStoreVideosDirectlyUnderTheSeries()
+    {
+        _series.SaveSeries(new SaveSeriesRequest(
+            "series-test", "مسلسل الأجزاء", "", 2026, "", null, IsPublished: false, OrganizationType: "Parts"));
+
+        var series = Assert.Single(_series.ListSeries());
+        Assert.Equal("Parts", series.OrganizationType);
+
+        _series.SetVideoPlacement("series-test", null, "aaaaaaaaaaaaaaaaaaaaaaaa", null, "فيديو مباشر");
+        var placement = _series.GetVideoPlacement("aaaaaaaaaaaaaaaaaaaaaaaa");
+
+        Assert.NotNull(placement);
+        Assert.Equal("series-test", placement.SeriesId);
+        Assert.Null(placement.SeasonId);
+        Assert.Equal("فيديو مباشر", placement.Title);
+    }
+
+    [Fact]
+    public void VideoCanMoveBetweenDirectSeriesPlacementAndPartWithoutDeletingTheFile()
+    {
+        var seasonId = _series.AddSeason(new SaveSeasonRequest("series-test", 1, "الجزء الأول"));
+        const string videoId = "bbbbbbbbbbbbbbbbbbbbbbbb";
+
+        _series.SetVideoPlacement("series-test", null, videoId, null, "مقدمة");
+        _series.SetVideoPlacement("series-test", seasonId, videoId, 3, "الحلقة الثالثة");
+
+        var placement = _series.GetVideoPlacement(videoId);
+        Assert.NotNull(placement);
+        Assert.Equal(seasonId, placement.SeasonId);
+        Assert.Equal(3, placement.EpisodeNumber);
+        Assert.Equal("الحلقة الثالثة", placement.Title);
+
+        _series.SetVideoPlacement(null, null, videoId, null, null);
+        Assert.Null(_series.GetVideoPlacement(videoId));
+        Assert.NotNull(_series.GetSeries("series-test"));
+    }
+
+    [Fact]
     public void UpdateEpisodeChangesNumberAndTitleWithoutChangingVideoLink()
     {
         var seasonId = _series.AddSeason(new SaveSeasonRequest("series-test", 1, "الموسم الأول"));
