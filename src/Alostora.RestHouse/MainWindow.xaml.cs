@@ -12,6 +12,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Threading;
 using Microsoft.Win32;
 
 namespace Alostora.RestHouse;
@@ -25,6 +26,7 @@ public partial class MainWindow : Window
     private readonly HttpClient _http = new() { BaseAddress = new Uri("http://127.0.0.1:8096") };
     private readonly ObservableCollection<AdminVideo> _videos = new();
     private readonly ObservableCollection<EpisodeCandidate> _episodeCandidates = new();
+    private readonly DispatcherTimer _messageRefreshTimer = new() { Interval = TimeSpan.FromSeconds(30) };
 
     public MainWindow(string root, string library, string posters, string? ffmpegPath)
     {
@@ -40,7 +42,10 @@ public partial class MainWindow : Window
         AddressBox.Text = $"رابط المشاهدة: http://{GetLanAddress()}:8096";
         VideosGrid.ItemsSource = _videos;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await CheckMediaToolsAsync(); };
+        Loaded += async (_, _) => { await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); };
+        _messageRefreshTimer.Tick += async (_, _) => await LoadCustomerMessagesAsync();
+        _messageRefreshTimer.Start();
+        Closed += (_, _) => _messageRefreshTimer.Stop();
     }
 
     private async void RefreshLibrary_Click(object sender, RoutedEventArgs e)
@@ -1189,6 +1194,99 @@ public partial class MainWindow : Window
         }
 
         return "عنوان الشبكة غير معروف";
+    }
+
+    private async System.Threading.Tasks.Task LoadCustomerMessagesAsync()
+    {
+        try
+        {
+            var selectedId = (CustomerMessagesGrid.SelectedItem as CustomerMessageAdmin)?.Id;
+            var rows = await _http.GetFromJsonAsync<CustomerMessageAdmin[]>("/api/admin/messages") ?? Array.Empty<CustomerMessageAdmin>();
+            CustomerMessagesGrid.ItemsSource = rows;
+            if (selectedId is not null)
+                CustomerMessagesGrid.SelectedItem = rows.FirstOrDefault(x => x.Id == selectedId);
+            var fresh = rows.Count(x => x.Status == "جديد");
+            CustomerMessageStatusText.Text = $"إجمالي الرسائل المعروضة: {rows.Length} — رسائل جديدة: {fresh}. يتم التحديث كل 30 ثانية.";
+            if (CustomerMessagesGrid.SelectedItem is null)
+                CustomerMessageDetailsText.Text = rows.Length == 0 ? "لا توجد رسائل من العملاء حتى الآن." : "اختر رسالة من القائمة لعرض تفاصيلها.";
+        }
+        catch (Exception ex)
+        {
+            CustomerMessageStatusText.Text = "تعذر تحميل رسائل العملاء: " + ex.Message;
+        }
+    }
+
+    private void CustomerMessagesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (CustomerMessagesGrid.SelectedItem is not CustomerMessageAdmin message) return;
+        CustomerMessageDetailsText.Text =
+            $"رقم الرسالة: {message.Id}\nالنوع: {message.Category}\nالعنوان: {message.Title}\n\nالتفاصيل:\n{message.Details}\n\nوسيلة التواصل: {(string.IsNullOrWhiteSpace(message.Contact) ? "لم يحدد العميل" : message.Contact)}\nمعرّف جهاز العميل: {(string.IsNullOrWhiteSpace(message.ViewerId) ? "غير متوفر" : message.ViewerId)}\nتاريخ الإرسال: {message.CreatedUtc}\nالحالة: {message.Status}";
+    }
+
+    private async void RefreshCustomerMessages_Click(object sender, RoutedEventArgs e) =>
+        await LoadCustomerMessagesAsync();
+
+    private async System.Threading.Tasks.Task SetSelectedCustomerMessageStatusAsync(string status)
+    {
+        if (CustomerMessagesGrid.SelectedItem is not CustomerMessageAdmin message)
+        {
+            CustomerMessageStatusText.Text = "اختر رسالة من القائمة أولاً.";
+            return;
+        }
+        try
+        {
+            var response = await _http.PostAsJsonAsync($"/api/admin/messages/{message.Id}/status", new { status });
+            if (!response.IsSuccessStatusCode)
+            {
+                CustomerMessageStatusText.Text = "تعذر تحديث حالة الرسالة: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            await LoadCustomerMessagesAsync();
+            CustomerMessageStatusText.Text = $"تم تحديث حالة الرسالة رقم {message.Id} إلى «{status}».";
+        }
+        catch (Exception ex) { CustomerMessageStatusText.Text = "تعذر تحديث الرسالة: " + ex.Message; }
+    }
+
+    private async void MarkCustomerMessageInProgress_Click(object sender, RoutedEventArgs e) =>
+        await SetSelectedCustomerMessageStatusAsync("قيد المتابعة");
+
+    private async void ResolveCustomerMessage_Click(object sender, RoutedEventArgs e) =>
+        await SetSelectedCustomerMessageStatusAsync("تمت المعالجة");
+
+    private async void DeleteCustomerMessage_Click(object sender, RoutedEventArgs e)
+    {
+        if (CustomerMessagesGrid.SelectedItem is not CustomerMessageAdmin message)
+        {
+            CustomerMessageStatusText.Text = "اختر رسالة تريد حذفها أولاً.";
+            return;
+        }
+        if (MessageBox.Show($"هل تريد حذف رسالة العميل رقم {message.Id}؟", "تأكيد حذف الرسالة", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+        try
+        {
+            var response = await _http.DeleteAsync($"/api/admin/messages/{message.Id}");
+            if (!response.IsSuccessStatusCode)
+            {
+                CustomerMessageStatusText.Text = "تعذر حذف الرسالة: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            await LoadCustomerMessagesAsync();
+            CustomerMessageStatusText.Text = $"تم حذف الرسالة رقم {message.Id}.";
+        }
+        catch (Exception ex) { CustomerMessageStatusText.Text = "تعذر حذف الرسالة: " + ex.Message; }
+    }
+
+    private sealed class CustomerMessageAdmin
+    {
+        public long Id { get; set; }
+        public string Category { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Details { get; set; } = "";
+        public string? Contact { get; set; }
+        public string? ViewerId { get; set; }
+        public string Status { get; set; } = "";
+        public string CreatedUtc { get; set; } = "";
+        public string UpdatedUtc { get; set; } = "";
     }
 
     private sealed class MediaToolStatus
