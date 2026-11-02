@@ -601,13 +601,13 @@ public partial class MainWindow : Window
             releaseDate = string.IsNullOrWhiteSpace(ReleaseDateBox.Text) ? null : ReleaseDateBox.Text.Trim(),
             tags = TagsBox.Text,
             section = string.IsNullOrWhiteSpace(SectionBox.Text) ? "عام" : SectionBox.Text.Trim(),
-            categoryId = VideoCategoryPicker.SelectedValue as string,
+            categoryId = (kindItem?.Tag?.ToString() == "Series" ? SeriesCategoryPicker.SelectedValue as string : VideoCategoryPicker.SelectedValue as string),
             isPublished = PublishBox.IsChecked == true
         };
         try
         {
             var response = await _http.PostAsJsonAsync("/api/admin/metadata", request);
-            if (!response.IsSuccessStatusCode) { StatusText.Text = "لم يتم الحفظ. تحقق من العنوان والسنة."; return; }
+            if (!response.IsSuccessStatusCode) { StatusText.Text = "لم يتم الحفظ: " + await response.Content.ReadAsStringAsync(); return; }
             StatusText.Text = "تم حفظ بيانات الفيديو بنجاح.";
             await LoadVideosAsync();
             VideosGrid.SelectedItem = _videos.FirstOrDefault(v => v.Id == IdBox.Text);
@@ -653,7 +653,7 @@ public partial class MainWindow : Window
                 genre = video.Genre ?? "",
                 posterPath = video.PosterPath,
                 folderPath = (string?)null,
-                categoryId = video.CategoryId,
+                categoryId = SeriesCategoryPicker.SelectedValue as string,
                 section = video.Section,
                 isPublished = video.IsPublished
             });
@@ -763,7 +763,7 @@ public partial class MainWindow : Window
         try
         {
             var response = await _http.PostAsJsonAsync("/api/admin/series", request);
-            if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "لم يتم حفظ المسلسل. تحقق من البيانات."; return; }
+            if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "لم يتم حفظ المسلسل: " + await response.Content.ReadAsStringAsync(); return; }
             SeriesIdBox.Text = id;
             SeriesStatusText.Text = "تم حفظ بيانات المسلسل.";
             await LoadSeriesAsync();
