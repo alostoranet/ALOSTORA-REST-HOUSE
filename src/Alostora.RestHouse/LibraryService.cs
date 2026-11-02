@@ -471,6 +471,54 @@ public sealed class LibraryService : IDisposable
         return selected.Length;
     }
 
+    public int RegisterFiles(IEnumerable<string> filePaths)
+    {
+        var selected = filePaths?
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(Path.GetFullPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray() ?? Array.Empty<string>();
+
+        if (selected.Length == 0)
+            throw new ArgumentException("لم يتم اختيار أي ملف فيديو.");
+        if (selected.Length > 1000)
+            throw new ArgumentException("يمكن إضافة 1000 ملف كحد أقصى في المرة الواحدة.");
+
+        foreach (var path in selected)
+        {
+            if (!File.Exists(path) || !ContentTypes.ContainsKey(Path.GetExtension(path)))
+                throw new InvalidOperationException("أحد الملفات المحددة غير موجود أو صيغته غير مدعومة: " + Path.GetFileName(path));
+        }
+
+        using (var connection = new SqliteConnection(_connectionString))
+        {
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            foreach (var path in selected)
+            {
+                var id = IsInsideRoot(path)
+                    ? GetOrCreateId(connection, transaction, NormalizeRelativePath(Path.GetRelativePath(_root, path)))
+                    : GetOrCreateExternalId(connection, transaction, path);
+
+                using var include = connection.CreateCommand();
+                include.Transaction = transaction;
+                include.CommandText = "DELETE FROM ExcludedLibraryFiles WHERE VideoId=$id";
+                include.Parameters.AddWithValue("$id", id);
+                include.ExecuteNonQuery();
+            }
+            transaction.Commit();
+        }
+
+        foreach (var folder in selected.Where(path => !IsInsideRoot(path))
+                     .Select(Path.GetDirectoryName)
+                     .Where(path => !string.IsNullOrWhiteSpace(path))
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+            AddWatcher(folder!);
+
+        Invalidate();
+        return selected.Length;
+    }
+
     public void EnsureFolderRegistered(string folderPath)
     {
         if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
