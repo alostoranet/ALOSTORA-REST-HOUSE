@@ -181,7 +181,7 @@ if ($xaml -notmatch '<DataGrid x:Name="VideosGrid"' -or
     $code -notmatch 'MetadataStatus => MetadataSaved' -or
     $code -notmatch 'تمت إضافة بيانات الفيديو' -or
     $code -notmatch 'تمت إضافة المسلسل' -or
-    $code -notmatch 'تمت إضافة.*القسم الفرعي') {
+    $code -notmatch 'isNew\s*\?\s*"تمت إضافة"' -or $code -notmatch 'var typeName = kind == "Group" \? "القسم الرئيسي" : "القسم الفرعي"') {
     throw "The editable video, series, or category registers are incomplete."
 }
 Write-Host "PASS: videos, series, and categories have separate editable registers and save confirmations."
