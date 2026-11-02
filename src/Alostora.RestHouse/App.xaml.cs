@@ -40,6 +40,7 @@ public partial class App : Application
    builder.Services.AddSingleton(new WatchProgressService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new VideoMetadataService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new SeriesCatalogService(Path.Combine(root,"resthouse.db")));
+   builder.Services.AddSingleton(new CatalogCategoryService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddHostedService(provider => new ScheduledBackupService(root,posters,provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ScheduledBackupService>>()));
    _server=builder.Build();
    static bool IsLanAddress(IPAddress? address)
@@ -73,6 +74,30 @@ public partial class App : Application
     return IPAddress.IsLoopback(address);
    }
    _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
+   _server.MapGet("/api/catalog-categories",(CatalogCategoryService categories)=>Results.Ok(categories.List(publishedOnly:true)));
+   _server.MapGet("/api/admin/catalog-categories",(HttpContext c,CatalogCategoryService categories)=>IsLocal(c)?Results.Ok(categories.List()):Results.NotFound());
+   _server.MapPost("/api/admin/catalog-categories",(HttpContext c,SaveCatalogCategoryRequest request,CatalogCategoryService categories)=>{
+    if(!IsLocal(c))return Results.NotFound();
+    if(string.IsNullOrWhiteSpace(request.Title)||(request.Title?.Length??0)>100||(request.PosterPath?.Length??0)>240)return Results.BadRequest(new{error="اسم القسم أو الغلاف غير صالح"});
+    if(request.IsPublished&&string.IsNullOrWhiteSpace(request.PosterPath))return Results.BadRequest(new{error="لا يمكن نشر القسم قبل رفع غلافه"});
+    if(request.ParentId is not null){var parent=categories.Get(request.ParentId);if(parent is null||parent.ParentId is not null||parent.ContentKind!="Group")return Results.BadRequest(new{error="اختر قسماً رئيسياً صحيحاً"});}
+    try{categories.Save(request);return Results.Ok(new{saved=true});}catch(Exception ex) when(ex is ArgumentException or Microsoft.Data.Sqlite.SqliteException){return Results.BadRequest(new{error=ex.Message});}
+   });
+   _server.MapDelete("/api/admin/catalog-categories/{id}",(HttpContext c,string id,CatalogCategoryService categories)=>{
+    if(!IsLocal(c))return Results.NotFound();try{categories.Delete(id);return Results.Ok(new{deleted=true});}catch(KeyNotFoundException ex){return Results.NotFound(new{error=ex.Message});}
+   });
+   _server.MapPost("/api/admin/catalog-categories/{id}/poster",async (HttpContext c,string id,CatalogCategoryService categories)=>{
+    if(!IsLocal(c))return Results.NotFound();if(categories.Get(id) is null)return Results.NotFound(new{error="القسم غير موجود"});
+    if(c.Request.ContentLength is > 5_242_880)return Results.StatusCode(413);
+    var type=c.Request.ContentType?.Split(';')[0].Trim().ToLowerInvariant();var ext=type switch{"image/jpeg"=>".jpg","image/png"=>".png","image/webp"=>".webp",_=>null};
+    if(ext is null)return Results.BadRequest(new{error="الصيغ المسموحة JPG وPNG وWEBP"});
+    await using var ms=new MemoryStream();await c.Request.Body.CopyToAsync(ms);var bytes=ms.ToArray();
+    var valid=type switch{"image/jpeg"=>bytes.Length>=3&&bytes[0]==255&&bytes[1]==216&&bytes[2]==255,"image/png"=>bytes.Length>=8&&bytes.Take(8).SequenceEqual(new byte[]{137,80,78,71,13,10,26,10}),"image/webp"=>bytes.Length>=12&&System.Text.Encoding.ASCII.GetString(bytes,0,4)=="RIFF"&&System.Text.Encoding.ASCII.GetString(bytes,8,4)=="WEBP",_=>false};
+    if(!valid||bytes.Length==0||bytes.Length>5_242_880)return Results.BadRequest(new{error="الصورة غير صالحة أو تجاوزت 5 ميجابايت"});
+    var fileName="category-"+id+"-"+Guid.NewGuid().ToString("N")+ext;await File.WriteAllBytesAsync(Path.Combine(posters,fileName),bytes);
+    var path="/posters/"+fileName;categories.SetPoster(id,path);return Results.Ok(new{posterPath=path});
+   });
+
    _server.MapGet("/api/media-tools",(HttpContext c,MediaConversionService media)=>IsLocal(c)?Results.Ok(media.GetToolStatus()):Results.NotFound());
    _server.MapGet("/api/playback/{id}/tracks",async (string id,MediaConversionService media)=>Results.Ok(await media.ProbeAsync(id)));
    _server.MapPost("/api/playback/{id}/prepare",async (string id,PreparePlaybackRequest request,MediaConversionService media)=>
