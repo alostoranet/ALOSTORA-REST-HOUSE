@@ -578,7 +578,7 @@ public partial class MainWindow : Window
         SectionBox.Text = v.Section ?? "عام";
         VideoCategoryPicker.SelectedValue = v.CategoryId;
         SeriesCategoryPicker.SelectedValue = v.CategoryId;
-        PublishBox.IsChecked = v.IsPublished;
+        PublishBox.IsChecked = v.IsPublished || string.IsNullOrWhiteSpace(v.CategoryId);
         KindBox.SelectedIndex = string.Equals(v.Kind, "Series", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         PosterStatusText.Text = string.IsNullOrWhiteSpace(v.PosterPath) ? "لا يوجد غلاف لهذا العمل حالياً." : "يوجد غلاف محفوظ لهذا العمل.";
     }
@@ -688,7 +688,7 @@ public partial class MainWindow : Window
         SeriesGenreBox.Clear();
         SeriesSectionBox.Text = "عام";
         SeriesCategoryPicker.SelectedIndex = -1;
-        SeriesPublishBox.IsChecked = false;
+        SeriesPublishBox.IsChecked = true;
         SeriesPosterPathBox.Clear();
         SeriesFolderPathBox.Clear();
         SeasonsGrid.ItemsSource = null;
