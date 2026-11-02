@@ -101,6 +101,43 @@ public sealed class PublicCatalogAccessTests : IDisposable
     }
 
     [Fact]
+    public void DirectSeriesVideoIsPublicOnlyWhenItsSeriesAndCategoryTreeArePublished()
+    {
+        CreateRootAndSeriesCategory();
+        const string videoId = "ffffffffffffffffffffffff";
+
+        _series.SaveSeries(new SaveSeriesRequest(
+            SeriesId: "series-direct",
+            Title: "برنامج مباشر",
+            Description: null,
+            Year: null,
+            Genre: null,
+            PosterPath: null,
+            IsPublished: true,
+            CategoryId: "series-category",
+            OrganizationType: "None"));
+        _series.SetVideoPlacement("series-direct", null, videoId, null, "مقطع مباشر");
+
+        Assert.True(_access.IsVideoPublished(videoId));
+        Assert.Contains(videoId, _access.GetPublishedVideoIds());
+        Assert.Contains("series-direct", _access.GetPublishedSeriesIds());
+
+        _series.SaveSeries(new SaveSeriesRequest(
+            SeriesId: "series-direct",
+            Title: "برنامج مباشر",
+            Description: null,
+            Year: null,
+            Genre: null,
+            PosterPath: null,
+            IsPublished: false,
+            CategoryId: "series-category",
+            OrganizationType: "None"));
+
+        Assert.False(_access.IsVideoPublished(videoId));
+        Assert.DoesNotContain(videoId, _access.GetPublishedVideoIds());
+    }
+
+    [Fact]
     public void RegisterFilesAddsExternalVideoWithoutMovingTheOriginalFile()
     {
         var libraryRoot = Path.Combine(_root, "library");
