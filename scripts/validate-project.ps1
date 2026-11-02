@@ -60,6 +60,36 @@ foreach ($match in $scripts) {
 }
 Write-Host ("PASS: {0} inline viewer script block(s) passed Node.js syntax validation." -f $scripts.Count)
 
+# The customer page must open on the accommodation catalog and show contact only on demand.
+if ($html -notmatch 'id="homeNav"' -or
+    $html -notmatch 'id="contactNav"' -or
+    $html -notmatch 'id="homeView"' -or
+    $html -notmatch 'id="contactView"[^>]*hidden' -or
+    $html -notmatch "showCustomerView\('contact'\)" -or
+    $html -notmatch "showCustomerView\('home'\)") {
+    throw "Customer navigation must separate the home catalog from the contact form."
+}
+Write-Host "PASS: customer home and contact form have separate navigation states."
+
+# A category may be published without a poster; new category forms default to published.
+if ($app -match 'request\.IsPublished\s*&&\s*!PosterExists\(request\.PosterPath,posters\)' -or
+    $app -match 'if\(!PosterExists\(poster,posters\)\)' -or
+    $xaml -notmatch 'CategoryPublishBox"[^>]*IsChecked="True"' -or
+    $xaml -notmatch 'PublishBox"[^>]*IsChecked="True"' -or
+    $xaml -notmatch 'SeriesPublishBox"[^>]*IsChecked="True"' -or
+    $code -notmatch 'CategoryPublishBox\.IsChecked\s*=\s*true' -or
+    $code -notmatch 'SeriesPublishBox\.IsChecked\s*=\s*true' -or
+    $code -notmatch 'PublishBox\.IsChecked\s*=\s*v\.IsPublished\s*\|\|\s*string\.IsNullOrWhiteSpace\(v\.CategoryId\)') {
+    throw "New categories, movies, and series must publish by default without mandatory poster images."
+}
+$categoryTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/CatalogCategoryServiceTests.cs"
+if (-not (Test-Path $categoryTestsPath)) { throw "Catalog category regression tests are missing." }
+$categoryTests = Get-Content $categoryTestsPath -Raw
+foreach ($testName in @("PublishedMainAndChildCategoriesAppearWithoutPosterImages", "UnpublishedCategoriesDoNotAppearInCustomerCatalog", "PublishedChildOfUnpublishedParentIsNotExposed")) {
+    if (-not $categoryTests.Contains($testName)) { throw ("Missing category regression test: " + $testName) }
+}
+Write-Host "PASS: customer category publication and optional-poster behavior are regression-tested."
+
 # The metadata List projection must match the ordinal layout consumed by VideoMetadataService.Read.
 $metadataPath = Join-Path $root "src/Alostora.RestHouse/VideoMetadataService.cs"
 $metadata = Get-Content $metadataPath -Raw
