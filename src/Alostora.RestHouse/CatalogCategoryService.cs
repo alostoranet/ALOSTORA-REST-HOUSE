@@ -12,7 +12,7 @@ public sealed class CatalogCategoryService
     public CatalogCategoryService(string databasePath)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
-        _connectionString=new SqliteConnectionStringBuilder{DataSource=databasePath,DefaultTimeout=10,Pooling=true}.ToString();
+        _connectionString=new SqliteConnectionStringBuilder{DataSource=databasePath,ForeignKeys=true,DefaultTimeout=10,Pooling=true}.ToString();
         using var c=new SqliteConnection(_connectionString);c.Open();
         using var cmd=c.CreateCommand();
         cmd.CommandText="""
