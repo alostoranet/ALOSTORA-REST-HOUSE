@@ -242,10 +242,23 @@ public sealed class SeriesCatalogService
 
     public long AddEpisode(SaveEpisodeRequest x)
     {
-        using var c=Open(); using var cmd=c.CreateCommand();
-        cmd.CommandText="INSERT INTO SeriesEpisodes(SeasonId,VideoId,EpisodeNumber,Title) VALUES($season,$video,$number,$title); SELECT last_insert_rowid();";
-        cmd.Parameters.AddWithValue("$season",x.SeasonId); cmd.Parameters.AddWithValue("$video",x.VideoId); cmd.Parameters.AddWithValue("$number",x.EpisodeNumber); cmd.Parameters.AddWithValue("$title",x.Title??"");
-        return (long)cmd.ExecuteScalar()!;
+        using var c = Open();
+        using var transaction = c.BeginTransaction();
+        using var cmd = c.CreateCommand();
+        cmd.Transaction = transaction;
+        cmd.CommandText = "INSERT INTO SeriesEpisodes(SeasonId,VideoId,EpisodeNumber,Title) VALUES($season,$video,$number,$title); SELECT last_insert_rowid();";
+        cmd.Parameters.AddWithValue("$season", x.SeasonId);
+        cmd.Parameters.AddWithValue("$video", x.VideoId);
+        cmd.Parameters.AddWithValue("$number", x.EpisodeNumber);
+        cmd.Parameters.AddWithValue("$title", x.Title ?? "");
+        var episodeId = (long)cmd.ExecuteScalar()!;
+        using var removeDirect = c.CreateCommand();
+        removeDirect.Transaction = transaction;
+        removeDirect.CommandText = "DELETE FROM SeriesDirectVideos WHERE VideoId=$video";
+        removeDirect.Parameters.AddWithValue("$video", x.VideoId);
+        removeDirect.ExecuteNonQuery();
+        transaction.Commit();
+        return episodeId;
     }
     public string UpdateEpisodeVideo(long episodeId, string videoId)
     {
@@ -266,6 +279,13 @@ public sealed class SeriesCatalogService
             update.Parameters.AddWithValue("$video", videoId);
             update.Parameters.AddWithValue("$id", episodeId);
             update.ExecuteNonQuery();
+        }
+        using (var removeDirect = c.CreateCommand())
+        {
+            removeDirect.Transaction = transaction;
+            removeDirect.CommandText = "DELETE FROM SeriesDirectVideos WHERE VideoId=$video";
+            removeDirect.Parameters.AddWithValue("$video", videoId);
+            removeDirect.ExecuteNonQuery();
         }
         transaction.Commit();
         return oldVideoId;
