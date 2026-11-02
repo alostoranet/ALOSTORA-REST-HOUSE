@@ -10,6 +10,7 @@ using System.Windows;
 namespace Alostora.RestHouse;
 
 public sealed record BulkLibraryRequest(List<string> Ids);
+public sealed record CustomerMessageStatusRequest(string Status);
 public sealed record UpdateSeasonFolderRequest(string? FolderPath);
 public sealed record ScanFolderRequest(string FolderPath);
 public sealed record RegisterSelectedFilesRequest(string FolderPath, List<string> FilePaths);
@@ -41,6 +42,7 @@ public partial class App : Application
    builder.Services.AddSingleton(new VideoMetadataService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new SeriesCatalogService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new CatalogCategoryService(Path.Combine(root,"resthouse.db")));
+   builder.Services.AddSingleton(new CustomerMessageService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddHostedService(provider => new ScheduledBackupService(root,posters,provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ScheduledBackupService>>()));
    _server=builder.Build();
    static bool IsLanAddress(IPAddress? address)
@@ -86,6 +88,24 @@ public partial class App : Application
     catch{return false;}
    }
    _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
+   _server.MapPost("/api/messages",(CreateCustomerMessageRequest request,CustomerMessageService messages)=>{
+    var allowed=new[]{"طلب مسلسل","الإبلاغ عن مشكلة","اقتراح","أخرى"};
+    if(request is null||!allowed.Contains(request.Category)||string.IsNullOrWhiteSpace(request.Title)||request.Title.Trim().Length<3||request.Title.Length>120||string.IsNullOrWhiteSpace(request.Details)||request.Details.Trim().Length<8||request.Details.Length>2500||(request.Contact?.Length??0)>100||(request.ViewerId?.Length??0)>100)
+     return Results.BadRequest(new{error="تحقق من نوع الرسالة والعنوان والتفاصيل. الحد الأقصى للتفاصيل 2500 حرف."});
+    var id=messages.Create(request);
+    return Results.Ok(new{sent=true,id,message="وصلت رسالتك إلى إدارة استراحة الأسطورة، شكراً لتواصلك."});
+   });
+   _server.MapGet("/api/admin/messages",(HttpContext c,CustomerMessageService messages)=>
+    IsLocal(c)?Results.Ok(messages.List()):Results.NotFound());
+   _server.MapPost("/api/admin/messages/{id:long}/status",(HttpContext c,long id,CustomerMessageStatusRequest request,CustomerMessageService messages)=>{
+    if(!IsLocal(c))return Results.NotFound();
+    if(request.Status is not ("جديد" or "قيد المتابعة" or "تمت المعالجة"))return Results.BadRequest(new{error="حالة الرسالة غير صالحة"});
+    return messages.SetStatus(id,request.Status)?Results.Ok(new{updated=true}):Results.NotFound(new{error="الرسالة غير موجودة"});
+   });
+   _server.MapDelete("/api/admin/messages/{id:long}",(HttpContext c,long id,CustomerMessageService messages)=>{
+    if(!IsLocal(c))return Results.NotFound();
+    return messages.Delete(id)?Results.Ok(new{deleted=true}):Results.NotFound(new{error="الرسالة غير موجودة"});
+   });
    _server.MapGet("/api/catalog-categories",(CatalogCategoryService categories)=>Results.Ok(categories.List(publishedOnly:true)));
    _server.MapGet("/api/admin/catalog-categories",(HttpContext c,CatalogCategoryService categories)=>IsLocal(c)?Results.Ok(categories.List()):Results.NotFound());
    _server.MapPost("/api/admin/catalog-categories",(HttpContext c,SaveCatalogCategoryRequest request,CatalogCategoryService categories)=>{
