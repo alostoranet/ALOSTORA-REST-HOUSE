@@ -111,6 +111,17 @@ public sealed class PublicCatalogAccessService
               AND child.ContentKind='Series'
               AND parent.IsPublished=1
               AND parent.ContentKind='Group'
+            UNION
+            SELECT direct.VideoId
+            FROM SeriesDirectVideos direct
+            JOIN SeriesCatalog series ON series.SeriesId=direct.SeriesId
+            JOIN CatalogCategories child ON child.CategoryId=series.CategoryId
+            JOIN CatalogCategories parent ON parent.CategoryId=child.ParentId
+            WHERE series.IsPublished=1
+              AND child.IsPublished=1
+              AND child.ContentKind='Series'
+              AND parent.IsPublished=1
+              AND parent.ContentKind='Group'
             """;
 
         using var reader = command.ExecuteReader();
@@ -126,28 +137,6 @@ public sealed class PublicCatalogAccessService
         command.CommandText = """
             SELECT series.SeriesId
             FROM SeriesCatalog series
-            JOIN CatalogCategories child ON child.CategoryId=series.CategoryId
-            JOIN CatalogCategories parent ON parent.CategoryId=child.ParentId
-            WHERE series.IsPublished=1
-              AND child.IsPublished=1
-              AND child.ContentKind='Series'
-              AND parent.IsPublished=1
-              AND parent.ContentKind='Group'
-            UNION
-            SELECT direct.VideoId
-            FROM SeriesDirectVideos direct
-            JOIN SeriesCatalog series ON series.SeriesId=direct.SeriesId
-            JOIN CatalogCategories child ON child.CategoryId=series.CategoryId
-            JOIN CatalogCategories parent ON parent.CategoryId=child.ParentId
-            WHERE series.IsPublished=1
-              AND child.IsPublished=1
-              AND child.ContentKind='Series'
-              AND parent.IsPublished=1
-              AND parent.ContentKind='Group'
-            UNION
-            SELECT direct.VideoId
-            FROM SeriesDirectVideos direct
-            JOIN SeriesCatalog series ON series.SeriesId=direct.SeriesId
             JOIN CatalogCategories child ON child.CategoryId=series.CategoryId
             JOIN CatalogCategories parent ON parent.CategoryId=child.ParentId
             WHERE series.IsPublished=1
