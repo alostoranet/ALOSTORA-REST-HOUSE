@@ -112,7 +112,7 @@ function render(){
     const cardPoster=makePoster(item.posterPath,item.title);if(cardPoster)card.append(cardPoster);
     const titleNode=document.createElement('h3');titleNode.textContent=item.title;
     const meta=document.createElement('div');meta.className='meta';
-    meta.textContent=isSeries?['مسلسل',item.year,item.genre,(item.seasons||[]).length+' موسم',(item.seasons||[]).reduce((n,s)=>n+(s.episodes||[]).length,0)+' حلقة'].filter(Boolean).join(' • '):[sub.contentKind==='Other'?'محتوى': 'فيلم',item.year,item.genre,item.rating!=null?'التقييم '+item.rating+'/10':'',item.runtimeMinutes?item.runtimeMinutes+' دقيقة':''].filter(Boolean).join(' • ');
+    meta.textContent=isSeries?['مسلسل',item.year,item.genre,(item.seasons||[]).length+' موسم',(item.seasons||[]).reduce((n,s)=>n+(s.episodes||[]).length,0)+' حلقة',item.rating!=null?'التقييم '+item.rating+'/10':''].filter(Boolean).join(' • '):[sub.contentKind==='Other'?'محتوى': 'فيلم',item.year,item.genre,item.rating!=null?'التقييم '+item.rating+'/10':'',item.runtimeMinutes?item.runtimeMinutes+' دقيقة':''].filter(Boolean).join(' • ');
     const desc=document.createElement('p');desc.textContent=item.description||(isSeries?'مسلسل':'فيلم');
     const episodeAddedDates=isSeries?(item.seasons||[]).flatMap(season=>season.episodes||[]).map(ep=>items.find(video=>video.id===ep.videoId)?.addedUtc).filter(Boolean).sort().reverse():[];const newDate=item.addedUtc||item.createdUtc||episodeAddedDates[0];if(isNew(newDate))card.append(makeNewBadge());
     const btn=document.createElement('button');btn.textContent=isSeries?'فتح المسلسل':(sub.contentKind==='Other'?'التفاصيل':'تفاصيل الفيلم');btn.onclick=()=>isSeries?showSeries(item):showMovie(item);

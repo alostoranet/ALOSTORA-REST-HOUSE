@@ -1,4 +1,4 @@
-name: Build Windows application
+name: Manual Windows build
 
 on:
   workflow_dispatch:
@@ -8,41 +8,4 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-      - name: Restore
-        run: dotnet restore src/Alostora.RestHouse/Alostora.RestHouse.csproj --runtime win-x64
-      - name: Validate viewer JavaScript
-        shell: pwsh
-        run: |
-          $html = Get-Content src/Alostora.RestHouse/wwwroot/index.html -Raw
-          $match = [regex]::Match($html, '(?s)<script>(.*?)</script>')
-          if (-not $match.Success) { throw "Viewer JavaScript block was not found." }
-          $scriptPath = Join-Path $env:RUNNER_TEMP "alostora-viewer.js"
-          [System.IO.File]::WriteAllText($scriptPath, $match.Groups[1].Value, [System.Text.UTF8Encoding]::new($false))
-          node --check $scriptPath
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Validate UI wiring, API routes, and viewer scripts
-        shell: pwsh
-        run: ./scripts/validate-project.ps1
-      - name: Restore SQLite test dependencies
-        run: dotnet restore tests/Alostora.RestHouse.Tests/Alostora.RestHouse.Tests.csproj --runtime win-x64
-      - name: Run SQLite publication and catalog tests
-        run: dotnet test tests/Alostora.RestHouse.Tests/Alostora.RestHouse.Tests.csproj --configuration Release --runtime win-x64 --no-restore
-      - name: Build
-        run: dotnet build src/Alostora.RestHouse/Alostora.RestHouse.csproj --configuration Release --runtime win-x64 --no-restore
-      - name: Publish Windows x64
-        run: dotnet publish src/Alostora.RestHouse/Alostora.RestHouse.csproj --configuration Release --runtime win-x64 --self-contained true --no-restore -p:PublishSingleFile=false --output ./publish/win-x64
-      - name: Upload Windows build
-        uses: actions/upload-artifact@v4
-        with:
-          name: ALOSTORA-REST-HOUSE-Windows-x64
-          path: ./publish/win-x64/**
-          if-no-files-found: error
-          retention-days: 14
+    uses: ./.github/workflows/build.yml

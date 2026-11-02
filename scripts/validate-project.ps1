@@ -36,6 +36,8 @@ $requiredRoutes = @(
     '/api/admin/poster/',
     '/api/admin/series-poster/',
     '/api/admin/episodes',
+    '/api/admin/seasons/{seasonId:long}/episodes',
+    '/api/admin/episodes/{episodeId:long}',
     '/api/admin/missing-episodes',
     '/api/library'
 )
@@ -98,3 +100,43 @@ if ($publicAccess -notmatch 'GetPublishedVideoIds' -or
     throw "Public catalog, media, subtitle, or conversion routes are missing publication guards."
 }
 Write-Host "PASS: public catalog, media, subtitle, and conversion routes enforce publication."
+
+# Episode editing and unlinking must remain non-destructive and covered by regression tests.
+if ($series -notmatch 'public void UpdateEpisode\(' -or
+    $series -notmatch 'public string UnlinkEpisode\(' -or
+    $app -notmatch 'MapPut\("/api/admin/episodes/' -or
+    $app -notmatch 'MapDelete\("/api/admin/episodes/' -or
+    $code -notmatch 'UpdateEpisode_Click' -or
+    $code -notmatch 'UnlinkEpisode_Click') {
+    throw "Episode edit/unlink implementation is incomplete."
+}
+$seriesTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/SeriesCatalogServiceTests.cs"
+if (-not (Test-Path $seriesTestsPath)) {
+    throw "Series catalog regression tests are missing."
+}
+$seriesTests = Get-Content $seriesTestsPath -Raw
+foreach ($testName in @("UpdateEpisodeChangesNumberAndTitleWithoutChangingVideoLink", "UnlinkEpisodeRemovesOnlyTheSeriesLinkAndKeepsOriginalVideoFile", "MissingPhysicalVideoFileIsReportedWithoutRemovingEpisodeRecord", "DuplicateEpisodeNumberAndDuplicateVideoLinksAreRejected")) {
+    if (-not $seriesTests.Contains($testName)) { throw ("Missing regression test: " + $testName) }
+}
+Write-Host "PASS: episode editing, non-destructive unlinking, and duplicate-link regression tests are present."
+
+# Keep one canonical build definition; the manual workflow must reuse it.
+$manualWorkflowPath = Join-Path $root ".github/workflows/build-windows.yml"
+$mainWorkflowPath = Join-Path $root ".github/workflows/build.yml"
+$manualWorkflow = Get-Content $manualWorkflowPath -Raw
+$mainWorkflow = Get-Content $mainWorkflowPath -Raw
+if ($manualWorkflow -notmatch 'uses:\s*\./\.github/workflows/build\.yml' -or
+    $mainWorkflow -notmatch '(?m)^\s*workflow_call:\s*$') {
+    throw "Windows build workflows are not using one canonical build definition."
+}
+Write-Host "PASS: manual and automatic Windows builds share one workflow."
+
+if (Test-Path (Join-Path $root "Mo")) {
+    throw "The confirmed empty placeholder file Mo should not be present."
+}
+if ($series -notmatch 'seasonCount = seasons\.Length' -or
+    $series -notmatch 'episodeCount = seasons\.Sum' -or
+    $series -notmatch 'rating = ratings\.Length') {
+    throw "Series cards are missing their season count, episode count, or average episode rating."
+}
+Write-Host "PASS: series catalog exposes counts and average rating; empty placeholder is absent."

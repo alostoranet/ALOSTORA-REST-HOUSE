@@ -170,6 +170,47 @@ public sealed class SeriesCatalogService
         return oldVideoId;
     }
 
+    public void UpdateEpisode(long episodeId, int episodeNumber, string? title)
+    {
+        if (episodeNumber < 1 || episodeNumber > 10000)
+            throw new ArgumentOutOfRangeException(nameof(episodeNumber), "رقم الحلقة يجب أن يكون بين 1 و10000.");
+
+        using var c = Open();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "UPDATE SeriesEpisodes SET EpisodeNumber=$number, Title=$title WHERE EpisodeId=$id";
+        cmd.Parameters.AddWithValue("$number", episodeNumber);
+        cmd.Parameters.AddWithValue("$title", title?.Trim() ?? "");
+        cmd.Parameters.AddWithValue("$id", episodeId);
+        if (cmd.ExecuteNonQuery() == 0)
+            throw new KeyNotFoundException("الحلقة غير موجودة");
+    }
+
+    public string UnlinkEpisode(long episodeId)
+    {
+        using var c = Open();
+        using var transaction = c.BeginTransaction();
+        string videoId;
+        using (var find = c.CreateCommand())
+        {
+            find.Transaction = transaction;
+            find.CommandText = "SELECT VideoId FROM SeriesEpisodes WHERE EpisodeId=$id";
+            find.Parameters.AddWithValue("$id", episodeId);
+            videoId = find.ExecuteScalar() as string ?? throw new KeyNotFoundException("الحلقة غير موجودة");
+        }
+
+        using (var delete = c.CreateCommand())
+        {
+            delete.Transaction = transaction;
+            delete.CommandText = "DELETE FROM SeriesEpisodes WHERE EpisodeId=$id";
+            delete.Parameters.AddWithValue("$id", episodeId);
+            if (delete.ExecuteNonQuery() == 0)
+                throw new KeyNotFoundException("الحلقة غير موجودة");
+        }
+
+        transaction.Commit();
+        return videoId;
+    }
+
     public IReadOnlyList<MissingEpisodeRecord> ListMissingEpisodes(LibraryService library)
     {
         var available = library.List().Select(x => x.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -272,6 +313,12 @@ public sealed class SeriesCatalogService
                 })
                 .ToArray();
 
+            var ratings = seasons.SelectMany(x => x.episodes)
+                .Select(x => metadataById.TryGetValue(x.videoId, out var value) ? value?.Rating : null)
+                .Where(x => x.HasValue)
+                .Select(x => x!.Value)
+                .ToArray();
+
             return new
             {
                 seriesId = series.SeriesId,
@@ -283,6 +330,9 @@ public sealed class SeriesCatalogService
                 categoryId = series.CategoryId,
                 section = series.Section,
                 isPublished = series.IsPublished,
+                seasonCount = seasons.Length,
+                episodeCount = seasons.Sum(x => x.episodes.Length),
+                rating = ratings.Length == 0 ? (double?)null : Math.Round(ratings.Average(), 1),
                 seasons
             };
         }).ToArray();

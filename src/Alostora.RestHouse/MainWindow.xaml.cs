@@ -694,6 +694,7 @@ public partial class MainWindow : Window
         SeriesPosterPathBox.Clear();
         SeriesFolderPathBox.Clear();
         SeasonsGrid.ItemsSource = null;
+        EpisodesGrid.ItemsSource = null;
         SeasonTitleBox.Clear();
         SeasonNumberBox.Text = "1";
         SeasonFolderPathBox.Clear();
@@ -765,9 +766,20 @@ public partial class MainWindow : Window
     {
         try
         {
+            var selectedSeasonId = (SeasonsGrid.SelectedItem as SeasonAdmin)?.SeasonId;
             var url = "/api/admin/seasons?seriesId=" + Uri.EscapeDataString(seriesId);
             var rows = await _http.GetFromJsonAsync<SeasonAdmin[]>(url) ?? Array.Empty<SeasonAdmin>();
             SeasonsGrid.ItemsSource = rows;
+            var selected = rows.FirstOrDefault(x => x.SeasonId == selectedSeasonId && x.SeriesId == seriesId);
+            if (selected is not null)
+            {
+                SeasonsGrid.SelectedItem = selected;
+                await LoadEpisodesAsync(selected.SeasonId);
+            }
+            else
+            {
+                EpisodesGrid.ItemsSource = null;
+            }
             SeriesStatusText.Text = $"تم تحميل {rows.Length} موسم/مواسم.";
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر تحميل المواسم: " + ex.Message; }
@@ -873,6 +885,7 @@ public partial class MainWindow : Window
             SeriesIdBox.Clear(); SeriesTitleBox.Clear(); SeriesDescriptionBox.Clear(); SeriesYearBox.Clear();
             SeriesGenreBox.Clear(); SeriesPosterPathBox.Clear(); SeriesFolderPathBox.Clear();
             SeasonsGrid.ItemsSource = null;
+            EpisodesGrid.ItemsSource = null;
             await LoadSeriesAsync();
             await LoadVideosAsync();
             await LoadMissingEpisodesAsync();
@@ -926,13 +939,100 @@ public partial class MainWindow : Window
         catch (Exception ex) { SeriesStatusText.Text = "تعذر إضافة الموسم: " + ex.Message; }
     }
 
-    private void SeasonsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void SeasonsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (SeasonsGrid.SelectedItem is SeasonAdmin season)
         {
             SeasonFolderPathBox.Text = season.FolderPath ?? "";
-            SeriesStatusText.Text = $"الموسم المحدد: {season.SeasonNumber} — اختر ملف فيديو لإضافته كحلقة.";
+            EpisodesGrid.ItemsSource = null;
+            await LoadEpisodesAsync(season.SeasonId);
+            SeriesStatusText.Text = $"الموسم المحدد: {season.SeasonNumber} — يمكنك إضافة الحلقات أو تعديلها أو فك ربطها.";
         }
+        else
+        {
+            EpisodesGrid.ItemsSource = null;
+        }
+    }
+
+    private async System.Threading.Tasks.Task LoadEpisodesAsync(long seasonId)
+    {
+        try
+        {
+            var rows = await _http.GetFromJsonAsync<EpisodeAdmin[]>(
+                "/api/admin/seasons/" + seasonId + "/episodes") ?? Array.Empty<EpisodeAdmin>();
+            EpisodesGrid.ItemsSource = rows;
+        }
+        catch (Exception ex)
+        {
+            EpisodesGrid.ItemsSource = null;
+            SeriesStatusText.Text = "تعذر تحميل حلقات الموسم: " + ex.Message;
+        }
+    }
+
+    private void EpisodesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (EpisodesGrid.SelectedItem is not EpisodeAdmin episode) return;
+        EpisodeNumberBox.Text = episode.EpisodeNumber.ToString();
+        EpisodeTitleBox.Text = episode.Title;
+        SeriesStatusText.Text = $"تم تحديد الحلقة رقم {episode.EpisodeNumber}. عدّل الرقم أو الاسم ثم اضغط حفظ التعديل.";
+    }
+
+    private async void UpdateEpisode_Click(object sender, RoutedEventArgs e)
+    {
+        if (EpisodesGrid.SelectedItem is not EpisodeAdmin episode)
+        {
+            SeriesStatusText.Text = "حدد الحلقة المراد تعديلها من جدول حلقات الموسم.";
+            return;
+        }
+        if (!int.TryParse(EpisodeNumberBox.Text, out var number) || number < 1 || number > 10000)
+        {
+            SeriesStatusText.Text = "رقم الحلقة يجب أن يكون بين 1 و10000.";
+            return;
+        }
+        try
+        {
+            var response = await _http.PutAsJsonAsync(
+                "/api/admin/episodes/" + episode.EpisodeId,
+                new { episodeNumber = number, title = EpisodeTitleBox.Text });
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = await response.Content.ReadAsStringAsync();
+                SeriesStatusText.Text = response.StatusCode == System.Net.HttpStatusCode.Conflict
+                    ? "رقم الحلقة مستخدم في هذا الموسم بالفعل."
+                    : "تعذر تعديل الحلقة: " + detail;
+                return;
+            }
+            await LoadEpisodesAsync(episode.SeasonId);
+            SeriesStatusText.Text = $"تم تحديث بيانات الحلقة رقم {number} دون تغيير ملف الفيديو.";
+        }
+        catch (Exception ex) { SeriesStatusText.Text = "تعذر تعديل الحلقة: " + ex.Message; }
+    }
+
+    private async void UnlinkEpisode_Click(object sender, RoutedEventArgs e)
+    {
+        if (EpisodesGrid.SelectedItem is not EpisodeAdmin episode)
+        {
+            SeriesStatusText.Text = "حدد الحلقة المراد فك ربطها أولاً.";
+            return;
+        }
+        if (MessageBox.Show(
+            $"سيتم فك ربط الحلقة «{episode.Title}» من الموسم فقط. لن يُحذف ملف الفيديو أو بياناته من المكتبة. هل تريد المتابعة؟",
+            "فك ربط الحلقة", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+        try
+        {
+            var response = await _http.DeleteAsync("/api/admin/episodes/" + episode.EpisodeId);
+            if (!response.IsSuccessStatusCode)
+            {
+                SeriesStatusText.Text = "تعذر فك ربط الحلقة: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            await LoadEpisodesAsync(episode.SeasonId);
+            await LoadVideosAsync();
+            await LoadMissingEpisodesAsync();
+            SeriesStatusText.Text = "تم فك ربط الحلقة فقط. ملف الفيديو الأصلي ما زال محفوظاً في المكتبة.";
+        }
+        catch (Exception ex) { SeriesStatusText.Text = "تعذر فك ربط الحلقة: " + ex.Message; }
     }
 
     private async void SaveSeasonFolder_Click(object sender, RoutedEventArgs e)
@@ -1056,11 +1156,12 @@ public partial class MainWindow : Window
                 "/api/admin/seasons/" + season.SeasonId + "/link-detected", payload);
             if (!response.IsSuccessStatusCode)
             {
-                SeriesStatusText.Text = "تعذر اعتماد ربط الحلقات المحددة.";
+                SeriesStatusText.Text = "تعذر اعتماد ربط الحلقات المحددة: " + await response.Content.ReadAsStringAsync();
                 return;
             }
             var result = await response.Content.ReadFromJsonAsync<LinkDetectedResult>();
             await LoadSeasonsAsync(season.SeriesId);
+            await LoadEpisodesAsync(season.SeasonId);
             var rows = await _http.GetFromJsonAsync<EpisodeCandidate[]>(
                 "/api/admin/seasons/" + season.SeasonId + "/preview") ?? Array.Empty<EpisodeCandidate>();
             _episodeCandidates.Clear();
@@ -1087,7 +1188,14 @@ public partial class MainWindow : Window
         try
         {
             var response = await _http.PostAsJsonAsync("/api/admin/episodes", new { seasonId = season.SeasonId, videoId = video.Id, episodeNumber = number, title = EpisodeTitleBox.Text });
-            if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "لم تتم إضافة الحلقة. قد يكون الملف مرتبطاً بحلقة أخرى أو الرقم مكرراً."; return; }
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = await response.Content.ReadAsStringAsync();
+                SeriesStatusText.Text = response.StatusCode == System.Net.HttpStatusCode.Conflict
+                    ? "لم تتم إضافة الحلقة: الملف مربوط مسبقاً أو رقم الحلقة مكرر في هذا الموسم."
+                    : "تعذر إضافة الحلقة: " + detail;
+                return;
+            }
             EpisodeTitleBox.Clear(); EpisodeNumberBox.Text = (number + 1).ToString();
             var rows = await _http.GetFromJsonAsync<EpisodeCandidate[]>(
                 "/api/admin/seasons/" + season.SeasonId + "/preview") ?? Array.Empty<EpisodeCandidate>();
@@ -1101,6 +1209,7 @@ public partial class MainWindow : Window
                 row.Selected = !row.IsAlreadyLinked && !row.IsNumberUsed && row.EpisodeNumber is > 0;
                 _episodeCandidates.Add(row);
             }
+            await LoadEpisodesAsync(season.SeasonId);
             await LoadMissingEpisodesAsync();
             SeriesStatusText.Text = $"تم ربط «{video.Title}» كالحلقة رقم {number} وتحديث قائمة ملفات الموسم.";
         }
@@ -1155,7 +1264,7 @@ public partial class MainWindow : Window
                 new { videoId = video.Id });
             if (!response.IsSuccessStatusCode)
             {
-                SeriesStatusText.Text = "تعذرت إعادة الربط. قد يكون الملف مستخدماً في حلقة أخرى.";
+                SeriesStatusText.Text = "تعذرت إعادة الربط: " + await response.Content.ReadAsStringAsync();
                 return;
             }
             await LoadMissingEpisodesAsync();
@@ -1316,6 +1425,14 @@ public partial class MainWindow : Window
         public int SeasonNumber { get; set; }
         public string Title { get; set; } = "";
         public string? FolderPath { get; set; }
+    }
+    private sealed class EpisodeAdmin
+    {
+        public long EpisodeId { get; set; }
+        public long SeasonId { get; set; }
+        public string VideoId { get; set; } = "";
+        public int EpisodeNumber { get; set; }
+        public string Title { get; set; } = "";
     }
     private sealed class PosterUploadResult { public string? PosterPath { get; set; } }
     private sealed class LinkDetectedResult { public int LinkedCount { get; set; } public int Skipped { get; set; } }
