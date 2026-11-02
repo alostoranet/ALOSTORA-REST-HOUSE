@@ -593,6 +593,15 @@ public partial class MainWindow : Window
         if (VideoCategoryPicker is null || VideoCategoryStatusText is null || VideoMainCategoryPicker is null) return;
         var parentId = VideoMainCategoryPicker.SelectedValue as string;
         var kind = (KindBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Movie";
+        if (kind != "Series" && VideoSeriesPicker.SelectedIndex >= 0)
+        {
+            _suppressVideoSeriesPickerEvent = true;
+            VideoSeriesPicker.SelectedIndex = -1;
+            _suppressVideoSeriesPickerEvent = false;
+            VideoSeasonPicker.ItemsSource = null;
+            VideoEpisodeNumberBox.Clear();
+            VideoEpisodeTitleBox.Clear();
+        }
         var allowedKinds = kind == "Series" ? new[] { "Series" } : new[] { "Movie", "Other" };
         var rows = string.IsNullOrWhiteSpace(parentId)
             ? Array.Empty<CategoryAdmin>()
@@ -947,6 +956,7 @@ public partial class MainWindow : Window
         var type = (SeriesStructureBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Seasons";
         var isParts = type == "Parts";
         var isNone = type == "None";
+        SeasonManagementPanel.Visibility = isNone ? Visibility.Collapsed : Visibility.Visible;
         SeasonSectionTitle.Text = isParts ? "الأجزاء" : "المواسم";
         AddSeasonButton.Content = isParts ? "إضافة الجزء" : "إضافة الموسم";
         if (SeasonNumberBox is not null) SeasonNumberBox.ToolTip = isParts ? "رقم الجزء" : "رقم الموسم";
