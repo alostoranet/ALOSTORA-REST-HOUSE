@@ -1554,6 +1554,17 @@ public partial class MainWindow : Window
         catch (Exception ex) { CustomerMessageStatusText.Text = "تعذر حذف الرسالة: " + ex.Message; }
     }
 
+    private sealed class RestHouseProfileAdmin
+    {
+        public string RestHouseName { get; set; } = "استراحة الأسطورة";
+        public string NetworkName { get; set; } = "شبكة الأسطورة نت";
+        public string? LogoPath { get; set; }
+    }
+    private sealed class BrandLogoUploadResult
+    {
+        public string? LogoPath { get; set; }
+    }
+
     private sealed class CustomerMessageAdmin
     {
         public long Id { get; set; }
@@ -1586,6 +1597,8 @@ public partial class MainWindow : Window
         public string? CategoryId { get; set; }
         public string Section { get; set; } = "عام";
         public bool IsPublished { get; set; }
+        public string CategoryTitle { get; set; } = "غير مصنف";
+        public string PublishStatus { get; set; } = "";
     }
     private sealed class SeasonAdmin
     {
@@ -1658,6 +1671,11 @@ public partial class MainWindow : Window
         public string? CategoryId { get; set; }
         public string Section { get; set; } = "عام";
         public bool IsPublished { get; set; }
+        public bool MetadataSaved { get; set; }
+        public string? CategoryTitle { get; set; }
+        public string KindLabel => string.Equals(Kind, "Series", StringComparison.OrdinalIgnoreCase) ? "مسلسل" : "فيلم";
+        public string MetadataStatus => MetadataSaved ? "بيانات محفوظة" : "بانتظار البيانات";
+        public string PublishStatus => IsPublished ? "منشور" : "غير منشور";
     }
 }
 
