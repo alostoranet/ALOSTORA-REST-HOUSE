@@ -210,7 +210,6 @@ async function startTranscodedPlayback(item,audioIndex,generation,saved){
  throw new Error('استغرق تحويل الفيديو وقتاً أطول من المتوقع. يمكنك المحاولة مرة أخرى.');
 }
 async function play(item){
- setCatalogPage('player','مشاهدة الفيديو');
  catalogHistory.push(catalogSnapshot());
  catalogLevel='player';
  setCatalogPage('player','مشاهدة الفيديو');
