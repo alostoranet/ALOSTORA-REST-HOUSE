@@ -13,11 +13,29 @@ main{max-width:1200px;margin:auto;padding:24px}h2{font-size:22px}
 #seriesDetails h2{margin:4px 0 8px}.series-head{display:flex;gap:18px;align-items:flex-start}.series-head img{width:145px;height:190px;object-fit:cover;border-radius:9px;background:#0b1420}.series-head .poster-empty{width:145px;height:190px;flex:0 0 145px}.series-copy{flex:1}.series-copy p{color:#c4d2e1;line-height:1.8}.season-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.season-tabs button{background:#263e58;color:white;border:1px solid #526b85;border-radius:8px;padding:9px 14px;cursor:pointer}.season-tabs button.active{background:#c93640;border-color:#c93640}
 .episode-list{display:grid;gap:8px}.episode{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#1c344d;padding:12px;border-radius:9px}.episode small{color:#c4d2e1}.empty{color:#bdcadd}
 #playerSection{display:none;background:#14283e;border:1px solid #38516d;border-radius:14px;padding:14px;margin:18px 0}#playerSection h2{margin:0 0 10px}video{display:block;width:100%;max-height:70vh;background:#000;border-radius:12px;margin:0}#message{color:#bdcadd}#audioControls{display:flex;gap:9px;align-items:center;flex-wrap:wrap;background:#172d45;border:1px solid #38516d;border-radius:10px;padding:11px;margin-top:10px}#audioControls select{background:#0c1727;color:#fff;border:1px solid #526b85;border-radius:7px;padding:9px;min-width:180px}#audioControls button{background:#c93640;color:white;border:0;border-radius:7px;padding:9px 14px;font-weight:bold;cursor:pointer}#playbackHint{color:#bdcadd;font-size:13px;line-height:1.7}
+.contact-box{background:#14283e;border:1px solid #38516d;border-radius:14px;padding:16px;margin:16px 0 20px}.contact-box h2{margin:0 0 7px}.contact-box p{color:#c4d2e1;font-size:13px;line-height:1.7}.contact-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.contact-form input,.contact-form select,.contact-form textarea{width:100%;background:#0c1727;color:#fff;border:1px solid #526b85;border-radius:8px;padding:11px;font:inherit;min-width:0}.contact-form textarea{grid-column:1/-1;min-height:105px;resize:vertical}.contact-form button{justify-self:start;background:#c93640;color:white;border:0;border-radius:8px;padding:11px 20px;font-weight:bold;cursor:pointer}.contact-form button:disabled{opacity:.6;cursor:wait}#contactFeedback{margin:8px 0 0;font-weight:bold;min-height:20px}@media(max-width:600px){.contact-form{grid-template-columns:1fr}.contact-form textarea{grid-column:auto}}
 @media(max-width:600px){main{padding:16px}.series-head{display:block}.series-head img,.series-head .poster-empty{width:110px;height:145px;float:right;margin:0 0 10px 12px}.episode{align-items:flex-start}.episode button{white-space:nowrap;padding:9px 12px}}
 </style></head><body>
 <header><h1>ALOSTORA REST HOUSE</h1><p>استراحة الأسطورة نت — مكتبة المشاهدة</p></header>
 <main><h2>مكتبة الأفلام والمسلسلات</h2>
 <div class="toolbar"><input id="search" type="search" placeholder="ابحث عن فيلم أو مسلسل..."><select id="categoryFilter" aria-label="اختر القسم"><option value="">كل الأقسام</option></select><select id="collection"><option value="">كل الأعمال المنشورة</option><option value="favorites">المفضلة</option></select><select id="sort" aria-label="ترتيب المكتبة"><option value="title">ترتيب حسب الاسم</option><option value="year">الأحدث إنتاجاً</option><option value="rating">الأعلى تقييماً</option></select></div>
+<section class="contact-box" aria-labelledby="contactTitle">
+<h2 id="contactTitle">تواصل مع إدارة الاستراحة</h2>
+<p>عندك مسلسل تريد إضافته؟ واجهتك مشكلة في التشغيل؟ أرسل لنا رسالتك وستصل مباشرة إلى برنامج الإدارة.</p>
+<form id="customerMessageForm" class="contact-form">
+<select id="customerMessageCategory" required aria-label="نوع الرسالة">
+<option value="طلب مسلسل">طلب مسلسل أو فيلم</option>
+<option value="الإبلاغ عن مشكلة">الإبلاغ عن مشكلة</option>
+<option value="اقتراح">اقتراح أو ملاحظة</option>
+<option value="أخرى">موضوع آخر</option>
+</select>
+<input id="customerMessageTitle" type="text" maxlength="120" minlength="3" required placeholder="عنوان الرسالة">
+<textarea id="customerMessageDetails" maxlength="2500" minlength="8" required placeholder="اكتب تفاصيل طلبك أو المشكلة..."></textarea>
+<input id="customerMessageContact" type="text" maxlength="100" placeholder="رقم تواصل أو اسم (اختياري)">
+<button id="customerMessageSend" type="submit">إرسال الرسالة للإدارة</button>
+</form>
+<p id="contactFeedback" role="status" aria-live="polite"></p>
+</section>
 <p id="message">يتم تحميل المكتبة...</p><section id="continueSection"><h2>متابعة المشاهدة</h2><p id="continueEmpty">جارٍ تحميل سجل المشاهدة...</p><div id="continueGrid"></div></section><section id="playerSection" aria-live="polite"><h2 id="nowPlayingTitle">المشغل</h2><video id="player" controls playsinline preload="metadata"></video><div id="audioControls" hidden><label for="audioTrack">المسار الصوتي:</label><select id="audioTrack"></select><button id="applyAudio" type="button">تشغيل بالصوت المحدد</button></div><p id="playbackHint"></p><p id="subtitleHint" class="meta">تُكتشف الترجمات الخارجية تلقائياً بجانب ملف الفيديو (SRT أو VTT أو ASS أو SSA)، ويمكن استخراج الترجمات النصية المدمجة عند توفر FFmpeg.</p></section><section id="seriesDetails" aria-live="polite"></section><section id="movieDetails" aria-live="polite"></section><section id="library"></section></main>
 <script>
 function createViewerId(){try{if(window.crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();if(window.crypto&&crypto.getRandomValues){const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}}catch{}return 'viewer-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);}
@@ -202,6 +220,27 @@ document.querySelector('#applyAudio').addEventListener('click',async()=>{
  let saved=null;try{const r=await fetch('/api/progress/'+encodeURIComponent(viewerId));if(r.ok){const rows=await r.json();saved=rows.find(x=>x.videoId===item.id)||null;}}catch{}
  if(generation!==playbackGeneration)return;
  try{await startTranscodedPlayback(item,selected,generation,saved);}catch(ex){if(generation===playbackGeneration)document.querySelector('#playbackHint').textContent='تعذر تغيير المسار الصوتي: '+ex.message;}
+});
+document.querySelector('#customerMessageForm').addEventListener('submit',async event=>{
+ event.preventDefault();
+ const button=document.querySelector('#customerMessageSend'),feedback=document.querySelector('#contactFeedback');
+ const payload={
+  category:document.querySelector('#customerMessageCategory').value,
+  title:document.querySelector('#customerMessageTitle').value.trim(),
+  details:document.querySelector('#customerMessageDetails').value.trim(),
+  contact:document.querySelector('#customerMessageContact').value.trim()||null,
+  viewerId:viewerId||null
+ };
+ if(payload.title.length<3||payload.details.length<8){feedback.textContent='اكتب عنواناً وتفاصيل كافية للرسالة.';return;}
+ button.disabled=true;button.textContent='جارٍ إرسال الرسالة...';feedback.textContent='';
+ try{
+  const response=await fetch('/api/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(result.error||'تعذر إرسال الرسالة.');
+  document.querySelector('#customerMessageForm').reset();
+  feedback.textContent=result.message||'تم إرسال رسالتك بنجاح.';
+ }catch(error){feedback.textContent=error.message||'حدث خطأ أثناء الإرسال. حاول مرة أخرى.';}
+ finally{button.disabled=false;button.textContent='إرسال الرسالة للإدارة';}
 });
 async function load(){try{
  const [libraryResponse,seriesResponse,categoryResponse]=await Promise.all([fetch('/api/library'),fetch('/api/series'),fetch('/api/catalog-categories')]);
