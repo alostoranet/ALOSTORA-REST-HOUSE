@@ -85,6 +85,28 @@
 <DataGrid.Columns><DataGridTextColumn Header="القسم" Binding="{Binding DisplayTitle}" Width="*"/><DataGridTextColumn Header="النوع" Binding="{Binding ContentKindLabel}" Width="100"/><DataGridCheckBoxColumn Header="منشور" Binding="{Binding IsPublished}" Width="65"/><DataGridTextColumn Header="الغلاف" Binding="{Binding PosterPath}" Width="*"/></DataGrid.Columns>
 </DataGrid>
 <TextBlock x:Name="CategoryStatusText" Text="ابدأ بإنشاء قسم رئيسي ثم أضف الأقسام الفرعية." Foreground="#526174" TextWrapping="Wrap" Margin="0,10,0,0"/>
+</StackPanel></ScrollViewer></TabItem>
+<TabItem Header="رسائل العملاء">
+<ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
+<TextBlock Text="رسائل العملاء وطلبات المحتوى" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,8"/>
+<TextBlock Text="تظهر هنا طلبات المسلسلات وبلاغات المشاكل والاقتراحات التي يرسلها العملاء من صفحة المشاهدة. يتم تحديث القائمة تلقائياً كل 30 ثانية." TextWrapping="Wrap" Foreground="#526174" Margin="0,0,0,10"/>
+<WrapPanel Margin="0,0,0,10">
+<Button Content="تحديث الرسائل" Click="RefreshCustomerMessages_Click" Padding="12,8" Margin="0,0,6,0"/>
+<Button Content="بدء المتابعة" Click="MarkCustomerMessageInProgress_Click" Padding="12,8" Margin="0,0,6,0" Background="#E6F1FA" Foreground="#245B87"/>
+<Button Content="تمت المعالجة" Click="ResolveCustomerMessage_Click" Padding="12,8" Margin="0,0,6,0" Background="#E5F4EA" Foreground="#176B3A"/>
+<Button Content="حذف الرسالة" Click="DeleteCustomerMessage_Click" Padding="12,8" Background="#FCE8E8" Foreground="#9F2630"/>
+</WrapPanel>
+<DataGrid x:Name="CustomerMessagesGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="CustomerMessagesGrid_SelectionChanged" CanUserAddRows="False" Height="280">
+<DataGrid.Columns>
+<DataGridTextColumn Header="رقم" Binding="{Binding Id}" Width="55"/>
+<DataGridTextColumn Header="النوع" Binding="{Binding Category}" Width="110"/>
+<DataGridTextColumn Header="العنوان" Binding="{Binding Title}" Width="*"/>
+<DataGridTextColumn Header="الحالة" Binding="{Binding Status}" Width="100"/>
+<DataGridTextColumn Header="التاريخ" Binding="{Binding CreatedUtc}" Width="150"/>
+</DataGrid.Columns></DataGrid>
+<TextBlock Text="تفاصيل الرسالة المحددة" FontWeight="Bold" Foreground="#142D4A" Margin="0,12,0,5"/>
+<Border Background="#F1F5F9" CornerRadius="8" Padding="10"><TextBlock x:Name="CustomerMessageDetailsText" Text="اختر رسالة من القائمة لعرض تفاصيلها." TextWrapping="Wrap" Foreground="#334155"/></Border>
+<TextBlock x:Name="CustomerMessageStatusText" Text="لا توجد رسائل محمّلة بعد." Foreground="#526174" TextWrapping="Wrap" Margin="0,10,0,0"/>
 </StackPanel></ScrollViewer></TabItem></TabControl></Border></Grid>
 <StackPanel Grid.Row="3"><TextBlock x:Name="AddressBox" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#142D4A"/><TextBlock x:Name="LibraryBox" FontSize="12" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4"/><TextBlock x:Name="CountText" FontSize="13" Foreground="#16834A" HorizontalAlignment="Center" Margin="0,4"/><TextBlock Text="المشاهدة متاحة للأجهزة المتصلة بالشبكة المحلية فقط." Foreground="#64748B" HorizontalAlignment="Center" Margin="0,6"/></StackPanel>
 </Grid></Window>
