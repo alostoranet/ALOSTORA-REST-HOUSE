@@ -55,7 +55,7 @@
 <TextBlock Text="مسار الغلاف (اختياري)"/><TextBox x:Name="SeriesPosterPathBox" Padding="8" Margin="0,4,0,8"/><Button Content="اختيار ورفع غلاف المسلسل" Click="UploadSeriesPoster_Click" Padding="10,8" HorizontalAlignment="Right" Margin="0,0,0,10"/>
 <WrapPanel Margin="0,3,0,14"><Button Content="حفظ بيانات المسلسل" Click="SaveSeries_Click" Background="#C93640" Foreground="White" FontWeight="Bold" Padding="12,9" BorderThickness="0" Margin="0,0,6,0"/><Button Content="حذف المسلسل وبياناته" Click="DeleteSeries_Click" Background="#FCE8E8" Foreground="#9F2630" Padding="12,9" BorderThickness="0"/></WrapPanel>
 <Separator/>
-<TextBlock x:Name="SeasonSectionTitle" Text="المواسم" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,12,0,8"/>
+<StackPanel x:Name="SeasonManagementPanel"><TextBlock x:Name="SeasonSectionTitle" Text="المواسم" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,12,0,8"/>
 <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="90"/></Grid.ColumnDefinitions>
 <StackPanel Grid.Column="0" Margin="0,0,6,8"><TextBox x:Name="SeasonTitleBox" Padding="8" Margin="0,0,0,5" ToolTip="اسم الموسم (اختياري)"/><DockPanel><Button DockPanel.Dock="Left" Content="مجلد الموسم" Click="ChooseSeasonFolder_Click" Padding="8,5" Margin="0,0,5,0"/><TextBox x:Name="SeasonFolderPathBox" Padding="7" FlowDirection="LeftToRight" ToolTip="مسار مجلد ملفات هذا الموسم"/></DockPanel></StackPanel>
 <TextBox x:Name="SeasonNumberBox" Grid.Column="1" Padding="8" Margin="0,0,0,8" Text="1" ToolTip="رقم الموسم أو الجزء"/>
@@ -75,7 +75,7 @@
 <TextBox x:Name="EpisodeTitleBox" Grid.Column="0" Padding="8" Margin="0,0,6,8" ToolTip="اسم الحلقة (اختياري)"/>
 <TextBox x:Name="EpisodeNumberBox" Grid.Column="1" Padding="8" Margin="0,0,0,8" Text="1" ToolTip="رقم الحلقة"/>
 </Grid>
-<Button Content="ربط الفيديو كحلقة" Click="AddEpisode_Click" HorizontalAlignment="Right" Padding="12,8"/>
+<Button Content="ربط الفيديو كحلقة" Click="AddEpisode_Click" HorizontalAlignment="Right" Padding="12,8"/></StackPanel>
 <Separator/>
 <WrapPanel Margin="0,10,0,6"><TextBlock Text="الحلقات التي فقدت ملفاتها" FontSize="15" FontWeight="Bold" Foreground="#142D4A" VerticalAlignment="Center" Margin="0,0,8,0"/><Button Content="فحص الملفات المفقودة" Click="RefreshMissingEpisodes_Click" Padding="10,6"/><Button Content="إعادة ربط الحلقة بالملف المختار" Click="RelinkMissingEpisode_Click" Padding="10,6" Margin="6,0,0,0"/></WrapPanel>
 <DataGrid x:Name="MissingEpisodesGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single" Height="135" Margin="0,0,0,10">
