@@ -115,7 +115,7 @@ public partial class App : Application
    _server.MapPost("/api/admin/catalog-categories",(HttpContext c,SaveCatalogCategoryRequest request,CatalogCategoryService categories)=>{
     if(!IsLocal(c))return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.Title)||(request.Title?.Length??0)>100||(request.PosterPath?.Length??0)>240)return Results.BadRequest(new{error="اسم القسم أو الغلاف غير صالح"});
-    if(request.IsPublished&&!PosterExists(request.PosterPath,posters))return Results.BadRequest(new{error="لا يمكن نشر القسم قبل رفع غلاف صالح موجود فعلياً"});
+    if(!string.IsNullOrWhiteSpace(request.PosterPath)&&!PosterExists(request.PosterPath,posters))return Results.BadRequest(new{error="مسار غلاف القسم غير صالح أو أن ملف الصورة غير موجود"});
     if(request.ParentId is not null){var parent=categories.Get(request.ParentId);if(parent is null||parent.ParentId is not null||parent.ContentKind!="Group")return Results.BadRequest(new{error="اختر قسماً رئيسياً صحيحاً"});
      if(request.IsPublished&&!parent.IsPublished)return Results.BadRequest(new{error="يجب نشر القسم الرئيسي أولاً قبل نشر القسم الفرعي"});}
     try{categories.Save(request);return Results.Ok(new{saved=true});}catch(Exception ex) when(ex is ArgumentException or InvalidOperationException or Microsoft.Data.Sqlite.SqliteException){return Results.BadRequest(new{error=ex.Message});}
