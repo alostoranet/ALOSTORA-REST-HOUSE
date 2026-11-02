@@ -194,13 +194,15 @@ public sealed class SeriesCatalogService
         return rows;
     }
 
-    public object GetCatalog(LibraryService library, VideoMetadataService metadata)
+    public object GetCatalog(LibraryService library, VideoMetadataService metadata, IReadOnlySet<string>? allowedSeriesIds = null)
     {
         // Load each source into memory before composing the response. This avoids
         // opening nested SQLite readers on the same connection while one is active.
         var files = library.List().ToDictionary(x => x.Id);
         var metadataById = metadata.List().ToDictionary(x => x.VideoId);
         var seriesRows = ListSeries();
+        if (allowedSeriesIds is not null)
+            seriesRows = seriesRows.Where(x => allowedSeriesIds.Contains(x.SeriesId)).ToArray();
 
         var seasonMap = new Dictionary<long, (SeasonRecord Season, List<EpisodeRecord> Episodes)>();
         using (var c = Open())
