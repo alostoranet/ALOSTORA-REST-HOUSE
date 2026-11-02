@@ -198,7 +198,7 @@ public partial class App : Application
     return path is null?Results.NotFound():Results.File(path,"video/mp4",enableRangeProcessing:true);
    });
 
-   _server.MapGet("/api/library",(HttpContext c,LibraryService svc,VideoMetadataService meta,SeriesCatalogService catalog,PublicCatalogAccessService publicCatalog)=>
+   _server.MapGet("/api/library",(HttpContext c,LibraryService svc,VideoMetadataService meta,SeriesCatalogService catalog,CatalogCategoryService categories,PublicCatalogAccessService publicCatalog)=>
    {
     var isLocal=IsLocal(c);
     IReadOnlySet<string>? visibleVideoIds=isLocal?null:publicCatalog.GetPublishedVideoIds();
@@ -209,6 +209,7 @@ public partial class App : Application
       if(!string.IsNullOrWhiteSpace(seasonRow.FolderPath)&&Directory.Exists(seasonRow.FolderPath)) svc.EnsureFolderRegistered(seasonRow.FolderPath);
     }
     var metadataById=meta.List().ToDictionary(x=>x.VideoId);
+    var categoryById=categories.List().ToDictionary(x=>x.CategoryId,x=>x.Title,StringComparer.OrdinalIgnoreCase);
     var posterLookup=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
     try
     {
@@ -235,7 +236,7 @@ public partial class App : Application
        posterPath="/posters/"+string.Join("/",relative.Split('/').Select(Uri.EscapeDataString));
       }
      }
-     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,addedUtc,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags,categoryId=m?.CategoryId,section=m?.Section??"عام",isPublished=m?.IsPublished??false};
+     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,addedUtc,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags,categoryId=m?.CategoryId,categoryTitle=m?.CategoryId is not null&&categoryById.TryGetValue(m.CategoryId,out var categoryTitle)?categoryTitle:null,metadataSaved=m is not null,section=m?.Section??"عام",isPublished=m?.IsPublished??false};
     });
     return Results.Ok(result);
    });
