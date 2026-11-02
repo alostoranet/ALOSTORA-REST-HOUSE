@@ -313,6 +313,12 @@ public sealed class SeriesCatalogService
                 })
                 .ToArray();
 
+            var ratings = seasons.SelectMany(x => x.episodes)
+                .Select(x => metadataById.TryGetValue(x.videoId, out var value) ? value?.Rating : null)
+                .Where(x => x.HasValue)
+                .Select(x => x!.Value)
+                .ToArray();
+
             return new
             {
                 seriesId = series.SeriesId,
@@ -324,6 +330,9 @@ public sealed class SeriesCatalogService
                 categoryId = series.CategoryId,
                 section = series.Section,
                 isPublished = series.IsPublished,
+                seasonCount = seasons.Length,
+                episodeCount = seasons.Sum(x => x.episodes.Length),
+                rating = ratings.Length == 0 ? (double?)null : Math.Round(ratings.Average(), 1),
                 seasons
             };
         }).ToArray();
