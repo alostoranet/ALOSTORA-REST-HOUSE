@@ -45,6 +45,7 @@ public partial class App : Application
    builder.Services.AddSingleton(new SeriesCatalogService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new CatalogCategoryService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new CustomerMessageService(Path.Combine(root,"resthouse.db")));
+   builder.Services.AddSingleton(new RestHouseProfileService(root));
    builder.Services.AddSingleton(new PublicCatalogAccessService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddHostedService(provider => new ScheduledBackupService(root,posters,provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ScheduledBackupService>>()));
    _server=builder.Build();
@@ -91,6 +92,7 @@ public partial class App : Application
     catch{return false;}
    }
    _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
+   _server.MapGet("/api/profile",(RestHouseProfileService profile)=>Results.Ok(profile.Load()));
    _server.MapPost("/api/messages",(CreateCustomerMessageRequest request,CustomerMessageService messages)=>{
     var allowed=new[]{"طلب مسلسل","الإبلاغ عن مشكلة","اقتراح","أخرى"};
     if(request is null||!allowed.Contains(request.Category)||string.IsNullOrWhiteSpace(request.Title)||request.Title.Trim().Length<3||request.Title.Length>120||string.IsNullOrWhiteSpace(request.Details)||request.Details.Trim().Length<8||request.Details.Length>2500||(request.Contact?.Length??0)>100||(request.ViewerId?.Length??0)>100)
@@ -108,6 +110,41 @@ public partial class App : Application
    _server.MapDelete("/api/admin/messages/{id:long}",(HttpContext c,long id,CustomerMessageService messages)=>{
     if(!IsLocal(c))return Results.NotFound();
     return messages.Delete(id)?Results.Ok(new{deleted=true}):Results.NotFound(new{error="الرسالة غير موجودة"});
+   });
+
+   _server.MapGet("/api/admin/profile",(HttpContext c,RestHouseProfileService profile)=>
+    IsLocal(c)?Results.Ok(profile.Load()):Results.NotFound());
+   _server.MapPost("/api/admin/profile",(HttpContext c,RestHouseProfile request,RestHouseProfileService profile)=>
+   {
+    if(!IsLocal(c))return Results.NotFound();
+    if(request is null||(request.LogoPath is not null&&!PosterExists(request.LogoPath,posters)))
+     return Results.BadRequest(new{error="مسار شعار الشبكة غير صالح أو أن الصورة غير موجودة"});
+    try{profile.Save(request);return Results.Ok(new{saved=true,profile=profile.Load()});}
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+   });
+   _server.MapPost("/api/admin/profile/logo",async (HttpContext c,RestHouseProfileService profile)=>
+   {
+    if(!IsLocal(c))return Results.NotFound();
+    if(c.Request.ContentLength is > 5_242_880)return Results.StatusCode(413);
+    var contentType=c.Request.ContentType?.Split(';')[0].Trim().ToLowerInvariant();
+    var ext=contentType switch{"image/jpeg"=>".jpg","image/png"=>".png","image/webp"=>".webp",_=>null};
+    if(ext is null)return Results.BadRequest(new{error="الصيغ المسموحة JPG وPNG وWEBP فقط"});
+    await using var ms=new MemoryStream();await c.Request.Body.CopyToAsync(ms);
+    if(ms.Length==0||ms.Length>5_242_880)return Results.BadRequest(new{error="حجم الصورة يجب ألا يتجاوز 5 ميجابايت"});
+    var bytes=ms.ToArray();
+    var valid=contentType switch{
+     "image/jpeg"=>bytes.Length>=3&&bytes[0]==0xFF&&bytes[1]==0xD8&&bytes[2]==0xFF,
+     "image/png"=>bytes.Length>=8&&bytes.Take(8).SequenceEqual(new byte[]{137,80,78,71,13,10,26,10}),
+     "image/webp"=>bytes.Length>=12&&System.Text.Encoding.ASCII.GetString(bytes,0,4)=="RIFF"&&System.Text.Encoding.ASCII.GetString(bytes,8,4)=="WEBP",
+     _=>false
+    };
+    if(!valid)return Results.BadRequest(new{error="محتوى الصورة لا يطابق صيغتها"});
+    var fileName="brand-"+Guid.NewGuid().ToString("N")+ext;
+    await File.WriteAllBytesAsync(Path.Combine(posters,fileName),bytes);
+    var current=profile.Load();
+    var updated=current with{LogoPath="/posters/"+fileName};
+    try{profile.Save(updated);return Results.Ok(new{logoPath=updated.LogoPath});}
+    catch{try{File.Delete(Path.Combine(posters,fileName));}catch{}throw;}
    });
 
    _server.MapGet("/api/catalog-categories",(CatalogCategoryService categories)=>Results.Ok(categories.List(publishedOnly:true)));
@@ -161,7 +198,7 @@ public partial class App : Application
     return path is null?Results.NotFound():Results.File(path,"video/mp4",enableRangeProcessing:true);
    });
 
-   _server.MapGet("/api/library",(HttpContext c,LibraryService svc,VideoMetadataService meta,SeriesCatalogService catalog,PublicCatalogAccessService publicCatalog)=>
+   _server.MapGet("/api/library",(HttpContext c,LibraryService svc,VideoMetadataService meta,SeriesCatalogService catalog,CatalogCategoryService categories,PublicCatalogAccessService publicCatalog)=>
    {
     var isLocal=IsLocal(c);
     IReadOnlySet<string>? visibleVideoIds=isLocal?null:publicCatalog.GetPublishedVideoIds();
@@ -172,6 +209,7 @@ public partial class App : Application
       if(!string.IsNullOrWhiteSpace(seasonRow.FolderPath)&&Directory.Exists(seasonRow.FolderPath)) svc.EnsureFolderRegistered(seasonRow.FolderPath);
     }
     var metadataById=meta.List().ToDictionary(x=>x.VideoId);
+    var categoryById=categories.List().ToDictionary(x=>x.CategoryId,x=>x.Title,StringComparer.OrdinalIgnoreCase);
     var posterLookup=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
     try
     {
@@ -198,7 +236,7 @@ public partial class App : Application
        posterPath="/posters/"+string.Join("/",relative.Split('/').Select(Uri.EscapeDataString));
       }
      }
-     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,addedUtc,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags,categoryId=m?.CategoryId,section=m?.Section??"عام",isPublished=m?.IsPublished??false};
+     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,addedUtc,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags,categoryId=m?.CategoryId,categoryTitle=m is not null&&m.CategoryId is not null&&categoryById.TryGetValue(m.CategoryId,out var categoryTitle)?categoryTitle:null,metadataSaved=m is not null,section=m?.Section??"عام",isPublished=m?.IsPublished??false};
     });
     return Results.Ok(result);
    });
