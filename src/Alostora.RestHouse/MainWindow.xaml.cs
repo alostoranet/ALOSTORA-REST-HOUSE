@@ -13,6 +13,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Threading;
+using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 
 namespace Alostora.RestHouse;
@@ -26,6 +27,8 @@ public partial class MainWindow : Window
     private readonly HttpClient _http = new() { BaseAddress = new Uri("http://127.0.0.1:8096") };
     private readonly ObservableCollection<AdminVideo> _videos = new();
     private readonly ObservableCollection<EpisodeCandidate> _episodeCandidates = new();
+    private CategoryAdmin[] _categories = Array.Empty<CategoryAdmin>();
+    private bool _suppressCustomerMessagePopup;
     private readonly DispatcherTimer _messageRefreshTimer = new() { Interval = TimeSpan.FromSeconds(30) };
 
     public MainWindow(string root, string library, string posters, string? ffmpegPath)
@@ -42,7 +45,7 @@ public partial class MainWindow : Window
         AddressBox.Text = $"رابط المشاهدة: http://{GetLanAddress()}:8096";
         VideosGrid.ItemsSource = _videos;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); };
+        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); };
         _messageRefreshTimer.Tick += async (_, _) => await LoadCustomerMessagesAsync();
         _messageRefreshTimer.Start();
         Closed += (_, _) => _messageRefreshTimer.Stop();
@@ -146,6 +149,95 @@ public partial class MainWindow : Window
         {
             StatusText.Text = "تعذر إضافة ملفات الفيديو: " + ex.Message;
         }
+    }
+
+    private async System.Threading.Tasks.Task LoadBrandProfileAsync()
+    {
+        try
+        {
+            var profile = await _http.GetFromJsonAsync<RestHouseProfileAdmin>("/api/admin/profile");
+            if (profile is null) return;
+            RestHouseNameBox.Text = profile.RestHouseName;
+            NetworkNameBox.Text = profile.NetworkName;
+            BrandLogoPathBox.Text = profile.LogoPath ?? "";
+            BrandLogoPreview.Source = null;
+            if (!string.IsNullOrWhiteSpace(profile.LogoPath))
+            {
+                var image = new BitmapImage();
+                image.BeginInit();
+                image.CacheOption = BitmapCacheOption.OnLoad;
+                image.UriSource = new Uri(_http.BaseAddress!, profile.LogoPath);
+                image.EndInit();
+                image.Freeze();
+                BrandLogoPreview.Source = image;
+            }
+            BrandProfileStatusText.Text = "تم تحميل هوية الاستراحة والشبكة.";
+        }
+        catch (Exception ex)
+        {
+            BrandProfileStatusText.Text = "تعذر تحميل بيانات الهوية: " + ex.Message;
+        }
+    }
+
+    private async void SaveBrandProfile_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(RestHouseNameBox.Text) || string.IsNullOrWhiteSpace(NetworkNameBox.Text))
+        {
+            BrandProfileStatusText.Text = "اكتب اسم الاستراحة واسم الشبكة أولاً.";
+            return;
+        }
+        try
+        {
+            var response = await _http.PostAsJsonAsync("/api/admin/profile", new
+            {
+                restHouseName = RestHouseNameBox.Text.Trim(),
+                networkName = NetworkNameBox.Text.Trim(),
+                logoPath = string.IsNullOrWhiteSpace(BrandLogoPathBox.Text) ? null : BrandLogoPathBox.Text.Trim()
+            });
+            if (!response.IsSuccessStatusCode)
+            {
+                BrandProfileStatusText.Text = "تعذر حفظ الهوية: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            BrandProfileStatusText.Text = $"تم حفظ الهوية: {RestHouseNameBox.Text.Trim()} — {NetworkNameBox.Text.Trim()}.";
+        }
+        catch (Exception ex) { BrandProfileStatusText.Text = "تعذر حفظ الهوية: " + ex.Message; }
+    }
+
+    private async void ChooseBrandLogo_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختر شعار أو صورة الاستراحة والشبكة",
+            Filter = "صور مدعومة|*.jpg;*.jpeg;*.png;*.webp",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        var extension = Path.GetExtension(dialog.FileName).ToLowerInvariant();
+        var contentType = extension switch { ".jpg" or ".jpeg" => "image/jpeg", ".png" => "image/png", ".webp" => "image/webp", _ => "" };
+        var info = new FileInfo(dialog.FileName);
+        if (contentType.Length == 0 || info.Length == 0 || info.Length > 5_242_880)
+        {
+            BrandProfileStatusText.Text = "اختر صورة JPG أو PNG أو WEBP لا يتجاوز حجمها 5 ميجابايت.";
+            return;
+        }
+        try
+        {
+            BrandProfileStatusText.Text = "جارٍ رفع شعار الشبكة...";
+            using var bytes = new ByteArrayContent(await File.ReadAllBytesAsync(dialog.FileName));
+            bytes.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            var response = await _http.PostAsync("/api/admin/profile/logo", bytes);
+            if (!response.IsSuccessStatusCode)
+            {
+                BrandProfileStatusText.Text = "تعذر رفع الشعار: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            var result = await response.Content.ReadFromJsonAsync<BrandLogoUploadResult>();
+            BrandLogoPathBox.Text = result?.LogoPath ?? "";
+            await LoadBrandProfileAsync();
+            BrandProfileStatusText.Text = "تم رفع الشعار وحفظه. سيظهر في واجهة العملاء.";
+        }
+        catch (Exception ex) { BrandProfileStatusText.Text = "تعذر رفع الشعار: " + ex.Message; }
     }
 
     private void ChooseMediaFolder_Click(object sender, RoutedEventArgs e)
@@ -436,6 +528,7 @@ public partial class MainWindow : Window
         try
         {
             var rows = await _http.GetFromJsonAsync<CategoryAdmin[]>("/api/admin/catalog-categories") ?? Array.Empty<CategoryAdmin>();
+            _categories = rows;
             var parents = rows.Where(x => x.ParentId is null).ToDictionary(x => x.CategoryId, x => x.Title);
             foreach (var row in rows)
             {
@@ -444,11 +537,42 @@ public partial class MainWindow : Window
             }
             CategoriesGrid.ItemsSource = rows;
             CategoryParentPicker.ItemsSource = rows.Where(x => x.ParentId is null && x.ContentKind == "Group").ToArray();
-            var subcategories = rows.Where(x => x.ParentId is not null).ToArray();
-            VideoCategoryPicker.ItemsSource = subcategories.Where(x => x.ContentKind is "Movie" or "Other").ToArray();
+            var publishedParents = rows.Where(x => x.ParentId is null && x.ContentKind == "Group" && x.IsPublished)
+                .Select(x => x.CategoryId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var subcategories = rows.Where(x => x.ParentId is not null && x.IsPublished && publishedParents.Contains(x.ParentId)).ToArray();
             SeriesCategoryPicker.ItemsSource = subcategories.Where(x => x.ContentKind == "Series").ToArray();
+            RefreshVideoCategoryPicker();
+            var seriesCount = ((CategoryAdmin[])SeriesCategoryPicker.ItemsSource).Length;
+            SeriesCategoryStatusText.Text = seriesCount == 0
+                ? "لا توجد أقسام فرعية منشورة للمسلسلات. أضف قسماً رئيسياً منشوراً ثم قسماً فرعياً من نوع مسلسلات."
+                : $"الأقسام الفرعية المتاحة للمسلسلات: {seriesCount}.";
         }
         catch (Exception ex) { CategoryStatusText.Text = "تعذر تحميل الأقسام: " + ex.Message; }
+    }
+
+    private void KindBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (VideoCategoryPicker is null) return;
+        var selected = VideoCategoryPicker.SelectedValue as string;
+        RefreshVideoCategoryPicker(selected);
+    }
+
+    private void RefreshVideoCategoryPicker(string? selectedCategoryId = null)
+    {
+        if (VideoCategoryPicker is null || VideoCategoryStatusText is null) return;
+        var kind = (KindBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Movie";
+        var parentIds = _categories.Where(x => x.ParentId is null && x.ContentKind == "Group" && x.IsPublished)
+            .Select(x => x.CategoryId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var allowedKinds = kind == "Series" ? new[] { "Series" } : new[] { "Movie", "Other" };
+        var rows = _categories.Where(x => x.ParentId is not null && x.IsPublished &&
+            parentIds.Contains(x.ParentId) && allowedKinds.Contains(x.ContentKind, StringComparer.Ordinal)).ToArray();
+        VideoCategoryPicker.ItemsSource = rows;
+        VideoCategoryPicker.SelectedValue = selectedCategoryId;
+        VideoCategoryStatusText.Text = rows.Length == 0
+            ? kind == "Series"
+                ? "لا توجد أقسام مسلسلات منشورة. أنشئ قسماً رئيسياً منشوراً ثم قسماً فرعياً من نوع مسلسلات."
+                : "لا توجد أقسام أفلام منشورة. أنشئ قسماً رئيسياً منشوراً ثم قسماً فرعياً من نوع أفلام."
+            : $"تم العثور على {rows.Length} قسم فرعي مناسب. اختر القسم الذي سيظهر فيه الفيديو.";
     }
 
     private void NewCategory_Click(object sender, RoutedEventArgs e)
@@ -483,15 +607,21 @@ public partial class MainWindow : Window
         if (string.IsNullOrWhiteSpace(CategoryTitleBox.Text)) { CategoryStatusText.Text = "اكتب اسم القسم أولاً."; return; }
         if (kind == "Group") parentId = null;
         else if (string.IsNullOrWhiteSpace(parentId)) { CategoryStatusText.Text = "اختر القسم الرئيسي الذي سيندرج تحته هذا القسم."; return; }
-        var id = string.IsNullOrWhiteSpace(CategoryIdBox.Text) ? Guid.NewGuid().ToString("N") : CategoryIdBox.Text.Trim();
+        var isNew = string.IsNullOrWhiteSpace(CategoryIdBox.Text);
+        var title = CategoryTitleBox.Text.Trim();
+        var parentTitle = parentId is null ? null : _categories.FirstOrDefault(x => x.CategoryId == parentId)?.Title;
+        var id = isNew ? Guid.NewGuid().ToString("N") : CategoryIdBox.Text.Trim();
         try
         {
-            var response = await _http.PostAsJsonAsync("/api/admin/catalog-categories", new { categoryId = id, parentId, title = CategoryTitleBox.Text.Trim(), contentKind = kind, posterPath = string.IsNullOrWhiteSpace(CategoryPosterPathBox.Text) ? null : CategoryPosterPathBox.Text.Trim(), isPublished = CategoryPublishBox.IsChecked == true });
+            var response = await _http.PostAsJsonAsync("/api/admin/catalog-categories", new { categoryId = id, parentId, title, contentKind = kind, posterPath = string.IsNullOrWhiteSpace(CategoryPosterPathBox.Text) ? null : CategoryPosterPathBox.Text.Trim(), isPublished = CategoryPublishBox.IsChecked == true });
             if (!response.IsSuccessStatusCode) { CategoryStatusText.Text = "تعذر حفظ القسم: " + await response.Content.ReadAsStringAsync(); return; }
             CategoryIdBox.Text = id;
-            CategoryStatusText.Text = CategoryPublishBox.IsChecked == true ? "تم حفظ القسم ونشره. سيظهر في الواجهة الرئيسية للعميل بعد تحديث الصفحة." : "تم حفظ القسم كمسودة ولن يظهر للعميل حتى تفعّل النشر وتضغط حفظ القسم.";
             await LoadCategoriesAsync();
             CategoriesGrid.SelectedItem = (CategoriesGrid.ItemsSource as CategoryAdmin[])?.FirstOrDefault(x => x.CategoryId == id);
+            var typeName = kind == "Group" ? "القسم الرئيسي" : "القسم الفرعي";
+            var location = parentTitle is null ? "" : $" داخل القسم الرئيسي «{parentTitle}»";
+            var action = isNew ? "تمت إضافة" : "تم تحديث";
+            CategoryStatusText.Text = $"{action} {typeName} «{title}»{location}. الحالة: {(CategoryPublishBox.IsChecked == true ? "منشور" : "مسودة")}.";
         }
         catch (Exception ex) { CategoryStatusText.Text = "تعذر حفظ القسم: " + ex.Message; }
     }
@@ -548,10 +678,18 @@ public partial class MainWindow : Window
             StatusText.Text = "جارٍ تحديث القائمة...";
             var items = await _http.GetFromJsonAsync<AdminVideo[]>("/api/library") ?? Array.Empty<AdminVideo>();
             _videos.Clear();
-            foreach (var item in items) _videos.Add(item);
+            foreach (var item in items)
+            {
+                if (string.IsNullOrWhiteSpace(item.CategoryTitle) && !string.IsNullOrWhiteSpace(item.CategoryId))
+                    item.CategoryTitle = _categories.FirstOrDefault(x => x.CategoryId == item.CategoryId)?.Title ?? "قسم غير موجود";
+                _videos.Add(item);
+            }
             EpisodeVideoPicker.ItemsSource = _videos;
             CountText.Text = $"عدد ملفات الفيديو: {_videos.Count}";
-            StatusText.Text = "تم تحديث القائمة. اختر فيديو لتعديل بياناته.";
+            var incomplete = _videos.Count(x => !x.MetadataSaved);
+            StatusText.Text = incomplete == 0
+                ? $"سجل الفيديوهات جاهز: {_videos.Count} فيديو، وجميعها لها بيانات محفوظة."
+                : $"سجل الفيديوهات: {_videos.Count} فيديو. يوجد {incomplete} فيديو بانتظار استكمال بياناته وتصنيفه.";
         }
         catch (Exception ex) { StatusText.Text = "تعذر تحميل المكتبة: " + ex.Message; }
     }
@@ -587,10 +725,10 @@ public partial class MainWindow : Window
         ReleaseDateBox.Text = v.ReleaseDate ?? "";
         TagsBox.Text = v.Tags ?? "";
         SectionBox.Text = v.Section ?? "عام";
-        VideoCategoryPicker.SelectedValue = v.CategoryId;
-        SeriesCategoryPicker.SelectedValue = v.CategoryId;
-        PublishBox.IsChecked = v.IsPublished || string.IsNullOrWhiteSpace(v.CategoryId);
         KindBox.SelectedIndex = string.Equals(v.Kind, "Series", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        RefreshVideoCategoryPicker(v.CategoryId);
+        SeriesCategoryPicker.SelectedValue = v.CategoryId;
+        PublishBox.IsChecked = v.IsPublished || !v.MetadataSaved;
         PosterStatusText.Text = string.IsNullOrWhiteSpace(v.PosterPath) ? "لا يوجد غلاف لهذا العمل حالياً." : "يوجد غلاف محفوظ لهذا العمل.";
     }
 
@@ -645,6 +783,9 @@ public partial class MainWindow : Window
             runtime = parsedRuntime;
         }
         var kindItem = KindBox.SelectedItem as ComboBoxItem;
+        var previousMetadata = _videos.FirstOrDefault(v => v.Id == IdBox.Text);
+        var isNewMetadata = previousMetadata?.MetadataSaved != true;
+        var selectedCategory = VideoCategoryPicker.SelectedItem as CategoryAdmin;
         var request = new
         {
             videoId = IdBox.Text,
@@ -661,14 +802,17 @@ public partial class MainWindow : Window
             releaseDate = string.IsNullOrWhiteSpace(ReleaseDateBox.Text) ? null : ReleaseDateBox.Text.Trim(),
             tags = TagsBox.Text,
             section = string.IsNullOrWhiteSpace(SectionBox.Text) ? "عام" : SectionBox.Text.Trim(),
-            categoryId = (kindItem?.Tag?.ToString() == "Series" ? SeriesCategoryPicker.SelectedValue as string : VideoCategoryPicker.SelectedValue as string),
+            categoryId = VideoCategoryPicker.SelectedValue as string,
             isPublished = PublishBox.IsChecked == true
         };
         try
         {
             var response = await _http.PostAsJsonAsync("/api/admin/metadata", request);
             if (!response.IsSuccessStatusCode) { StatusText.Text = "لم يتم الحفظ: " + await response.Content.ReadAsStringAsync(); return; }
-            StatusText.Text = "تم حفظ بيانات الفيديو بنجاح.";
+            var videoTitle = TitleBox.Text.Trim();
+            var categoryName = selectedCategory?.Title ?? "غير مصنف";
+            var publication = PublishBox.IsChecked == true ? "منشور للعميل" : "محفوظ كمسودة";
+            StatusText.Text = $"{(isNewMetadata ? "تمت إضافة بيانات الفيديو" : "تم تحديث بيانات الفيديو")} «{videoTitle}» إلى سجل الفيديوهات. القسم: {categoryName}. الحالة: {publication}.";
             await LoadVideosAsync();
             VideosGrid.SelectedItem = _videos.FirstOrDefault(v => v.Id == IdBox.Text);
         }
@@ -682,9 +826,23 @@ public partial class MainWindow : Window
         {
             var selectedId = (SeriesPicker.SelectedItem as SeriesAdmin)?.SeriesId;
             var rows = await _http.GetFromJsonAsync<SeriesAdmin[]>("/api/admin/series") ?? Array.Empty<SeriesAdmin>();
+            foreach (var row in rows)
+            {
+                row.CategoryTitle = _categories.FirstOrDefault(x => x.CategoryId == row.CategoryId)?.Title ?? "غير مصنف";
+                row.PublishStatus = row.IsPublished ? "منشور" : "مسودة";
+            }
             SeriesPicker.ItemsSource = rows;
             SeriesPicker.SelectedItem = rows.FirstOrDefault(x => x.SeriesId == selectedId);
-            if (SeriesPicker.SelectedItem is null) { SeasonsGrid.ItemsSource = null; if (rows.Length == 0) SeriesStatusText.Text = "لا توجد مسلسلات محفوظة بعد. حدد ملفاً مصنفاً كمسلسل من قائمة الفيديو ثم اضغط «إنشاء مسلسل من الفيديو المحدد»."; }
+            if (SeriesPicker.SelectedItem is null)
+            {
+                SeasonsGrid.ItemsSource = null;
+                EpisodesGrid.ItemsSource = null;
+                if (rows.Length == 0) SeriesStatusText.Text = "سجل المسلسلات فارغ. أضف مسلسلاً جديداً أو أنشئه من فيديو موجود.";
+            }
+            else
+            {
+                SeriesStatusText.Text = $"سجل المسلسلات: {rows.Length} مسلسل. اختر أي مسلسل من الجدول لتعديل بياناته.";
+            }
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر تحميل المسلسلات: " + ex.Message; }
     }
@@ -861,8 +1019,10 @@ public partial class MainWindow : Window
         {
             var response = await _http.PostAsJsonAsync("/api/admin/series", request);
             if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "لم يتم حفظ المسلسل: " + await response.Content.ReadAsStringAsync(); return; }
+            var wasNewSeries = !((SeriesPicker.ItemsSource as SeriesAdmin[]) ?? Array.Empty<SeriesAdmin>()).Any(x => x.SeriesId == id);
             SeriesIdBox.Text = id;
-            SeriesStatusText.Text = "تم حفظ بيانات المسلسل.";
+            var seriesCategoryName = (SeriesCategoryPicker.SelectedItem as CategoryAdmin)?.Title ?? "غير مصنف";
+            SeriesStatusText.Text = $"{(wasNewSeries ? "تمت إضافة المسلسل" : "تم تحديث المسلسل")} «{SeriesTitleBox.Text.Trim()}» إلى سجل المسلسلات. القسم: {seriesCategoryName}. الحالة: {(SeriesPublishBox.IsChecked == true ? "منشور" : "مسودة")}.";
             await LoadSeriesAsync();
             SeriesPicker.SelectedItem = (SeriesPicker.ItemsSource as SeriesAdmin[])?.FirstOrDefault(x => x.SeriesId == id);
             if (SeriesPicker.SelectedItem is null) await LoadSeasonsAsync(id);
@@ -1320,29 +1480,149 @@ public partial class MainWindow : Window
         {
             var selectedId = (CustomerMessagesGrid.SelectedItem as CustomerMessageAdmin)?.Id;
             var rows = await _http.GetFromJsonAsync<CustomerMessageAdmin[]>("/api/admin/messages") ?? Array.Empty<CustomerMessageAdmin>();
+            _suppressCustomerMessagePopup = true;
             CustomerMessagesGrid.ItemsSource = rows;
             if (selectedId is not null)
                 CustomerMessagesGrid.SelectedItem = rows.FirstOrDefault(x => x.Id == selectedId);
+            _suppressCustomerMessagePopup = false;
             var fresh = rows.Count(x => x.Status == "جديد");
-            CustomerMessageStatusText.Text = $"إجمالي الرسائل المعروضة: {rows.Length} — رسائل جديدة: {fresh}. يتم التحديث كل 30 ثانية.";
-            if (CustomerMessagesGrid.SelectedItem is null)
-                CustomerMessageDetailsText.Text = rows.Length == 0 ? "لا توجد رسائل من العملاء حتى الآن." : "اختر رسالة من القائمة لعرض تفاصيلها.";
+            CustomerMessageStatusText.Text = $"إجمالي الرسائل: {rows.Length} — رسائل جديدة: {fresh}. اضغط على الرسالة لفتح تفاصيلها.";
         }
         catch (Exception ex)
         {
+            _suppressCustomerMessagePopup = false;
             CustomerMessageStatusText.Text = "تعذر تحميل رسائل العملاء: " + ex.Message;
         }
     }
 
     private void CustomerMessagesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (CustomerMessagesGrid.SelectedItem is not CustomerMessageAdmin message) return;
-        CustomerMessageDetailsText.Text =
-            $"رقم الرسالة: {message.Id}\nالنوع: {message.Category}\nالعنوان: {message.Title}\n\nالتفاصيل:\n{message.Details}\n\nوسيلة التواصل: {(string.IsNullOrWhiteSpace(message.Contact) ? "لم يحدد العميل" : message.Contact)}\nمعرّف جهاز العميل: {(string.IsNullOrWhiteSpace(message.ViewerId) ? "غير متوفر" : message.ViewerId)}\nتاريخ الإرسال: {message.CreatedUtc}\nالحالة: {message.Status}";
+        if (_suppressCustomerMessagePopup || CustomerMessagesGrid.SelectedItem is not CustomerMessageAdmin message)
+            return;
+        ShowCustomerMessagePopup(message);
     }
 
-    private async void RefreshCustomerMessages_Click(object sender, RoutedEventArgs e) =>
-        await LoadCustomerMessagesAsync();
+    private void ShowCustomerMessagePopup(CustomerMessageAdmin message)
+    {
+        var dialog = new Window
+        {
+            Title = $"رسالة عميل رقم {message.Id}",
+            Width = 560,
+            Height = 540,
+            MinWidth = 430,
+            MinHeight = 420,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Owner = this,
+            FlowDirection = FlowDirection.RightToLeft,
+            Background = System.Windows.Media.Brushes.White,
+            ResizeMode = ResizeMode.CanResize
+        };
+        var root = new StackPanel { Margin = new Thickness(20) };
+        root.Children.Add(new TextBlock
+        {
+            Text = message.Title,
+            FontSize = 21,
+            FontWeight = FontWeights.Bold,
+            Foreground = System.Windows.Media.Brushes.DarkSlateGray,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+        root.Children.Add(new TextBlock
+        {
+            Text = $"النوع: {message.Category}     |     رقم الرسالة: {message.Id}",
+            Foreground = System.Windows.Media.Brushes.SlateGray,
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+        root.Children.Add(new TextBlock
+        {
+            Text = $"تاريخ الإرسال: {FormatMessageDate(message.CreatedUtc)}",
+            Foreground = System.Windows.Media.Brushes.SlateGray,
+            Margin = new Thickness(0, 0, 0, 10)
+        });
+        root.Children.Add(new TextBlock
+        {
+            Text = "تفاصيل رسالة العميل",
+            FontWeight = FontWeights.Bold,
+            Margin = new Thickness(0, 0, 0, 5)
+        });
+        root.Children.Add(new TextBox
+        {
+            Text = message.Details,
+            IsReadOnly = true,
+            TextWrapping = TextWrapping.Wrap,
+            AcceptsReturn = true,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Height = 205,
+            Padding = new Thickness(10),
+            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(245, 247, 250))
+        });
+        root.Children.Add(new TextBlock
+        {
+            Text = $"وسيلة التواصل: {(string.IsNullOrWhiteSpace(message.Contact) ? "لم يحدد العميل" : message.Contact)}",
+            Margin = new Thickness(0, 10, 0, 3)
+        });
+        root.Children.Add(new TextBlock
+        {
+            Text = $"معرّف جهاز العميل: {(string.IsNullOrWhiteSpace(message.ViewerId) ? "غير متوفر" : message.ViewerId)}",
+            Foreground = System.Windows.Media.Brushes.SlateGray,
+            FontSize = 11,
+            Margin = new Thickness(0, 0, 0, 12)
+        });
+        root.Children.Add(new TextBlock { Text = "حالة الرسالة", FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 5) });
+        var statusPicker = new ComboBox
+        {
+            ItemsSource = new[] { "جديد", "قيد المتابعة", "تمت المعالجة" },
+            SelectedItem = message.Status,
+            Padding = new Thickness(8),
+            Margin = new Thickness(0, 0, 0, 14)
+        };
+        root.Children.Add(statusPicker);
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left };
+        var save = new Button
+        {
+            Content = "حفظ الحالة",
+            Padding = new Thickness(18, 9, 18, 9),
+            Margin = new Thickness(0, 0, 8, 0),
+            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(201, 54, 64)),
+            Foreground = System.Windows.Media.Brushes.White,
+            FontWeight = FontWeights.Bold
+        };
+        var close = new Button { Content = "إغلاق", Padding = new Thickness(18, 9, 18, 9), IsCancel = true };
+        save.Click += async (_, _) =>
+        {
+            if (statusPicker.SelectedItem is string status)
+                await SetCustomerMessageStatusAsync(message.Id, status, dialog);
+        };
+        actions.Children.Add(save);
+        actions.Children.Add(close);
+        root.Children.Add(actions);
+        dialog.Content = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = root };
+        dialog.ShowDialog();
+    }
+
+    private static string FormatMessageDate(string value)
+    {
+        if (DateTime.TryParse(value, out var date))
+            return date.ToLocalTime().ToString("yyyy/MM/dd  hh:mm tt");
+        return value;
+    }
+
+    private async System.Threading.Tasks.Task SetCustomerMessageStatusAsync(long id, string status, Window? popup = null)
+    {
+        try
+        {
+            var response = await _http.PostAsJsonAsync($"/api/admin/messages/{id}/status", new { status });
+            if (!response.IsSuccessStatusCode)
+            {
+                CustomerMessageStatusText.Text = "تعذر تحديث حالة الرسالة: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            popup?.Close();
+            await LoadCustomerMessagesAsync();
+            CustomerMessageStatusText.Text = $"تم تحديث الرسالة رقم {id} إلى «{status}».";
+        }
+        catch (Exception ex) { CustomerMessageStatusText.Text = "تعذر تحديث الرسالة: " + ex.Message; }
+    }
 
     private async System.Threading.Tasks.Task SetSelectedCustomerMessageStatusAsync(string status)
     {
@@ -1351,18 +1631,7 @@ public partial class MainWindow : Window
             CustomerMessageStatusText.Text = "اختر رسالة من القائمة أولاً.";
             return;
         }
-        try
-        {
-            var response = await _http.PostAsJsonAsync($"/api/admin/messages/{message.Id}/status", new { status });
-            if (!response.IsSuccessStatusCode)
-            {
-                CustomerMessageStatusText.Text = "تعذر تحديث حالة الرسالة: " + await response.Content.ReadAsStringAsync();
-                return;
-            }
-            await LoadCustomerMessagesAsync();
-            CustomerMessageStatusText.Text = $"تم تحديث حالة الرسالة رقم {message.Id} إلى «{status}».";
-        }
-        catch (Exception ex) { CustomerMessageStatusText.Text = "تعذر تحديث الرسالة: " + ex.Message; }
+        await SetCustomerMessageStatusAsync(message.Id, status);
     }
 
     private async void MarkCustomerMessageInProgress_Click(object sender, RoutedEventArgs e) =>
@@ -1392,6 +1661,17 @@ public partial class MainWindow : Window
             CustomerMessageStatusText.Text = $"تم حذف الرسالة رقم {message.Id}.";
         }
         catch (Exception ex) { CustomerMessageStatusText.Text = "تعذر حذف الرسالة: " + ex.Message; }
+    }
+
+    private sealed class RestHouseProfileAdmin
+    {
+        public string RestHouseName { get; set; } = "استراحة الأسطورة";
+        public string NetworkName { get; set; } = "شبكة الأسطورة نت";
+        public string? LogoPath { get; set; }
+    }
+    private sealed class BrandLogoUploadResult
+    {
+        public string? LogoPath { get; set; }
     }
 
     private sealed class CustomerMessageAdmin
@@ -1426,6 +1706,8 @@ public partial class MainWindow : Window
         public string? CategoryId { get; set; }
         public string Section { get; set; } = "عام";
         public bool IsPublished { get; set; }
+        public string CategoryTitle { get; set; } = "غير مصنف";
+        public string PublishStatus { get; set; } = "";
     }
     private sealed class SeasonAdmin
     {
@@ -1498,6 +1780,11 @@ public partial class MainWindow : Window
         public string? CategoryId { get; set; }
         public string Section { get; set; } = "عام";
         public bool IsPublished { get; set; }
+        public bool MetadataSaved { get; set; }
+        public string? CategoryTitle { get; set; }
+        public string KindLabel => string.Equals(Kind, "Series", StringComparison.OrdinalIgnoreCase) ? "مسلسل" : "فيلم";
+        public string MetadataStatus => MetadataSaved ? "بيانات محفوظة" : "بانتظار البيانات";
+        public string PublishStatus => IsPublished ? "منشور" : "غير منشور";
     }
 }
 
