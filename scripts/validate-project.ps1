@@ -28,6 +28,9 @@ Write-Host "PASS: management client and embedded server port configuration match
 # Check that key management routes used by the UI exist in the embedded API.
 $requiredRoutes = @(
     '/api/admin/catalog-categories',
+    '/api/admin/profile',
+    '/api/admin/profile/logo',
+    '/api/profile',
     '/api/admin/series',
     '/api/admin/seasons',
     '/api/admin/register-selected-files',
@@ -79,7 +82,7 @@ if ($app -match 'request\.IsPublished\s*&&\s*!PosterExists\(request\.PosterPath,
     $xaml -notmatch 'SeriesPublishBox"[^>]*IsChecked="True"' -or
     $code -notmatch 'CategoryPublishBox\.IsChecked\s*=\s*true' -or
     $code -notmatch 'SeriesPublishBox\.IsChecked\s*=\s*true' -or
-    $code -notmatch 'PublishBox\.IsChecked\s*=\s*v\.IsPublished\s*\|\|\s*string\.IsNullOrWhiteSpace\(v\.CategoryId\)') {
+    $code -notmatch 'PublishBox\.IsChecked\s*=\s*v\.IsPublished\s*\|\|\s*!v\.MetadataSaved') {
     throw "New categories, movies, and series must publish by default without mandatory poster images."
 }
 $categoryTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/CatalogCategoryServiceTests.cs"
@@ -170,3 +173,42 @@ if ($series -notmatch 'seasonCount = seasons\.Length' -or
     throw "Series cards are missing their season count, episode count, or average episode rating."
 }
 Write-Host "PASS: series catalog exposes counts and average rating; empty placeholder is absent."
+
+# The admin experience must expose separate editable registers for videos, series, and categories.
+if ($xaml -notmatch '<DataGrid x:Name="VideosGrid"' -or
+    $xaml -notmatch '<DataGrid x:Name="SeriesPicker"' -or
+    $xaml -notmatch '<DataGrid x:Name="CategoriesGrid"' -or
+    $code -notmatch 'MetadataStatus => MetadataSaved' -or
+    $code -notmatch 'تمت إضافة بيانات الفيديو' -or
+    $code -notmatch 'تمت إضافة المسلسل' -or
+    $code -notmatch 'isNew\s*\?\s*"تمت إضافة"' -or $code -notmatch 'var typeName = kind == "Group" \? "القسم الرئيسي" : "القسم الفرعي"') {
+    throw "The editable video, series, or category registers are incomplete."
+}
+Write-Host "PASS: videos, series, and categories have separate editable registers and save confirmations."
+
+# The customer-message list must open details in a modal popup instead of a bottom details panel.
+if ($xaml -match 'CustomerMessageDetailsText' -or
+    $code -notmatch 'ShowCustomerMessagePopup\(' -or
+    $code -notmatch 'SetCustomerMessageStatusAsync\(long id, string status, Window\? popup') {
+    throw "Customer message popup workflow is incomplete."
+}
+Write-Host "PASS: selecting a customer message opens its details and status controls in a popup."
+
+# Branding settings must persist locally and be served to the customer-facing page.
+$profileServicePath = Join-Path $root "src/Alostora.RestHouse/RestHouseProfileService.cs"
+$profileTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/RestHouseProfileServiceTests.cs"
+if (-not (Test-Path $profileServicePath) -or -not (Test-Path $profileTestsPath) -or
+    $xaml -notmatch 'RestHouseNameBox' -or $xaml -notmatch 'NetworkNameBox' -or
+    $xaml -notmatch 'BrandLogoPreview' -or $html -notmatch 'loadBrandProfile\(' -or
+    $html -notmatch 'id="brandLogo"' -or
+    $code -notmatch 'SaveBrandProfile_Click' -or $app -notmatch 'MapPost\("/api/admin/profile/logo"') {
+    throw "Rest house branding settings and customer-facing identity are incomplete."
+}
+Write-Host "PASS: rest house name, network name, and logo settings are persisted and displayed."
+
+# Advanced media tools are optional helpers, not mandatory customer-facing setup.
+if ($xaml -notmatch 'مساعد توافق صيغ الفيديو \(FFmpeg\) — اختياري' -or
+    $xaml -notmatch 'لا يغيّر ملف الفيديو الأصلي') {
+    throw "The FFmpeg purpose and optional status must be explained in the advanced settings."
+}
+Write-Host "PASS: FFmpeg is documented as an optional non-destructive playback helper."
