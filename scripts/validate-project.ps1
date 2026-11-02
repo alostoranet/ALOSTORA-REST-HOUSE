@@ -11,16 +11,16 @@ $app = Get-Content $appPath -Raw
 $html = Get-Content $htmlPath -Raw
 
 # Every event wired in XAML must have a real code-behind handler.
-$events = [regex]::Matches($xaml, '\\b(?:Click|SelectionChanged|Loaded|Checked|Unchecked|TextChanged|Drop|DragOver)="([A-Za-z_]\\w*)"') |
+$events = [regex]::Matches($xaml, '\b(?:Click|SelectionChanged|Loaded|Checked|Unchecked|TextChanged|Drop|DragOver)="([A-Za-z_]\w*)"') |
     ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
-$missing = @($events | Where-Object { $code -notmatch ("(?m)\\b(?:async\\s+)?(?:void|Task(?:<[^>]+>)?)\\s+" + [regex]::Escape($_) + "\\s*\\(") })
+$missing = @($events | Where-Object { $code -notmatch ("(?m)\b(?:async\s+)?(?:void|Task(?:<[^>]+>)?)\s+" + [regex]::Escape($_) + "\s*\(") })
 if ($missing.Count -gt 0) {
     throw ("XAML events without code-behind handlers: " + ($missing -join ", "))
 }
 Write-Host ("PASS: all {0} XAML event handlers are implemented." -f $events.Count)
 
 # The management window and embedded server must use the same loopback endpoint.
-if ($code -notmatch 'http://127\\.0\\.0\\.1:8096' -or $app -notmatch 'http://0\\.0\\.0\\.0:8096') {
+if ($code -notmatch 'http://127\.0\.0\.1:8096' -or $app -notmatch 'http://0\.0\.0\.0:8096') {
     throw "Management client/server port configuration is inconsistent."
 }
 Write-Host "PASS: management client and embedded server port configuration match."
@@ -45,7 +45,7 @@ foreach ($route in $requiredRoutes) {
 Write-Host ("PASS: all {0} required management API routes are present." -f $requiredRoutes.Count)
 
 # Parse each inline viewer script with Node.js to catch syntax errors before packaging.
-$scripts = [regex]::Matches($html, '(?is)<script\\b[^>]*>(.*?)</script>')
+$scripts = [regex]::Matches($html, '(?is)<script\b[^>]*>(.*?)</script>')
 if ($scripts.Count -eq 0) { throw "No inline viewer scripts were found." }
 $index = 0
 foreach ($match in $scripts) {
