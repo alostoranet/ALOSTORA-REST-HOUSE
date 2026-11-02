@@ -49,6 +49,38 @@ public partial class MainWindow : Window
         await LoadMissingEpisodesAsync();
     }
 
+    private async void AddVideoFiles_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختر ملفات الفيديو التي تريد إضافتها إلى المكتبة",
+            Filter = "ملفات الفيديو المدعومة|*.mp4;*.m4v;*.mkv;*.avi;*.mov;*.webm;*.ts;*.m2ts;*.mts;*.flv;*.wmv;*.mpg;*.mpeg;*.3gp",
+            CheckFileExists = true,
+            Multiselect = true
+        };
+        if (dialog.ShowDialog(this) != true) return;
+
+        try
+        {
+            StatusText.Text = $"جارٍ إضافة {dialog.FileNames.Length} ملف فيديو...";
+            var response = await _http.PostAsJsonAsync("/api/admin/register-files", new { filePaths = dialog.FileNames });
+            if (!response.IsSuccessStatusCode)
+            {
+                StatusText.Text = "تعذرت إضافة ملفات الفيديو: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<RegisterFilesResult>();
+            await LoadVideosAsync();
+            await LoadMissingEpisodesAsync();
+            StatusText.Text = $"تمت إضافة {result?.VideoCount ?? dialog.FileNames.Length} ملف فيديو إلى المكتبة بنجاح.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "تعذرت إضافة ملفات الفيديو: " + ex.Message;
+        }
+    }
+
     private async void AddExternalMediaFolder_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFolderDialog
@@ -414,6 +446,19 @@ public partial class MainWindow : Window
         catch (Exception ex) { CategoryStatusText.Text = "تعذر تحميل الأقسام: " + ex.Message; }
     }
 
+    private void NewCategory_Click(object sender, RoutedEventArgs e)
+    {
+        CategoriesGrid.UnselectAll();
+        CategoryIdBox.Clear();
+        CategoryTitleBox.Clear();
+        CategoryParentPicker.SelectedIndex = -1;
+        CategoryKindPicker.SelectedIndex = 0;
+        CategoryPosterPathBox.Clear();
+        CategoryPublishBox.IsChecked = false;
+        CategoryPosterStatusText.Text = "اختر غلافاً بعد حفظ القسم، ثم فعّل النشر.";
+        CategoryStatusText.Text = "نموذج قسم جديد. اكتب الاسم واختر نوع القسم.";
+    }
+
     private void CategoriesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (CategoriesGrid.SelectedItem is not CategoryAdmin row) return;
@@ -628,6 +673,31 @@ public partial class MainWindow : Window
             if (SeriesPicker.SelectedItem is null) { SeasonsGrid.ItemsSource = null; if (rows.Length == 0) SeriesStatusText.Text = "لا توجد مسلسلات محفوظة بعد. حدد ملفاً مصنفاً كمسلسل من قائمة الفيديو ثم اضغط «إنشاء مسلسل من الفيديو المحدد»."; }
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر تحميل المسلسلات: " + ex.Message; }
+    }
+
+    private void NewSeries_Click(object sender, RoutedEventArgs e)
+    {
+        SeriesPicker.SelectedIndex = -1;
+        SeriesIdBox.Clear();
+        SeriesTitleBox.Clear();
+        SeriesDescriptionBox.Clear();
+        SeriesYearBox.Clear();
+        SeriesGenreBox.Clear();
+        SeriesSectionBox.Text = "عام";
+        SeriesCategoryPicker.SelectedIndex = -1;
+        SeriesPublishBox.IsChecked = false;
+        SeriesPosterPathBox.Clear();
+        SeriesFolderPathBox.Clear();
+        SeasonsGrid.ItemsSource = null;
+        SeasonTitleBox.Clear();
+        SeasonNumberBox.Text = "1";
+        SeasonFolderPathBox.Clear();
+        EpisodeVideoPicker.SelectedIndex = -1;
+        EpisodeTitleBox.Clear();
+        EpisodeNumberBox.Text = "1";
+        _episodeCandidates.Clear();
+        MissingEpisodesGrid.SelectedIndex = -1;
+        SeriesStatusText.Text = "نموذج مسلسل جديد. أدخل بياناته واحفظه أولاً.";
     }
 
     private async void CreateSeriesFromVideo_Click(object sender, RoutedEventArgs e)
@@ -1173,6 +1243,7 @@ public partial class MainWindow : Window
         public string Status { get; set; } = "";
     }
     private sealed class FolderScanResult { public bool Registered { get; set; } public int VideoCount { get; set; } }
+    private sealed class RegisterFilesResult { public bool Registered { get; set; } public int VideoCount { get; set; } public string? Message { get; set; } }
     private sealed class CategoryAdmin
     {
         public string CategoryId { get; set; } = "";
@@ -1235,12 +1306,12 @@ public sealed class FolderVideoSelectionWindow : Window
             FullPath = x.FullPath,
             FileName = x.FileName,
             SizeText = FormatSize(x.SizeBytes),
-            Selected = false
+            Selected = true
         }));
 
         var root = new DockPanel { Margin = new Thickness(16) };
         var header = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
-        header.Children.Add(new TextBlock { Text = "اختر الفيديوهات التي تريد إدخالها إلى المكتبة", FontSize = 19, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(20,45,74)) });
+        header.Children.Add(new TextBlock { Text = "تم تحديد جميع الفيديوهات تلقائياً. ألغِ تحديد ما لا تريد إضافته.", FontSize = 19, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(20,45,74)) });
         header.Children.Add(new TextBlock { Text = folderPath, TextWrapping = TextWrapping.Wrap, Foreground = System.Windows.Media.Brushes.DimGray, Margin = new Thickness(0,6,0,8) });
         var selectionButtons = new StackPanel { Orientation = Orientation.Horizontal };
         var allButton = new Button { Content = "تحديد الكل", Padding = new Thickness(12,6,12,6), Margin = new Thickness(0,0,6,0) };
