@@ -17,7 +17,7 @@ public sealed record RegisterSelectedFilesRequest(string FolderPath, List<string
 public sealed record RegisterFilesRequest(List<string> FilePaths);
 public sealed record DetectedEpisodeLink(string VideoId, int EpisodeNumber, string? Title, bool Selected);
 public sealed record LinkDetectedEpisodesRequest(List<DetectedEpisodeLink> Episodes);
-public sealed record RelinkEpisodeRequest(string VideoId);
+public sealed record RelinkEpisodeRequest(string VideoId);\npublic sealed record UpdateEpisodeRequest(int EpisodeNumber, string? Title);
 public sealed record PreparePlaybackRequest(int? AudioStreamIndex);
 
 public partial class App : Application
@@ -320,6 +320,24 @@ public partial class App : Application
     if(!IsLocal(c)) return Results.NotFound();
     if(request.SeasonId<1||request.EpisodeNumber<1||request.EpisodeNumber>10000||string.IsNullOrWhiteSpace(request.VideoId)||files.Resolve(request.VideoId) is null||(request.Title?.Length??0)>160) return Results.BadRequest(new{error="بيانات الحلقة غير صحيحة أو ملف الفيديو غير موجود"});
     try { var id=series.AddEpisode(request); return Results.Ok(new{episodeId=id}); } catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="الموسم غير موجود أو الملف مربوط بحلقة أخرى أو رقم الحلقة مكرر"}); }
+   });
+   _server.MapGet("/api/admin/seasons/{seasonId:long}/episodes",(HttpContext c,long seasonId,SeriesCatalogService series)=>{
+    if(!IsLocal(c)) return Results.NotFound();
+    if(series.GetSeason(seasonId) is null) return Results.NotFound(new{error="الموسم غير موجود"});
+    return Results.Ok(series.ListEpisodes(seasonId));
+   });
+   _server.MapPut("/api/admin/episodes/{episodeId:long}",(HttpContext c,long episodeId,UpdateEpisodeRequest request,SeriesCatalogService series)=>{
+    if(!IsLocal(c)) return Results.NotFound();
+    if(request.EpisodeNumber<1||request.EpisodeNumber>10000||(request.Title?.Length??0)>160)
+     return Results.BadRequest(new{error="رقم الحلقة أو اسمها غير صالح"});
+    try { series.UpdateEpisode(episodeId,request.EpisodeNumber,request.Title); return Results.Ok(new{updated=true}); }
+    catch(KeyNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
+    catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="رقم الحلقة مستخدم بالفعل في هذا الموسم"}); }
+   });
+   _server.MapDelete("/api/admin/episodes/{episodeId:long}",(HttpContext c,long episodeId,SeriesCatalogService series)=>{
+    if(!IsLocal(c)) return Results.NotFound();
+    try { var videoId=series.UnlinkEpisode(episodeId); return Results.Ok(new{unlinked=true,videoId,message="تم فك ربط الحلقة فقط، ولم يتم حذف ملف الفيديو"}); }
+    catch(KeyNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
    });
    _server.MapGet("/api/admin/missing-episodes",(HttpContext c,SeriesCatalogService series,LibraryService files)=>
     IsLocal(c)?Results.Ok(series.ListMissingEpisodes(files)):Results.NotFound());
