@@ -977,6 +977,13 @@ private void OpenVideoDetails_Click(object sender, RoutedEventArgs e)
             VideoMainCategoryPicker.SelectedValue = category?.ParentId;
             RefreshVideoCategoryPicker(selectedSeries.CategoryId);
         }
+        else
+        {
+            // إلغاء الربط الاختياري يعيد الملف إلى نوع فيلم مستقل ويزيل رقم الحلقة السابق.
+            KindBox.SelectedIndex = 0;
+            VideoEpisodeNumberBox.Clear();
+            VideoEpisodeTitleBox.Clear();
+        }
         await LoadVideoSeasonsForLinkAsync(seriesId);
     }
 
