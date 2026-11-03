@@ -260,20 +260,51 @@ async function startTranscodedPlayback(item,audioIndex,generation,saved){
 async function play(item){
  if(!item||!item.id||!item.url)return;
  navigateCatalog({type:'player',title:item.title});
- const playerSection=document.querySelector('#playerSection');playerSection.style.display='block';document.querySelector('#nowPlayingTitle').textContent='يتم تشغيل: '+(item.title||'الفيديو المحدد');playerSection.scrollIntoView({behavior:'smooth',block:'start'});
+ const playerSection=document.querySelector('#playerSection');
+ playerSection.hidden=false;playerSection.style.display='block';
+ document.querySelector('#nowPlayingTitle').textContent='يتم تشغيل: '+(item.title||'الفيديو المحدد');
+ playerSection.scrollIntoView({behavior:'smooth',block:'start'});
  const generation=++playbackGeneration,previous=activeVideo;
- player.dataset.transcodeAttempted='0';player.onerror=null;
- player.pause();if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
- if(previous)await saveProgress(previous,false);
- if(generation!==playbackGeneration)return;
- activeVideo=null;loadedVideoId=null;player.onloadedmetadata=null;
+ player.dataset.transcodeAttempted='0';
+ if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
+ const previousSave=previous?saveProgress(previous,false):Promise.resolve();
+ player.pause();activeVideo=null;loadedVideoId=null;
  const audioControls=document.querySelector('#audioControls'),audioSelect=document.querySelector('#audioTrack'),hint=document.querySelector('#playbackHint');
- audioControls.hidden=true;audioSelect.replaceChildren();hint.textContent='جارٍ فحص مسارات الصوت...';
+ audioControls.hidden=true;audioSelect.replaceChildren();hint.textContent='بدأ طلب تشغيل الفيديو، جارٍ فحص الصوت والترجمة...';
+ let mediaFailedEarly=false;
+ player.onerror=()=>{mediaFailedEarly=true;};
+ player.onloadedmetadata=()=>{if(generation===playbackGeneration){loadedVideoId=item.id;activeVideo={id:item.id};}};
+ // Start the media request and play attempt synchronously inside the episode click.
+ // Network lookups for progress, subtitles and audio tracks happen only after this.
+ player.src=item.url;player.load();
+ const immediatePlay=player.play();
+ if(immediatePlay&&typeof immediatePlay.catch==='function')
+  immediatePlay.catch(()=>{if(generation===playbackGeneration)hint.textContent='إذا لم يبدأ التشغيل تلقائياً، اضغط زر التشغيل في المشغل.';});
+
  let saved=null,subtitleTracks=[],probe=null;
- try{const r=await fetch('/api/progress/'+encodeURIComponent(viewerId));if(r.ok){const rows=await r.json();saved=rows.find(x=>x.videoId===item.id)||null;}}catch{}
- try{const sr=await fetch('/api/subtitles/'+encodeURIComponent(item.id));if(sr.ok)subtitleTracks=await sr.json();}catch{}
- try{const ar=await fetch('/api/playback/'+encodeURIComponent(item.id)+'/tracks');if(ar.ok)probe=await ar.json();}catch{}
+ const requests=await Promise.all([
+  fetch('/api/progress/'+encodeURIComponent(viewerId)).catch(()=>null),
+  fetch('/api/subtitles/'+encodeURIComponent(item.id)).catch(()=>null),
+  fetch('/api/playback/'+encodeURIComponent(item.id)+'/tracks').catch(()=>null),
+  previousSave.catch(()=>null)
+ ]);
+ if(requests[0]?.ok){try{const rows=await requests[0].json();saved=rows.find(x=>x.videoId===item.id)||null;}catch{}}
+ if(requests[1]?.ok){try{subtitleTracks=await requests[1].json();}catch{}}
+ if(requests[2]?.ok){try{probe=await requests[2].json();}catch{}}
  if(generation!==playbackGeneration)return;
+
+ const restorePlayback=()=>{
+  if(generation!==playbackGeneration)return;
+  loadedVideoId=item.id;activeVideo={id:item.id};
+  if(saved&&Number.isFinite(saved.positionSeconds)&&saved.positionSeconds>5&&Number.isFinite(player.duration)&&player.duration>0&&saved.positionSeconds<player.duration-10)
+   player.currentTime=saved.positionSeconds;
+ };
+ if(player.readyState>=1)restorePlayback();
+ else{
+  const earlier=player.onloadedmetadata;
+  player.onloadedmetadata=()=>{if(typeof earlier==='function')earlier();restorePlayback();};
+ }
+
  if(probe?.available&&probe?.success&&Array.isArray(probe.embeddedSubtitles)){
   for(const sub of probe.embeddedSubtitles){
    const lang=(sub.language||'und').toLowerCase();
@@ -293,13 +324,19 @@ async function play(item){
  }
  if(probe?.needsConversion){
   if(!probe.available||!probe.success){hint.textContent='هذا الملف يحتاج إلى تحويل للتشغيل، لكن محرك FFmpeg غير جاهز: '+(probe.message||'راجع إعدادات FFmpeg في لوحة الإدارة.');return;}
+  player.onerror=null;player.pause();
   try{await startTranscodedPlayback(item,selectedDefault?.index??null,generation,saved);}catch(ex){hint.textContent='تعذر تجهيز الفيديو: '+ex.message;}
   return;
  }
  hint.textContent=tracks.length>1?'يمكنك اختيار مسار صوتي آخر ثم الضغط على «تشغيل بالصوت المحدد».':'تشغيل مباشر دون تحويل.';
- player.onloadedmetadata=()=>{if(generation!==playbackGeneration)return;loadedVideoId=item.id;activeVideo={id:item.id};if(saved&&Number.isFinite(saved.positionSeconds)&&saved.positionSeconds>5&&Number.isFinite(player.duration)&&player.duration>0&&saved.positionSeconds<player.duration-10)player.currentTime=saved.positionSeconds;player.play().catch(()=>{hint.textContent='اضغط زر التشغيل في مشغل الفيديو لبدء المشاهدة.';});};
- player.onerror=async()=>{if(generation!==playbackGeneration||player.dataset.transcodeAttempted==='1')return;if(!probe?.available||!probe?.success){hint.textContent='المتصفح لم يستطع تشغيل ترميز هذا الملف، ومحرك التحويل غير متاح. جهّز FFmpeg من لوحة الإدارة لإتاحة التحويل التلقائي.';return;}player.dataset.transcodeAttempted='1';try{hint.textContent='المتصفح لا يدعم ترميز هذا الملف مباشرة. جارٍ تحويله تلقائياً...';await startTranscodedPlayback(item,selectedDefault?.index??null,generation,saved);}catch(ex){hint.textContent='تعذر تشغيل ترميز الفيديو: '+ex.message;}};
- player.src=item.url;player.load();
+ player.onerror=async()=>{
+  if(generation!==playbackGeneration||player.dataset.transcodeAttempted==='1')return;
+  if(!probe?.available||!probe?.success){hint.textContent='المتصفح لم يستطع تشغيل ترميز هذا الملف، ومحرك التحويل غير متاح. جهّز FFmpeg من لوحة الإدارة لإتاحة التحويل التلقائي.';return;}
+  player.dataset.transcodeAttempted='1';
+  try{hint.textContent='المتصفح لا يدعم ترميز هذا الملف مباشرة. جارٍ تحويله تلقائياً...';await startTranscodedPlayback(item,selectedDefault?.index??null,generation,saved);}
+  catch(ex){hint.textContent='تعذر تشغيل ترميز الفيديو: '+ex.message;}
+ };
+ if(mediaFailedEarly||player.error)player.onerror();
 }
 document.querySelector('#applyAudio').addEventListener('click',async()=>{
  if(!activeVideo)return;
