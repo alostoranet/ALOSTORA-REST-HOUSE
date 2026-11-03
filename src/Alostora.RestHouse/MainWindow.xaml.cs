@@ -873,6 +873,88 @@ private void OpenLibraryFolder_Click(object sender, RoutedEventArgs e)
         }
     }
 
+    private async void CopyVideosToSelectedFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = GetSelectedVideos();
+        if (selected.Length == 0)
+        {
+            StatusText.Text = "حدد فيديو واحداً أو أكثر من قائمة المكتبة أولاً.";
+            return;
+        }
+
+        var destination = Path.GetFullPath(_selectedFolderPath ?? _library);
+        if (!Directory.Exists(destination))
+        {
+            StatusText.Text = "المجلد الهدف غير موجود. أنشئ المجلد أو حدده مرة أخرى.";
+            return;
+        }
+
+        var confirm = MessageBox.Show(
+            $"سيتم نسخ {selected.Length} ملف فيديو إلى المجلد المحدد دون نقل الملفات الأصلية أو استبدال أي ملف موجود. هل تريد المتابعة؟",
+            "تأكيد نسخ ملفات الفيديو",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+        if (confirm != MessageBoxResult.Yes) return;
+
+        try
+        {
+            StatusText.Text = $"جارٍ نسخ {selected.Length} ملف فيديو إلى: {destination}";
+            var result = await System.Threading.Tasks.Task.Run(() =>
+            {
+                var copied = 0;
+                var skipped = 0;
+                var errors = new List<string>();
+                foreach (var video in selected)
+                {
+                    try
+                    {
+                        if (string.IsNullOrWhiteSpace(video.FolderPath) ||
+                            string.IsNullOrWhiteSpace(video.FileName))
+                        {
+                            skipped++;
+                            continue;
+                        }
+
+                        var source = Path.GetFullPath(Path.Combine(video.FolderPath, video.FileName));
+                        var target = Path.GetFullPath(Path.Combine(destination, Path.GetFileName(video.FileName)));
+                        if (!File.Exists(source) ||
+                            string.Equals(source, target, StringComparison.OrdinalIgnoreCase) ||
+                            File.Exists(target))
+                        {
+                            skipped++;
+                            continue;
+                        }
+
+                        File.Copy(source, target, overwrite: false);
+                        copied++;
+                    }
+                    catch (Exception ex)
+                    {
+                        errors.Add($"{video.FileName}: {ex.Message}");
+                    }
+                }
+                return (Copied: copied, Skipped: skipped, Errors: errors);
+            });
+
+            await LoadVideosAsync();
+            await LoadLibraryFoldersAsync();
+            StatusText.Text = $"اكتمل النسخ: {result.Copied} ملف. تم تجاوز {result.Skipped} ملف (موجود مسبقاً أو غير متاح).";
+            if (result.Errors.Count > 0)
+            {
+                var details = string.Join(Environment.NewLine, result.Errors.Take(8));
+                MessageBox.Show(
+                    $"تم نسخ {result.Copied} ملف، وتعذر نسخ {result.Errors.Count} ملف:\n\n{details}",
+                    "نتيجة نسخ الفيديوهات",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "تعذر نسخ ملفات الفيديو: " + ex.Message;
+        }
+    }
+
         private async void CreateLibraryFolder_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new Window
