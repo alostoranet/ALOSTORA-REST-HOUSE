@@ -228,7 +228,8 @@ public partial class App : Application
      var resolvedVideo=svc.Resolve(v.Id);
      var addedUtc=resolvedVideo is null?null:File.GetCreationTimeUtc(resolvedVideo.FullPath).ToString("O");
      var folderPath=resolvedVideo is null?string.Empty:(Path.GetDirectoryName(resolvedVideo.FullPath)??string.Empty);
-     var folderName=string.IsNullOrWhiteSpace(folderPath)?"مجلد غير معروف":(Path.GetFileName(folderPath.TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar)) is { Length: > 0 } name?name:folderPath);
+     var folderName=string.IsNullOrWhiteSpace(folderPath)?"مجلد غير معروف":Path.GetFileName(folderPath.TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar));
+     if(string.IsNullOrWhiteSpace(folderName))folderName=folderPath;
      var folderId=string.IsNullOrWhiteSpace(folderPath)?"root":Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(folderPath)))[..16];
      var posterPath=m?.PosterPath;
      if(string.IsNullOrWhiteSpace(posterPath))
