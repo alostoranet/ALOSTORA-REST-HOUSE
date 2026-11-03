@@ -52,7 +52,7 @@ public sealed class CatalogCategoryServiceTests : IDisposable
 
 
     [Fact]
-    public void DeletingMainCategoryRemovesChildCatalogRecordsButKeepsOriginalVideoFile()
+    public void DeletingMainCategoryRemovesCategoryTreeAndUnpublishesLinkedContentWithoutDeletingMedia()
     {
         const string videoId = "0123456789abcdef01234567";
         var mainId = "main-" + Guid.NewGuid().ToString("N");
@@ -72,8 +72,13 @@ public sealed class CatalogCategoryServiceTests : IDisposable
         _categories.Delete(mainId);
 
         Assert.Empty(_categories.List());
-        Assert.Empty(series.ListSeries());
-        Assert.Null(metadata.Get(videoId));
+        var savedSeries = Assert.Single(series.ListSeries());
+        Assert.Null(savedSeries.CategoryId);
+        Assert.False(savedSeries.IsPublished);
+        var savedVideo = metadata.Get(videoId);
+        Assert.NotNull(savedVideo);
+        Assert.Null(savedVideo.CategoryId);
+        Assert.False(savedVideo.IsPublished);
         Assert.True(File.Exists(videoPath));
     }
 
