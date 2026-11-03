@@ -27,6 +27,8 @@ public partial class MainWindow : Window
     private string? _pendingSeriesPosterPath;
     private readonly HttpClient _http = new() { BaseAddress = new Uri("http://127.0.0.1:8096") };
     private readonly ObservableCollection<AdminVideo> _videos = new();
+    private ICollectionView? _videosView;
+    private string? _selectedVideoFolderId;
     private readonly ObservableCollection<EpisodeCandidate> _episodeCandidates = new();
     private CategoryAdmin[] _categories = Array.Empty<CategoryAdmin>();
     private bool _suppressCustomerMessagePopup;
@@ -45,12 +47,50 @@ public partial class MainWindow : Window
         MediaFolderBox.Text = library;
         PostersFolderBox.Text = posters;
         AddressBox.Text = $"رابط المشاهدة: http://{GetLanAddress()}:8096";
-        VideosGrid.ItemsSource = _videos;
+        _videosView = CollectionViewSource.GetDefaultView(_videos);
+        _videosView.Filter = FilterVideosByFolder;
+        VideosGrid.ItemsSource = _videosView;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
         Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); };
         _messageRefreshTimer.Tick += async (_, _) => await LoadCustomerMessagesAsync();
         _messageRefreshTimer.Start();
         Closed += (_, _) => _messageRefreshTimer.Stop();
+    }
+
+    private bool FilterVideosByFolder(object item) =>
+        item is AdminVideo video &&
+        (string.IsNullOrWhiteSpace(_selectedVideoFolderId) ||
+         string.Equals(video.FolderId, _selectedVideoFolderId, StringComparison.Ordinal));
+
+    private void RefreshVideoFoldersTree()
+    {
+        if (VideoFoldersTree is null) return;
+        VideoFoldersTree.Items.Clear();
+        var all = new TreeViewItem { Header = $"كل المجلدات ({_videos.Count})", Tag = null, IsSelected = true };
+        VideoFoldersTree.Items.Add(all);
+        var groups = _videos
+            .GroupBy(x => new { x.FolderId, x.FolderName })
+            .OrderBy(x => x.Key.FolderName, StringComparer.CurrentCultureIgnoreCase);
+        foreach (var group in groups)
+        {
+            var folder = new TreeViewItem
+            {
+                Header = $"{group.Key.FolderName} ({group.Count()})",
+                Tag = group.Key.FolderId
+            };
+            VideoFoldersTree.Items.Add(folder);
+        }
+        _selectedVideoFolderId = null;
+        _videosView?.Refresh();
+    }
+
+    private void VideoFoldersTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+    {
+        if (VideoFoldersTree.SelectedItem is TreeViewItem selected)
+            _selectedVideoFolderId = selected.Tag as string;
+        else
+            _selectedVideoFolderId = null;
+        _videosView?.Refresh();
     }
 
     private async void RefreshLibrary_Click(object sender, RoutedEventArgs e)
@@ -755,6 +795,7 @@ public partial class MainWindow : Window
                 _videos.Add(item);
             }
             EpisodeVideoPicker.ItemsSource = _videos;
+            RefreshVideoFoldersTree();
             CountText.Text = $"عدد ملفات الفيديو: {_videos.Count}";
             var incomplete = _videos.Count(x => !x.MetadataSaved);
             StatusText.Text = incomplete == 0
@@ -1981,6 +2022,8 @@ public partial class MainWindow : Window
     {
         public string Id { get; set; } = "";
         public string? Title { get; set; }
+        public string? FolderId { get; set; }
+        public string FolderName { get; set; } = "المكتبة";
         public string? Description { get; set; }
         public int? Year { get; set; }
         public string? Genre { get; set; }
