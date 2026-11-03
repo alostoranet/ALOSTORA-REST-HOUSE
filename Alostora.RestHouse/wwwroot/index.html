@@ -280,7 +280,7 @@ async function play(item){
  player.pause();activeVideo=null;loadedVideoId=null;
  const audioControls=document.querySelector('#audioControls'),audioSelect=document.querySelector('#audioTrack'),hint=document.querySelector('#playbackHint');
  audioControls.hidden=true;audioSelect.replaceChildren();hint.textContent='بدأ طلب تشغيل الفيديو، جارٍ فحص الصوت والترجمة...';
- let mediaFailedEarly=false;
+ let mediaFailedEarly=false,immediatePlayRejected=false;
  player.onerror=()=>{mediaFailedEarly=true;};
  player.onloadedmetadata=()=>{if(generation===playbackGeneration){loadedVideoId=item.id;activeVideo={id:item.id};}};
  // Start the media request and play attempt synchronously inside the episode click.
@@ -288,7 +288,7 @@ async function play(item){
  player.src=item.url;player.load();
  const immediatePlay=player.play();
  if(immediatePlay&&typeof immediatePlay.catch==='function')
-  immediatePlay.catch(()=>{if(generation===playbackGeneration)hint.textContent='إذا لم يبدأ التشغيل تلقائياً، اضغط زر التشغيل في المشغل.';});
+  immediatePlay.catch(()=>{immediatePlayRejected=true;if(generation===playbackGeneration)hint.textContent='إذا لم يبدأ التشغيل تلقائياً، اضغط زر التشغيل في المشغل.';});
 
  let saved=null,subtitleTracks=[],probe=null;
  const requests=await Promise.all([
@@ -337,7 +337,7 @@ async function play(item){
   try{await startTranscodedPlayback(item,selectedDefault?.index??null,generation,saved);}catch(ex){hint.textContent='تعذر تجهيز الفيديو: '+ex.message;}
   return;
  }
- hint.textContent=tracks.length>1?'يمكنك اختيار مسار صوتي آخر ثم الضغط على «تشغيل بالصوت المحدد».':'تشغيل مباشر دون تحويل.';
+ hint.textContent=immediatePlayRejected?'اضغط زر التشغيل في المشغل لبدء المشاهدة.':(tracks.length>1?'يمكنك اختيار مسار صوتي آخر ثم الضغط على «تشغيل بالصوت المحدد».':'تشغيل مباشر دون تحويل.');
  player.onerror=async()=>{
   if(generation!==playbackGeneration||player.dataset.transcodeAttempted==='1')return;
   if(!probe?.available||!probe?.success){hint.textContent='المتصفح لم يستطع تشغيل ترميز هذا الملف، ومحرك التحويل غير متاح. جهّز FFmpeg من لوحة الإدارة لإتاحة التحويل التلقائي.';return;}
