@@ -731,9 +731,14 @@ public partial class MainWindow : Window
         var id = isNew ? Guid.NewGuid().ToString("N") : CategoryIdBox.Text.Trim();
         try
         {
-            var response = await _http.PostAsJsonAsync("/api/admin/catalog-categories", new { categoryId = id, parentId, title, contentKind = kind, posterPath = string.IsNullOrWhiteSpace(CategoryPosterPathBox.Text) ? null : CategoryPosterPathBox.Text.Trim(), isPublished = CategoryPublishBox.IsChecked == true });
+            var response = await _http.PostAsJsonAsync("/api/admin/catalog-categories", new { categoryId = id, parentId, title, contentKind = kind, posterPath = _pendingCategoryPosterPath is not null || string.IsNullOrWhiteSpace(CategoryPosterPathBox.Text) ? null : CategoryPosterPathBox.Text.Trim(), isPublished = CategoryPublishBox.IsChecked == true });
             if (!response.IsSuccessStatusCode) { CategoryStatusText.Text = "تعذر حفظ القسم: " + await response.Content.ReadAsStringAsync(); return; }
             CategoryIdBox.Text = id;
+            if (!string.IsNullOrWhiteSpace(_pendingCategoryPosterPath))
+            {
+                var pendingPoster = _pendingCategoryPosterPath;
+                if (!await UploadCategoryPosterFileAsync(id, pendingPoster)) return;
+            }
             await LoadCategoriesAsync();
             CategoriesGrid.SelectedItem = (CategoriesGrid.ItemsSource as CategoryAdmin[])?.FirstOrDefault(x => x.CategoryId == id);
             var typeName = kind == "Group" ? "القسم الرئيسي" : "القسم الفرعي";
