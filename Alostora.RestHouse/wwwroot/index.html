@@ -106,11 +106,14 @@ function catalogSectionTitle(text){const h=document.createElement('h2');h.classN
 function catalogEmpty(text){const p=document.createElement('p');p.className='catalog-empty';p.textContent=text;return p;}
 function navigateCatalog(page,push=true){
  if(push)catalogStack.push(catalogPage);
- catalogPage=page;renderCatalogPage();window.scrollTo({top:0,behavior:'instant'});
+ catalogPage=page;renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});
 }
 function goCatalogBack(){
  if(!catalogStack.length)return;
- catalogPage=catalogStack.pop();renderCatalogPage();window.scrollTo({top:0,behavior:'instant'});
+ if(catalogPage.type==='player'){
+  flushProgress();player.pause();player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;
+ }
+ catalogPage=catalogStack.pop();renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});
 }
 function renderCatalogPage(){
  const content=document.querySelector('#catalogContent'),back=document.querySelector('#catalogBack'),crumb=document.querySelector('#catalogBreadcrumb');
@@ -125,7 +128,7 @@ function renderCatalogPage(){
  back.hidden=pageType==='home'||catalogStack.length===0;
  back.textContent='رجوع';
  const titles={home:'الرئيسية',main:'الأقسام الداخلية',category:'المحتوى',series:'تفاصيل البرنامج',season:'الحلقات',player:'المشاهدة الآن'};
- crumb.textContent=titles[pageType]||'المكتبة';
+ crumb.textContent=catalogStack.map(x=>x.title||titles[x.type]||'').concat(catalogPage.title||titles[pageType]||'المكتبة').filter(Boolean).join('  /  ');
  const query=(document.querySelector('#search')?.value||'').trim().toLocaleLowerCase('ar');
  const collection=document.querySelector('#collection')?.value||'';
  const sort=document.querySelector('#sort')?.value||'title';
