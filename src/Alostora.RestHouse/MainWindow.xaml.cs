@@ -672,8 +672,12 @@ public partial class MainWindow : Window
                 return (Copied: copied, Skipped: skipped, Errors: errors);
             });
 
+            var refreshResponse = await _http.PostAsJsonAsync("/api/admin/scan-folder", new { folderPath = destination });
             await LoadVideosAsync();
-            StatusText.Text = $"اكتمل النسخ: {result.Copied} ملف. تم تجاوز {result.Skipped} ملف.";
+            if (!refreshResponse.IsSuccessStatusCode)
+                StatusText.Text = "تم النسخ، لكن تعذر تحديث فهرس المكتبة تلقائياً: " + await refreshResponse.Content.ReadAsStringAsync();
+            else
+                StatusText.Text = $"اكتمل النسخ: {result.Copied} ملف. تم تجاوز {result.Skipped} ملف.";
             if (result.Errors.Count > 0)
                 MessageBox.Show($"تم نسخ {result.Copied} ملف، وتعذر نسخ {result.Errors.Count} ملف:\n\n{string.Join(Environment.NewLine, result.Errors.Take(8))}",
                     "نتيجة نسخ الفيديوهات", MessageBoxButton.OK, MessageBoxImage.Warning);
