@@ -40,6 +40,8 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<EpisodeCandidate> _episodeCandidates = new();
     private CategoryAdmin[] _categories = Array.Empty<CategoryAdmin>();
     private bool _suppressCustomerMessagePopup;
+    private readonly HashSet<long> _knownCustomerMessageIds = new();
+    private bool _customerMessagesInitialized;
     private bool _suppressVideoSeriesPickerEvent;
     private readonly DispatcherTimer _messageRefreshTimer = new() { Interval = TimeSpan.FromSeconds(30) };
 
@@ -1615,11 +1617,21 @@ public partial class MainWindow : Window
             var seasonFolder = string.IsNullOrWhiteSpace(SeasonFolderPathBox.Text) ? null : Path.GetFullPath(SeasonFolderPathBox.Text.Trim());
             if (seasonFolder is not null && !Directory.Exists(seasonFolder)) { SeriesStatusText.Text = "مجلد الموسم المحدد غير موجود."; return; }
             var response = await _http.PostAsJsonAsync("/api/admin/seasons", new { seriesId = SeriesIdBox.Text.Trim(), seasonNumber = number, title = SeasonTitleBox.Text, folderPath = seasonFolder });
-            if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "لم تتم إضافة الموسم. ربما رقم الموسم مكرر."; return; }
-            SeasonTitleBox.Clear(); SeasonFolderPathBox.Clear(); SeasonNumberBox.Text = (number + 1).ToString();
-            await LoadSeasonsAsync(SeriesIdBox.Text.Trim());
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = await response.Content.ReadAsStringAsync();
+                SeriesStatusText.Text = "لم تتم إضافة الموسم: " + detail;
+                return;
+            }
+            var seriesId = SeriesIdBox.Text.Trim();
+            SeasonTitleBox.Clear();
+            SeasonFolderPathBox.Clear();
+            SeasonNumberBox.Text = (number + 1).ToString();
+            await LoadSeasonsAsync(seriesId);
+            var addedSeason = (SeasonsGrid.ItemsSource as SeasonAdmin[])?.FirstOrDefault(x => x.SeasonNumber == number);
+            if (addedSeason is not null) SeasonsGrid.SelectedItem = addedSeason;
             await LoadVideosAsync();
-            SeriesStatusText.Text = "تمت إضافة الموسم بنجاح.";
+            SeriesStatusText.Text = $"تمت إضافة {( (SeriesStructureBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Parts" ? "الجزء" : "الموسم")} رقم {number} بنجاح. أصبح محدداً الآن ويمكنك إضافة الحلقات إليه.";
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر إضافة الموسم: " + ex.Message; }
     }
@@ -1990,12 +2002,89 @@ public partial class MainWindow : Window
         return "عنوان الشبكة غير معروف";
     }
 
+    private void DashboardCard_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement element ||
+            !int.TryParse(element.Tag?.ToString(), out var tabIndex) ||
+            tabIndex < 1 || tabIndex >= MainNavigationTabs.Items.Count)
+            return;
+
+        MainNavigationTabs.SelectedIndex = tabIndex;
+        e.Handled = true;
+    }
+
+    private void ShowNewCustomerMessageToast(CustomerMessageAdmin message, int count)
+    {
+        var toast = new Window
+        {
+            Title = "رسالة جديدة من عميل",
+            Width = 370,
+            Height = 142,
+            WindowStyle = WindowStyle.None,
+            ResizeMode = ResizeMode.NoResize,
+            ShowInTaskbar = false,
+            Topmost = true,
+            Owner = this,
+            WindowStartupLocation = WindowStartupLocation.Manual,
+            Left = SystemParameters.WorkArea.Right - 390,
+            Top = SystemParameters.WorkArea.Top + 18,
+            FlowDirection = FlowDirection.RightToLeft,
+            Background = System.Windows.Media.Brushes.Transparent,
+            AllowsTransparency = true
+        };
+
+        var panel = new StackPanel { Margin = new Thickness(16) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = count > 1 ? $"وصلت {count} رسائل جديدة من العملاء" : "وصلت رسالة جديدة من عميل",
+            FontSize = 16,
+            FontWeight = FontWeights.Bold,
+            Foreground = System.Windows.Media.Brushes.White
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"{message.Category} — {message.Title}",
+            FontSize = 13,
+            Foreground = System.Windows.Media.Brushes.White,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 7, 0, 0)
+        });
+        var card = new Border
+        {
+            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(20, 45, 74)),
+            BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(201, 54, 64)),
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(12),
+            Child = panel,
+            Cursor = System.Windows.Input.Cursors.Hand
+        };
+        card.MouseLeftButtonUp += (_, _) =>
+        {
+            MainNavigationTabs.SelectedIndex = 4;
+            toast.Close();
+            ShowCustomerMessagePopup(message);
+        };
+        toast.Content = card;
+        toast.Show();
+
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
+        timer.Tick += (_, _) => { timer.Stop(); if (toast.IsVisible) toast.Close(); };
+        timer.Start();
+    }
+
     private async System.Threading.Tasks.Task LoadCustomerMessagesAsync()
     {
         try
         {
             var selectedId = (CustomerMessagesGrid.SelectedItem as CustomerMessageAdmin)?.Id;
             var rows = await _http.GetFromJsonAsync<CustomerMessageAdmin[]>("/api/admin/messages") ?? Array.Empty<CustomerMessageAdmin>();
+            var newlyArrived = _customerMessagesInitialized
+                ? rows.Where(x => x.Status == "جديد" && !_knownCustomerMessageIds.Contains(x.Id))
+                    .OrderBy(x => x.Id).ToArray()
+                : Array.Empty<CustomerMessageAdmin>();
+            foreach (var row in rows) _knownCustomerMessageIds.Add(row.Id);
+            _customerMessagesInitialized = true;
+
             _suppressCustomerMessagePopup = true;
             CustomerMessagesGrid.ItemsSource = rows;
             LogoReportsGrid.ItemsSource = rows.Where(x => string.Equals(x.Category, "بلاغ شعار أو علامة تجارية", StringComparison.OrdinalIgnoreCase)).ToArray();
@@ -2003,7 +2092,10 @@ public partial class MainWindow : Window
                 CustomerMessagesGrid.SelectedItem = rows.FirstOrDefault(x => x.Id == selectedId);
             _suppressCustomerMessagePopup = false;
             var fresh = rows.Count(x => x.Status == "جديد");
+            ContactTab.Header = fresh > 0 ? $"✉️ التواصل ({fresh})" : "✉️ التواصل";
             CustomerMessageStatusText.Text = $"إجمالي الرسائل: {rows.Length} — رسائل جديدة: {fresh}. اضغط على الرسالة لفتح تفاصيلها.";
+            if (newlyArrived.Length > 0)
+                ShowNewCustomerMessageToast(newlyArrived[^1], newlyArrived.Length);
         }
         catch (Exception ex)
         {
