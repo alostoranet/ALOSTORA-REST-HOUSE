@@ -64,7 +64,33 @@
 <Border Background="#F1F5F9" CornerRadius="8" Padding="10" Margin="0,0,0,12"><StackPanel><TextBlock Text="غلاف الفيلم أو المسلسل (اختياري)" FontWeight="Bold" Foreground="#142D4A"/><TextBlock x:Name="PosterStatusText" Text="لم يتم اختيار غلاف جديد." Foreground="#64748B" Margin="0,5,0,8" TextWrapping="Wrap"/><Button Content="اختيار ورفع الغلاف" Click="UploadPoster_Click" Padding="12,8" HorizontalAlignment="Right" Background="#245B87" Foreground="White" BorderThickness="0"/></StackPanel></Border>
 <Button Content="حفظ البيانات" Click="SaveMetadata_Click" Background="#C93640" Foreground="White" FontWeight="Bold" Padding="14,11" BorderThickness="0"/>
 <TextBlock x:Name="StatusText" Text="اختر فيديو من القائمة لتعديل بياناته." Foreground="#526174" TextWrapping="Wrap" Margin="0,12,0,0"/>
-</StackPanel></ScrollViewer></TabItem></TabControl></TabItem>
+</StackPanel></ScrollViewer></TabItem>
+<TabItem Header="🎧 الصوتيات والكتب والتطبيقات">
+<Border Background="White" CornerRadius="10" Padding="16">
+<DockPanel>
+<StackPanel DockPanel.Dock="Top">
+<TextBlock Text="إدارة المكتبات الإضافية" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,8"/>
+<TextBlock Text="أضف ملفاتك إلى المجلدات Audio وBooks وApps داخل مجلد مكتبة الاستراحة، ثم اضغط فحص المكتبة. الفحص يسجل الملفات دون نقلها أو حذفها." Foreground="#64748B" TextWrapping="Wrap" Margin="0,0,0,12"/>
+<WrapPanel Margin="0,0,0,12">
+<Button Content="فحص الصوتيات" Click="ScanAudioLibrary_Click" Padding="13,8" Margin="0,0,7,6" Background="#E7F5EC"/>
+<Button Content="فحص الكتب" Click="ScanBooksLibrary_Click" Padding="13,8" Margin="0,0,7,6" Background="#E7F5EC"/>
+<Button Content="فحص التطبيقات" Click="ScanAppsLibrary_Click" Padding="13,8" Margin="0,0,7,6" Background="#E7F5EC"/>
+<Button Content="تحديث القائمة" Click="RefreshMultiMediaLibrary_Click" Padding="13,8" Margin="0,0,7,6"/>
+</WrapPanel>
+<TextBlock x:Name="MultiMediaLibraryStatusText" Text="لم يتم فحص المكتبات بعد." Foreground="#526174" Margin="0,0,0,8"/>
+</StackPanel>
+<DataGrid x:Name="MultiMediaGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column">
+<DataGrid.Columns>
+<DataGridTextColumn Header="العنوان" Binding="{Binding Title}" Width="*"/>
+<DataGridTextColumn Header="المكتبة" Binding="{Binding KindLabel}" Width="120"/>
+<DataGridTextColumn Header="اسم الملف" Binding="{Binding FileName}" Width="180"/>
+<DataGridTextColumn Header="الحجم" Binding="{Binding SizeLabel}" Width="110"/>
+<DataGridTextColumn Header="آخر تعديل" Binding="{Binding ModifiedUtc}" Width="180"/>
+</DataGrid.Columns>
+</DataGrid>
+</DockPanel>
+</Border>
+</TabItem></TabControl></TabItem>
 <TabItem Header="🎬 المسلسلات والحلقات">
 <Grid>
 <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
