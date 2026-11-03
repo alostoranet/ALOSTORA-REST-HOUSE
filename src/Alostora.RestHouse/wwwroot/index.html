@@ -50,6 +50,14 @@ main{max-width:1320px;padding:26px 28px 18px}
 .developer-credit{color:#91a6bb;border-top-color:#2c425b}
 @media(max-width:600px){main{padding:16px 12px}.welcome-panel{padding:19px 17px}.welcome-panel h2{font-size:20px}.welcome-mark{flex-basis:52px;width:52px;height:52px;font-size:20px}.catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.catalog-card{padding:8px}}
 #welcomePanel[hidden],#catalogToolbar[hidden],#continueSection[hidden],#message[hidden]{display:none!important}
+
+/* Emby-inspired horizontal library rails: each card remains a separate page link. */
+.catalog-rail{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;gap:16px;padding:4px 2px 16px;scroll-snap-type:x mandatory;overscroll-behavior-inline:contain;scrollbar-width:thin;scrollbar-color:#526b85 transparent}
+.catalog-rail .catalog-card{flex:0 0 clamp(170px,19vw,225px);scroll-snap-align:start}
+.catalog-rail .catalog-card img,.catalog-rail .catalog-card .poster-empty{height:auto;aspect-ratio:3/4}
+.catalog-section-title{font-size:20px;font-weight:800;color:#f5f7fb;margin:24px 0 12px}
+.catalog-page-head{position:sticky;top:0;z-index:5;background:rgba(12,23,39,.94);backdrop-filter:blur(12px);padding:12px 0;border-radius:0 0 10px 10px}
+@media(max-width:600px){.catalog-rail{gap:10px}.catalog-rail .catalog-card{flex-basis:155px}.catalog-section-title{font-size:18px}}
 </style></head><body>
 <header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button></nav></header>
 <main><section id="homeView">
@@ -190,7 +198,8 @@ function renderCatalogPage(){
     ?seriesItems.some(show=>show.categoryId===sub.categoryId&&show.isPublished===true&&matches(show)&&matchesQuery(show))
     :items.some(video=>video.categoryId===sub.categoryId&&video.isPublished===true&&matches(video)&&matchesQuery(video))));
   });
-  const grid=document.createElement('div');grid.className='catalog-grid';
+  content.append(catalogSectionTitle('الأقسام الرئيسية'));
+  const grid=document.createElement('div');grid.className='catalog-grid catalog-rail';
   for(const main of mains){
    const subs=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true);
    const count=subs.length;
@@ -208,7 +217,8 @@ function renderCatalogPage(){
   const subs=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true&&(matchesQuery(x)||(x.contentKind==='Series'
    ?seriesItems.some(show=>show.categoryId===x.categoryId&&show.isPublished===true&&matches(show)&&matchesQuery(show))
    :items.some(video=>video.categoryId===x.categoryId&&video.isPublished===true&&matches(video)&&matchesQuery(video)))));
-  const grid=document.createElement('div');grid.className='catalog-grid';
+  content.append(catalogSectionTitle('الأقسام الفرعية'));
+  const grid=document.createElement('div');grid.className='catalog-grid catalog-rail';
   for(const sub of subs){
    const label=sub.contentKind==='Series'?'مسلسلات وبرامج':sub.contentKind==='Movie'?'أفلام':'محتوى';
    grid.append(catalogCard(sub.title,label,sub.posterPath,()=>navigateCatalog({type:'category',categoryId:sub.categoryId,title:sub.title})));
