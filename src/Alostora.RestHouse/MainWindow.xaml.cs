@@ -50,7 +50,7 @@ public partial class MainWindow : Window
         _videosView.Filter = FilterVideoByFolder;
         VideosGrid.ItemsSource = _videosView;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadLibraryFoldersAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); };
+        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); };
         _messageRefreshTimer.Tick += async (_, _) => await LoadCustomerMessagesAsync();
         _messageRefreshTimer.Start();
         Closed += (_, _) => _messageRefreshTimer.Stop();
@@ -768,8 +768,8 @@ private void CategoryLevelPicker_SelectionChanged(object sender, SelectionChange
                 : $"سجل الفيديوهات: {_videos.Count} فيديو. يوجد {incomplete} فيديو بانتظار استكمال بياناته وتصنيفه.";
         }
         catch (Exception ex) { StatusText.Text = "تعذر تحميل المكتبة: " + ex.Message; }
-                await LoadLibraryFoldersAsync();
-        }
+        await LoadLibraryFoldersAsync();
+    }
 
     private bool FilterVideoByFolder(object item)
     {
@@ -1249,8 +1249,17 @@ private void CategoryLevelPicker_SelectionChanged(object sender, SelectionChange
             return;
         }
 
+        // يسمح برفع الغلاف قبل اختيار القسم، لكن يُحفظ المسلسل كمسودة بوضوح حتى يكتمل ربطه.
+        if (SeriesPublishBox.IsChecked == true && SeriesCategoryPicker.SelectedValue is null)
+        {
+            var saveAsDraft = MessageBox.Show(
+                "لم تختر قسماً فرعياً للمسلسل بعد. يمكن رفع الغلاف الآن مع حفظ المسلسل كمسودة، ثم ربطه بالقسم ونشره لاحقاً. هل تريد المتابعة؟",
+                "رفع الغلاف قبل ربط القسم", MessageBoxButton.YesNo, MessageBoxImage.Information);
+            if (saveAsDraft != MessageBoxResult.Yes) return;
+            SeriesPublishBox.IsChecked = false;
+        }
+
         // احفظ بيانات المسلسل أولاً تلقائياً، حتى يعمل زر رفع الغلاف عند إنشاء مسلسل جديد.
-        if (!await SaveSeriesAsync()) return;
 
         try
         {
@@ -1294,6 +1303,15 @@ private void CategoryLevelPicker_SelectionChanged(object sender, SelectionChange
         var id = string.IsNullOrWhiteSpace(SeriesIdBox.Text) ? "series-" + Guid.NewGuid().ToString("N") : SeriesIdBox.Text.Trim();
         var folderPath = string.IsNullOrWhiteSpace(SeriesFolderPathBox.Text) ? null : Path.GetFullPath(SeriesFolderPathBox.Text.Trim());
         if (folderPath is not null && !Directory.Exists(folderPath)) { SeriesStatusText.Text = "مجلد المسلسل المحدد غير موجود."; return false; }
+        var selectedSeriesCategory = SeriesCategoryPicker.SelectedItem as CategoryAdmin;
+        var selectedMainCategory = SeriesMainCategoryPicker.SelectedItem as CategoryAdmin;
+        if (SeriesPublishBox.IsChecked == true &&
+            (selectedSeriesCategory is null || selectedSeriesCategory.ContentKind != "Series" || !selectedSeriesCategory.IsPublished ||
+             selectedMainCategory is null || !selectedMainCategory.IsPublished))
+        {
+            SeriesStatusText.Text = "لن يُنشر المسلسل قبل اختيار قسم فرعي من نوع «مسلسلات» والتأكد من نشر القسم الرئيسي والفرعي.";
+            return false;
+        }
         var request = new { seriesId = id, title = SeriesTitleBox.Text.Trim(), description = SeriesDescriptionBox.Text, year, genre = SeriesGenreBox.Text, posterPath = string.IsNullOrWhiteSpace(SeriesPosterPathBox.Text) ? null : SeriesPosterPathBox.Text.Trim(), folderPath, section = string.IsNullOrWhiteSpace(SeriesSectionBox.Text) ? "عام" : SeriesSectionBox.Text.Trim(), categoryId = SeriesCategoryPicker.SelectedValue as string, isPublished = SeriesPublishBox.IsChecked == true, organizationType = (SeriesStructureBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Seasons" };
         try
         {
