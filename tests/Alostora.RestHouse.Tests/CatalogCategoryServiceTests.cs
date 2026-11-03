@@ -50,6 +50,33 @@ public sealed class CatalogCategoryServiceTests : IDisposable
         Assert.Empty(_categories.List(publishedOnly: true));
     }
 
+
+    [Fact]
+    public void DeletingMainCategoryRemovesChildCatalogRecordsButKeepsOriginalVideoFile()
+    {
+        const string videoId = "0123456789abcdef01234567";
+        var mainId = "main-" + Guid.NewGuid().ToString("N");
+        var childId = "child-" + Guid.NewGuid().ToString("N");
+        var videoPath = Path.Combine(_root, "original-video.mp4");
+        File.WriteAllBytes(videoPath, new byte[] { 1, 2, 3, 4 });
+
+        var series = new SeriesCatalogService(Path.Combine(_root, "categories.db"));
+        var metadata = new VideoMetadataService(Path.Combine(_root, "categories.db"));
+        _categories.Save(new SaveCatalogCategoryRequest(mainId, null, "الرئيسية", "Group", null, true));
+        _categories.Save(new SaveCatalogCategoryRequest(childId, mainId, "المسلسلات", "Series", null, true));
+        series.SaveSeries(new SaveSeriesRequest("series-delete-test", "مسلسل مرتبط", "", 2026, "", null,
+            CategoryId: childId, IsPublished: true));
+        metadata.Save(new SaveVideoMetadataRequest(videoId, "حلقة مرتبطة", "", null, "", "Series", null,
+            CategoryId: childId, IsPublished: true));
+
+        _categories.Delete(mainId);
+
+        Assert.Empty(_categories.List());
+        Assert.Empty(series.ListSeries());
+        Assert.Null(metadata.Get(videoId));
+        Assert.True(File.Exists(videoPath));
+    }
+
     public void Dispose()
     {
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();

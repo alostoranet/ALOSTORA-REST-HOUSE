@@ -189,14 +189,17 @@ public sealed class PublicCatalogAccessTests : IDisposable
     }
 
     [Fact]
-    public void CategoryCannotBeDeletedWhileItIsReferencedByVideoMetadata()
+    public void DeletingCategoryRemovesItsVideoMetadataAndCategoryRecord()
     {
         CreateRootAndMovieCategory();
         const string videoId = "eeeeeeeeeeeeeeeeeeeeeeee";
         SaveMovie(videoId, isPublished: true);
 
-        Assert.Throws<InvalidOperationException>(() => _categories.Delete("movies"));
-        Assert.NotNull(_categories.Get("movies"));
+        _categories.Delete("movies");
+
+        Assert.Null(_categories.Get("movies"));
+        Assert.Null(_metadata.Get(videoId));
+        Assert.Single(_categories.List());
     }
 
     [Fact]
