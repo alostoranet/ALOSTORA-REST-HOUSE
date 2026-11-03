@@ -94,28 +94,54 @@ public sealed class CatalogCategoryService
     }
     public void Delete(string id)
     {
+        if (string.IsNullOrWhiteSpace(id))
+            throw new ArgumentException("معرّف القسم غير صالح", nameof(id));
+
         using var c=Open();
         using var transaction=c.BeginTransaction();
-        using (var check=c.CreateCommand())
+        var updatedUtc=DateTime.UtcNow.ToString("O");
+
+        // إزالة ارتباط المحتوى بالقسم وإخفاؤه عن العملاء، مع الإبقاء على بياناته وملفات الفيديو الأصلية.
+        using (var videos=c.CreateCommand())
         {
-            check.Transaction=transaction;
-            check.CommandText="""
-            SELECT
-              EXISTS(SELECT 1 FROM VideoMetadata
-                     WHERE CategoryId IN (SELECT CategoryId FROM CatalogCategories WHERE CategoryId=$id OR ParentId=$id))
-              OR
-              EXISTS(SELECT 1 FROM SeriesCatalog
-                     WHERE CategoryId IN (SELECT CategoryId FROM CatalogCategories WHERE CategoryId=$id OR ParentId=$id))
-            """;
-            check.Parameters.AddWithValue("$id",id);
-            if(Convert.ToInt32(check.ExecuteScalar())!=0)
-                throw new InvalidOperationException("لا يمكن حذف القسم لأنه مرتبط بأفلام أو مسلسلات. انقل الأعمال إلى تصنيف آخر أولاً.");
+            videos.Transaction=transaction;
+            videos.CommandText="""
+                UPDATE VideoMetadata
+                SET CategoryId=NULL, IsPublished=0, UpdatedUtc=$updated
+                WHERE CategoryId IN (
+                    SELECT CategoryId FROM CatalogCategories
+                    WHERE CategoryId=$id OR ParentId=$id
+                )
+                """;
+            videos.Parameters.AddWithValue("$updated",updatedUtc);
+            videos.Parameters.AddWithValue("$id",id);
+            videos.ExecuteNonQuery();
         }
+
+        using (var series=c.CreateCommand())
+        {
+            series.Transaction=transaction;
+            series.CommandText="""
+                UPDATE SeriesCatalog
+                SET CategoryId=NULL, IsPublished=0, UpdatedUtc=$updated
+                WHERE CategoryId IN (
+                    SELECT CategoryId FROM CatalogCategories
+                    WHERE CategoryId=$id OR ParentId=$id
+                )
+                """;
+            series.Parameters.AddWithValue("$updated",updatedUtc);
+            series.Parameters.AddWithValue("$id",id);
+            series.ExecuteNonQuery();
+        }
+
         using var cmd=c.CreateCommand();
         cmd.Transaction=transaction;
         cmd.CommandText="DELETE FROM CatalogCategories WHERE CategoryId=$id";
         cmd.Parameters.AddWithValue("$id",id);
-        if(cmd.ExecuteNonQuery()==0)throw new KeyNotFoundException("القسم غير موجود");
+        if(cmd.ExecuteNonQuery()==0)
+            throw new KeyNotFoundException("القسم غير موجود");
+
+        // ParentId uses ON DELETE CASCADE, so all nested subcategories are removed in this transaction.
         transaction.Commit();
     }
 }
