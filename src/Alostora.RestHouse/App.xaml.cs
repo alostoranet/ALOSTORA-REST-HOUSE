@@ -678,7 +678,14 @@ public partial class App : Application
    });
    _server.MapGet("/media/{id}",(string id,LibraryService svc,PublicCatalogAccessService publicCatalog)=>{var item=svc.Resolve(id);return item is null||!publicCatalog.IsVideoPublished(id)?Results.NotFound():Results.File(item.FullPath,item.ContentType,enableRangeProcessing:true);});
    await _server.StartAsync(); new MainWindow(root,library,posters,settings.FfmpegPath).Show();
-  } catch(Exception ex){MessageBox.Show("تعذر تشغيل السيرفر:\n"+ex.Message,"استراحة الأسطورة",MessageBoxButton.OK,MessageBoxImage.Error);Shutdown(1);}
+  } catch(Exception ex){
+   var details=ex.ToString();
+   var logPath=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"AlostoraRestHouse","startup-error.txt");
+   try { Directory.CreateDirectory(Path.GetDirectoryName(logPath)!); File.WriteAllText(logPath,details); } catch { }
+   var inner=ex.GetBaseException();
+   MessageBox.Show("تعذر تشغيل السيرفر:\n"+inner.Message+"\n\nتم حفظ تفاصيل الخطأ في:\n"+logPath,"استراحة الأسطورة",MessageBoxButton.OK,MessageBoxImage.Error);
+   Shutdown(1);
+  }
  }
  private static int? ParseEpisodeNumber(string fileName)
  {
