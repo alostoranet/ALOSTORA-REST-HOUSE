@@ -990,6 +990,12 @@ public partial class MainWindow : Window
         var previousMetadata = _videos.FirstOrDefault(v => v.Id == IdBox.Text);
         var isNewMetadata = previousMetadata?.MetadataSaved != true;
         var selectedCategory = VideoCategoryPicker.SelectedItem as CategoryAdmin;
+        if (PublishBox.IsChecked == true && selectedCategory is null)
+        {
+            StatusText.Text = "لا يمكن نشر الفيديو دون ربطه بقسم فرعي. إذا كان تابعاً لمسلسل، اختر المسلسل أولاً ليُحدد قسمه تلقائياً.";
+            VideoMainCategoryPicker.Focus();
+            return;
+        }
         int? linkedEpisodeNumber = null;
         if (VideoSeasonPicker.SelectedValue is not null)
         {
