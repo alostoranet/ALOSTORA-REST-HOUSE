@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#142d4a"><title>دخول إدارة استراحة الأسطورة</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:#0c1727;color:#f5f7fb;font-family:Tahoma,Arial}
+.card{width:min(100%,440px);padding:28px;background:#14283e;border:1px solid #38516d;border-radius:18px;box-shadow:0 18px 50px #0005}
+h1{margin:0 0 8px;font-size:24px}.muted{color:#bdcadd;font-size:14px;line-height:1.8}
+label{display:block;margin:16px 0 7px;font-weight:bold;font-size:14px}
+input{width:100%;padding:13px;border:1px solid #526b85;border-radius:9px;background:#0c1727;color:#fff;font:inherit}
+button{width:100%;margin-top:18px;padding:13px;border:0;border-radius:9px;background:#c93640;color:white;font:inherit;font-weight:bold;cursor:pointer}
+button.secondary{background:#315577}button:disabled{opacity:.6;cursor:wait}
+#status{min-height:48px;margin-top:15px;padding:10px;border-radius:8px;background:#0c1727;color:#dce8f5;white-space:pre-wrap;line-height:1.7;font-size:13px}
+.note{margin-top:16px;padding-top:14px;border-top:1px solid #38516d}
+</style></head>
+<body><main class="card">
+<h1>إدارة استراحة الأسطورة</h1>
+<p class="muted">سجّل الدخول بحساب الإدارة للوصول إلى واجهات الإدارة المحمية.</p>
+<form id="loginForm">
+<label for="email">البريد الإلكتروني</label><input id="email" type="email" autocomplete="username" required>
+<label for="password">كلمة المرور</label><input id="password" type="password" autocomplete="current-password" required>
+<button id="loginButton" type="submit">تسجيل الدخول</button>
+</form>
+<button id="logoutButton" class="secondary" type="button" hidden>تسجيل الخروج</button>
+<div id="status" role="status" aria-live="polite">هذه الصفحة مخصصة لحسابات الإدارة المعتمدة فقط.</div>
+<div class="note muted">إذا كان الحساب صحيحاً وظهرت رسالة عدم امتلاك الصلاحية، فيلزم منح الحساب دور <b>admin</b> من إعدادات المشروع. إنشاء حساب عادي لا يمنحه صلاحيات الإدارة تلقائياً.</div>
+</main>
+<script>
+const SUPABASE_URL="https://erxbnboohjiylzbafqho.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_IVA_HybnOmyw0bp-tkJfpw_5VyYr1aV";
+const SESSION_KEY="alostora-admin-session";
+const form=document.querySelector("#loginForm"),button=document.querySelector("#loginButton"),logoutButton=document.querySelector("#logoutButton"),statusBox=document.querySelector("#status");
+let session=null;
+try{session=JSON.parse(sessionStorage.getItem(SESSION_KEY)||"null");}catch{session=null;}
+function saveSession(value){session={...value,expires_at:Date.now()+Number(value.expires_in||3600)*1000};sessionStorage.setItem(SESSION_KEY,JSON.stringify(session));}
+function clearSession(){session=null;sessionStorage.removeItem(SESSION_KEY);logoutButton.hidden=true;form.hidden=false;}
+async function authRequest(path,body,token){const headers={"apikey":SUPABASE_PUBLISHABLE_KEY,"Content-Type":"application/json"};if(token)headers.Authorization="Bearer "+token;const response=await fetch(SUPABASE_URL+"/auth/v1/"+path,{method:"POST",headers,body:JSON.stringify(body)});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.msg||data.message||data.error_description||data.error||"تعذر إكمال طلب تسجيل الدخول.");return data;}
+async function accessToken(){if(!session?.access_token)throw new Error("سجّل الدخول أولاً.");if(session.expires_at>Date.now()+60000)return session.access_token;try{const refreshed=await authRequest("token?grant_type=refresh_token",{refresh_token:session.refresh_token});saveSession(refreshed);return session.access_token;}catch{clearSession();throw new Error("انتهت جلسة الدخول. سجّل الدخول مجدداً.");}}
+async function verifyAdmin(){const token=await accessToken();const response=await fetch("/api/admin/profile",{headers:{Authorization:"Bearer "+token},cache:"no-store"});const data=await response.json().catch(()=>({}));if(response.status===403)throw new Error("تم تسجيل الدخول بنجاح، لكن الحساب غير مفعّل كمدير. اطلب من مالك المشروع تعيين app_metadata.role = admin لهذا البريد.");if(response.status===401)throw new Error("جلسة الدخول غير صالحة. سجّل الدخول مجدداً.");if(!response.ok)throw new Error(data.error||"تعذر الوصول إلى واجهة الإدارة.");form.hidden=true;logoutButton.hidden=false;statusBox.textContent="تم التحقق من حساب الإدارة بنجاح. واجهات الإدارة المحمية متاحة الآن من هذا المتصفح.";return true;}
+form.addEventListener("submit",async event=>{event.preventDefault();button.disabled=true;statusBox.textContent="جارٍ التحقق من بيانات الدخول...";try{const result=await authRequest("token?grant_type=password",{email:document.querySelector("#email").value.trim(),password:document.querySelector("#password").value});saveSession(result);await verifyAdmin();}catch(error){statusBox.textContent=error.message;}finally{button.disabled=false;}});
+logoutButton.addEventListener("click",async()=>{try{const token=await accessToken();await fetch(SUPABASE_URL+"/auth/v1/logout",{method:"POST",headers:{"apikey":SUPABASE_PUBLISHABLE_KEY,Authorization:"Bearer "+token}});}catch{}clearSession();statusBox.textContent="تم تسجيل الخروج من جلسة الإدارة.";});
+if(session?.access_token){form.hidden=true;logoutButton.hidden=false;verifyAdmin().catch(error=>{statusBox.textContent=error.message;if(!session)clearSession();});}
+</script></body></html>
