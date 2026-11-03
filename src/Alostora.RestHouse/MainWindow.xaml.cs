@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     private string _posters;
     private string? _ffmpegPath;
     private string? _pendingSeriesPosterPath;
+    private string? _pendingCategoryPosterPath;
     private readonly HttpClient _http = new() { BaseAddress = new Uri("http://127.0.0.1:8096") };
     private readonly ObservableCollection<AdminVideo> _videos = new();
     private ICollectionView? _videosView;
