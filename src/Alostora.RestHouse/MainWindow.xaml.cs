@@ -668,11 +668,16 @@ private void CategoryLevelPicker_SelectionChanged(object sender, SelectionChange
 
     private async void SaveCategory_Click(object sender, RoutedEventArgs e)
     {
+        await SaveCategoryAsync();
+    }
+
+    private async System.Threading.Tasks.Task<bool> SaveCategoryAsync()
+    {
         var isChild = (CategoryLevelPicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Child";
         var kind = isChild ? (CategoryKindPicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Movie" : "Group";
         var parentId = isChild ? CategoryParentPicker.SelectedValue as string : null;
-        if (string.IsNullOrWhiteSpace(CategoryTitleBox.Text)) { CategoryStatusText.Text = "اكتب اسم القسم أولاً."; return; }
-        if (isChild && string.IsNullOrWhiteSpace(parentId)) { CategoryStatusText.Text = "اختر القسم الرئيسي الذي سيوضع هذا القسم الفرعي بداخله."; return; }
+        if (string.IsNullOrWhiteSpace(CategoryTitleBox.Text)) { CategoryStatusText.Text = "اكتب اسم القسم أولاً."; return false; }
+        if (isChild && string.IsNullOrWhiteSpace(parentId)) { CategoryStatusText.Text = "اختر القسم الرئيسي الذي سيوضع هذا القسم الفرعي بداخله."; return false; }
         var isNew = string.IsNullOrWhiteSpace(CategoryIdBox.Text);
         var title = CategoryTitleBox.Text.Trim();
         var parentTitle = parentId is null ? null : _categories.FirstOrDefault(x => x.CategoryId == parentId)?.Title;
@@ -680,7 +685,7 @@ private void CategoryLevelPicker_SelectionChanged(object sender, SelectionChange
         try
         {
             var response = await _http.PostAsJsonAsync("/api/admin/catalog-categories", new { categoryId = id, parentId, title, contentKind = kind, posterPath = string.IsNullOrWhiteSpace(CategoryPosterPathBox.Text) ? null : CategoryPosterPathBox.Text.Trim(), isPublished = CategoryPublishBox.IsChecked == true });
-            if (!response.IsSuccessStatusCode) { CategoryStatusText.Text = "تعذر حفظ القسم: " + await response.Content.ReadAsStringAsync(); return; }
+            if (!response.IsSuccessStatusCode) { CategoryStatusText.Text = "تعذر حفظ القسم: " + await response.Content.ReadAsStringAsync(); return false; }
             CategoryIdBox.Text = id;
             await LoadCategoriesAsync();
             CategoriesGrid.SelectedItem = (CategoriesGrid.ItemsSource as CategoryAdmin[])?.FirstOrDefault(x => x.CategoryId == id);
@@ -688,8 +693,9 @@ private void CategoryLevelPicker_SelectionChanged(object sender, SelectionChange
             var location = parentTitle is null ? "" : $" داخل القسم الرئيسي «{parentTitle}»";
             var action = isNew ? "تمت إضافة" : "تم تحديث";
             CategoryStatusText.Text = $"{action} {typeName} «{title}»{location}. الحالة: {(CategoryPublishBox.IsChecked == true ? "منشور" : "مسودة")}.";
+            return true;
         }
-        catch (Exception ex) { CategoryStatusText.Text = "تعذر حفظ القسم: " + ex.Message; }
+        catch (Exception ex) { CategoryStatusText.Text = "تعذر حفظ القسم: " + ex.Message; return false; }
     }
 
     private void PublishCategory_Click(object sender, RoutedEventArgs e)
@@ -705,13 +711,19 @@ private void CategoryLevelPicker_SelectionChanged(object sender, SelectionChange
 
     private async void UploadCategoryPoster_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(CategoryIdBox.Text)) { CategoryStatusText.Text = "احفظ القسم أولاً ثم ارفع غلافه."; return; }
-        var dialog = new OpenFileDialog { Title = "اختر غلاف القسم", Filter = "صور مدعومة|*.jpg;*.jpeg;*.png;*.webp", CheckFileExists = true };
+        var dialog = new OpenFileDialog { Title = "اختر صورة غلاف القسم", Filter = "صور مدعومة|*.jpg;*.jpeg;*.png;*.webp", CheckFileExists = true };
         if (dialog.ShowDialog(this) != true) return;
         var ext = Path.GetExtension(dialog.FileName).ToLowerInvariant();
         var type = ext switch { ".jpg" or ".jpeg" => "image/jpeg", ".png" => "image/png", ".webp" => "image/webp", _ => "" };
         var info = new FileInfo(dialog.FileName);
-        if (type.Length == 0 || info.Length == 0 || info.Length > 5_242_880) { CategoryStatusText.Text = "اختر صورة JPG أو PNG أو WEBP لا تتجاوز 5 ميجابايت."; return; }
+        if (type.Length == 0 || info.Length == 0 || info.Length > 5_242_880)
+        {
+            CategoryStatusText.Text = "اختر صورة JPG أو PNG أو WEBP لا تتجاوز 5 ميجابايت.";
+            return;
+        }
+
+        // احفظ القسم أولاً تلقائياً حتى يعمل رفع الغلاف عند إنشاء قسم جديد.
+        if (!await SaveCategoryAsync()) return;
         try
         {
             using var bytes = new ByteArrayContent(await File.ReadAllBytesAsync(dialog.FileName));
@@ -720,8 +732,9 @@ private void CategoryLevelPicker_SelectionChanged(object sender, SelectionChange
             if (!response.IsSuccessStatusCode) { CategoryStatusText.Text = "تعذر رفع الغلاف: " + await response.Content.ReadAsStringAsync(); return; }
             var result = await response.Content.ReadFromJsonAsync<PosterUploadResult>();
             CategoryPosterPathBox.Text = result?.PosterPath ?? "";
-            CategoryPosterStatusText.Text = "تم رفع الغلاف. اضغط حفظ القسم لتحديث بياناته.";
+            CategoryPosterStatusText.Text = "تم رفع الغلاف وحفظه تلقائياً.";
             await LoadCategoriesAsync();
+            CategoriesGrid.SelectedItem = (CategoriesGrid.ItemsSource as CategoryAdmin[])?.FirstOrDefault(x => x.CategoryId == CategoryIdBox.Text.Trim());
         }
         catch (Exception ex) { CategoryStatusText.Text = "تعذر رفع الغلاف: " + ex.Message; }
     }
