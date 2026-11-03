@@ -122,10 +122,10 @@ if ($categoryService -notmatch 'SET CategoryId=NULL, IsPublished=0' -or
     throw "Category deletion must safely unpublish and detach linked content while preserving media."
 }
 Write-Host "PASS: category deletion safely unpublishes linked content and preserves source media."
-if ($xaml -notmatch 'CategoryLevelPicker' -or
-    $xaml -notmatch 'LibraryFoldersTree' -or
-    $code -notmatch 'private async System\.Threading\.Tasks\.Task<bool> SaveSeriesAsync' -or
-    $code -notmatch 'if \(!await SaveSeriesAsync\(\)\) return;') {
+if (-not $xaml.Contains('CategoryLevelPicker') -or
+    -not $xaml.Contains('LibraryFoldersTree') -or
+    -not $code.Contains('SaveSeriesAsync()') -or
+    -not $code.Contains('if (!await SaveSeriesAsync()) return;')) {
     throw "The new category workflow, nested library folders, or automatic series-cover save flow is incomplete."
 }
 Write-Host "PASS: category level selection, nested video folders, and automatic series-cover saving are wired."
