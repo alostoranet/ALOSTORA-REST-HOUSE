@@ -32,10 +32,12 @@ public partial class App : Application
  private static readonly HttpClient SupabaseAuthHttpClient = new();
  private async void OnStartup(object sender, StartupEventArgs e)
  {
+  var configuredPort = 8097;
   try {
    var root=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"AlostoraRestHouse");
    Directory.CreateDirectory(root);
    var settings=AppSettings.Load(root);
+   configuredPort = settings.Port;
    var library=settings.LibraryPath;
    var posters=settings.PostersPath;
    Directory.CreateDirectory(library);
@@ -725,7 +727,7 @@ public partial class App : Application
    var inner=ex.GetBaseException();
    var message=inner.Message;
    if(inner is System.Net.Sockets.SocketException socket && socket.SocketErrorCode==System.Net.Sockets.SocketError.AddressAlreadyInUse)
-    message=$"المنفذ {settings.Port} مستخدم حالياً من برنامج آخر. أغلق البرنامج الذي يستخدمه أو اختر منفذاً آخر من إعدادات الاستراحة.";
+    message=$"المنفذ {configuredPort} مستخدم حالياً من برنامج آخر. أغلق البرنامج الذي يستخدمه أو اختر منفذاً آخر من إعدادات الاستراحة.";
    MessageBox.Show("تعذر تشغيل السيرفر:\n"+message+"\n\nتم حفظ تفاصيل الخطأ في:\n"+logPath,"استراحة الأسطورة",MessageBoxButton.OK,MessageBoxImage.Error);
    Shutdown(1);
   }
