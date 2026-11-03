@@ -28,6 +28,7 @@ Write-Host "PASS: management client and embedded server port configuration match
 # Check that key management routes used by the UI exist in the embedded API.
 $requiredRoutes = @(
     '/api/admin/catalog-categories',
+    '/api/admin/library/folders',
     '/api/admin/profile',
     '/api/admin/profile/logo',
     '/api/profile',
@@ -63,7 +64,7 @@ foreach ($match in $scripts) {
 }
 Write-Host ("PASS: {0} inline viewer script block(s) passed Node.js syntax validation." -f $scripts.Count)
 
-# The customer page must open on the accommodation catalog and show contact only on demand.
+# The customer page must use separate catalog navigation pages and show contact only on demand.
 if ($html -notmatch 'id="homeNav"' -or
     $html -notmatch 'id="contactNav"' -or
     $html -notmatch 'id="homeView"' -or
@@ -72,7 +73,7 @@ if ($html -notmatch 'id="homeNav"' -or
     $html -notmatch "showCustomerView\('home'\)") {
     throw "Customer navigation must separate the home catalog from the contact form."
 }
-Write-Host "PASS: customer home and contact form have separate navigation states."
+Write-Host "PASS: customer catalog uses separate category and program navigation pages."
 
 # A category may be published without a poster; new category forms default to published.
 if ($app -match 'request\.IsPublished\s*&&\s*!PosterExists\(request\.PosterPath,posters\)' -or
@@ -88,7 +89,7 @@ if ($app -match 'request\.IsPublished\s*&&\s*!PosterExists\(request\.PosterPath,
 $categoryTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/CatalogCategoryServiceTests.cs"
 if (-not (Test-Path $categoryTestsPath)) { throw "Catalog category regression tests are missing." }
 $categoryTests = Get-Content $categoryTestsPath -Raw
-foreach ($testName in @("PublishedMainAndChildCategoriesAppearWithoutPosterImages", "UnpublishedCategoriesDoNotAppearInCustomerCatalog", "PublishedChildOfUnpublishedParentIsNotExposed")) {
+foreach ($testName in @("PublishedMainAndChildCategoriesAppearWithoutPosterImages", "UnpublishedCategoriesDoNotAppearInCustomerCatalog", "PublishedChildOfUnpublishedParentIsNotExposed", "DeletingMainCategoryRemovesItsTreeAndUnpublishesLinkedContentWithoutDeletingVideoFiles")) {
     if (-not $categoryTests.Contains($testName)) { throw ("Missing category regression test: " + $testName) }
 }
 Write-Host "PASS: customer category publication and optional-poster behavior are regression-tested."
@@ -105,7 +106,7 @@ if ($metadata -notmatch 'r\.IsDBNull\(13\)\s*\?\s*null\s*:\s*r\.GetString\(13\),
 }
 Write-Host "PASS: metadata List query includes CategoryId and matches the reader column layout."
 
-# Protect category references so deletion cannot orphan published library items.
+# Deleting a category tree must detach and unpublish its content without deleting source media.
 $categoryServicePath = Join-Path $root "src/Alostora.RestHouse/CatalogCategoryService.cs"
 $categoryService = Get-Content $categoryServicePath -Raw
 if ($categoryService -notmatch 'ParentId=\$id AND IsPublished=1' -or
@@ -113,7 +114,11 @@ if ($categoryService -notmatch 'ParentId=\$id AND IsPublished=1' -or
     $categoryService -notmatch 'FROM SeriesCatalog\s+WHERE CategoryId IN') {
     throw "Catalog category integrity checks are missing."
 }
-Write-Host "PASS: category publication and linked-content integrity checks are present."
+if ($categoryService -notmatch 'SET CategoryId=NULL, IsPublished=0' -or
+    $categoryTests -notmatch 'DeletingMainCategoryRemovesItsTreeAndUnpublishesLinkedContentWithoutDeletingVideoFiles') {
+    throw "Category deletion must safely unpublish and detach linked content while preserving media."
+}
+Write-Host "PASS: category deletion safely unpublishes linked content and preserves source media."
 
 # Public catalog and media routes must enforce publication on the server, not only in browser JavaScript.
 $publicAccessPath = Join-Path $root "src/Alostora.RestHouse/PublicCatalogAccessService.cs"
