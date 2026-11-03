@@ -614,7 +614,7 @@ public partial class MainWindow : Window
         }
         try
         {
-            Process.Start(new ProcessStartInfo("explorer.exe", $"\\"{path}\\"") { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo("explorer.exe", "\"" + path + "\"") { UseShellExecute = true });
         }
         catch (Exception ex) { StatusText.Text = "تعذر فتح المجلد: " + ex.Message; }
     }
