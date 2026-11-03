@@ -773,12 +773,15 @@ public partial class MainWindow : Window
     private async void DeleteCategory_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(CategoryIdBox.Text)) { CategoryStatusText.Text = "اختر قسماً من القائمة أولاً."; return; }
-        if (MessageBox.Show("سيتم حذف القسم وأقسامه الفرعية. لن تُحذف ملفات الفيديو الأصلية. هل تريد المتابعة؟", "تأكيد حذف القسم", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        if (MessageBox.Show("سيتم حذف القسم وكل الأقسام الفرعية التابعة له، وإزالة بيانات الأفلام والمسلسلات وروابط الحلقات المرتبطة به من المكتبة. لن تُحذف ملفات الفيديو الأصلية من القرص. لا يمكن التراجع عن حذف البيانات. هل تريد المتابعة؟", "تأكيد حذف القسم ومحتوياته", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         var response = await _http.DeleteAsync("/api/admin/catalog-categories/" + Uri.EscapeDataString(CategoryIdBox.Text.Trim()));
         if (!response.IsSuccessStatusCode) { CategoryStatusText.Text = "تعذر حذف القسم: " + await response.Content.ReadAsStringAsync(); return; }
         CategoryIdBox.Clear(); CategoryTitleBox.Clear(); CategoryPosterPathBox.Clear();
         await LoadCategoriesAsync();
-        CategoryStatusText.Text = "تم حذف القسم.";
+        await LoadSeriesAsync();
+        await LoadVideosAsync();
+        await LoadMissingEpisodesAsync();
+        CategoryStatusText.Text = "تم حذف القسم ومحتوياته من قاعدة بيانات المكتبة. ملفات الفيديو الأصلية ما زالت محفوظة على القرص.";
     }
 
     private async System.Threading.Tasks.Task LoadVideosAsync()
@@ -1046,6 +1049,7 @@ public partial class MainWindow : Window
     private void NewSeries_Click(object sender, RoutedEventArgs e)
     {
         SeriesPicker.SelectedIndex = -1;
+        _pendingSeriesPosterPath = null;
         SeriesIdBox.Clear();
         SeriesTitleBox.Clear();
         SeriesDescriptionBox.Clear();
@@ -1117,6 +1121,7 @@ public partial class MainWindow : Window
     private async void SeriesPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (SeriesPicker.SelectedItem is not SeriesAdmin s) return;
+        _pendingSeriesPosterPath = null;
         SeriesIdBox.Text = s.SeriesId;
         SeriesTitleBox.Text = s.Title ?? "";
         SeriesDescriptionBox.Text = s.Description ?? "";
