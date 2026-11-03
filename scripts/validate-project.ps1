@@ -273,7 +273,7 @@ Write-Host "PASS: hierarchical categories, logo reports, reopenable messages, vi
 
 # The admin media register must support selecting a folder and filtering its videos.
 if ($xaml -notmatch 'VideoFoldersTree' -or
-    $code -notmatch 'RefreshVideoFoldersTree\(' -or
+    $code -notmatch 'RefreshVideoFoldersTreeAsync\(' -or
     $code -notmatch 'FilterVideosByFolder' -or
     $app -notmatch 'folderId,folderName') {
     throw "The admin folder browser is not connected to the video register."
