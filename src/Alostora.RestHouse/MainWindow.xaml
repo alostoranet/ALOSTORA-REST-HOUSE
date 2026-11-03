@@ -126,7 +126,13 @@
 <TabItem Header="🗂️ الأقسام والتصنيفات">
 <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
 <TextBlock Text="تنظيم أقسام مكتبة العميل" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,8"/>
-<TextBlock Text="ابدأ بالقسم الرئيسي، ثم حدده واضغط «قسم فرعي جديد» لإضافة قسم أفلام أو مسلسلات تحته. الأقسام المنشورة تظهر للعميل، ويمكن اختيار غلاف الآن أو بعد الحفظ." TextWrapping="Wrap" Foreground="#526174" Margin="0,0,0,12"/>
+<Border Background="#EEF4FA" CornerRadius="10" Padding="12" Margin="0,0,0,12"><StackPanel>
+<TextBlock Text="طريقة إنشاء الأقسام — اتبع هذه الخطوات بالترتيب" FontWeight="Bold" FontSize="14" Foreground="#142D4A" Margin="0,0,0,6"/>
+<TextBlock Text="١. اضغط «قسم رئيسي جديد»، اكتب الاسم، ثم «حفظ القسم». مثال: المسلسلات أو الأفلام." TextWrapping="Wrap" Foreground="#334155" Margin="0,3"/>
+<TextBlock Text="٢. اختر القسم الرئيسي من القائمة، ثم اضغط «قسم فرعي جديد». سيختار البرنامج القسم الأب تلقائياً إذا كان محدداً." TextWrapping="Wrap" Foreground="#334155" Margin="0,3"/>
+<TextBlock Text="٣. اكتب اسم القسم الفرعي وحدد نوعه: أفلام أو مسلسلات أو محتوى آخر، ثم احفظ." TextWrapping="Wrap" Foreground="#334155" Margin="0,3"/>
+<TextBlock Text="٤. عند إضافة مسلسل، اختر القسم الرئيسي ثم القسم الفرعي من إدارة المسلسلات. يجب أن يكون القسم الفرعي من نوع «مسلسلات»." TextWrapping="Wrap" Foreground="#334155" Margin="0,3"/>
+</StackPanel></Border>
 <TextBlock Text="اسم القسم"/><TextBox x:Name="CategoryTitleBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="القسم الرئيسي الأب (يُترك فارغاً للقسم الرئيسي)"/><ComboBox x:Name="CategoryParentPicker" DisplayMemberPath="Title" SelectedValuePath="CategoryId" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="نوع القسم"/><ComboBox x:Name="CategoryKindPicker" Padding="8" Margin="0,4,0,8" SelectionChanged="CategoryKindPicker_SelectionChanged">
