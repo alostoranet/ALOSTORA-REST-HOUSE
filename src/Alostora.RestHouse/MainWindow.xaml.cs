@@ -2144,6 +2144,7 @@ public partial class MainWindow : Window
         if (tabIndex == 1)
         {
             _dashboardKindFilter = parts.Length == 3 && (parts[2] == "Movie" || parts[2] == "Series") ? parts[2] : null;
+            _selectedVideoFolderPath = null;
             _videosView?.Refresh();
             VideosGrid.SelectedIndex = -1;
             if (subTabIndex >= 0 && subTabIndex < LibraryTabs.Items.Count)
