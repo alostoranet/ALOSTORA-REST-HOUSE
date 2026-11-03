@@ -269,7 +269,7 @@ if ($xaml -notmatch 'SeriesStructureBox' -or
     $series -notmatch 'OrganizationType' -or
     $series -notmatch 'SeriesDirectVideos' -or
     $series -notmatch 'SetVideoPlacement\(' -or
-    $html -notmatch 'فيديوهات مرتبطة مباشرة بالمسلسل' -or
+    $html -notmatch 'فيديوهات مباشرة' -or
     $html -notmatch "organizationType==='Parts'" -or
     $publicAccess -notmatch 'SeriesDirectVideos') {
     throw "Series organization and video-to-series/season/part placement are incomplete."
