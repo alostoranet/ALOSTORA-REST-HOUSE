@@ -2091,6 +2091,7 @@ public partial class MainWindow : Window
         public string? Title { get; set; }
         public string? FolderId { get; set; }
         public string FolderName { get; set; } = "المكتبة";
+        public string? FolderPath { get; set; }
         public string? Description { get; set; }
         public int? Year { get; set; }
         public string? Genre { get; set; }
