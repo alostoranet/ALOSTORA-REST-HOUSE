@@ -29,7 +29,7 @@ public partial class MainWindow : Window
     private readonly HttpClient _http = new() { BaseAddress = new Uri("http://127.0.0.1:8096") };
     private readonly ObservableCollection<AdminVideo> _videos = new();
     private ICollectionView? _videosView;
-    private string? _selectedVideoFolderId;
+    private string? _selectedVideoFolderPath;
     private readonly ObservableCollection<EpisodeCandidate> _episodeCandidates = new();
     private CategoryAdmin[] _categories = Array.Empty<CategoryAdmin>();
     private bool _suppressCustomerMessagePopup;
@@ -58,10 +58,17 @@ public partial class MainWindow : Window
         Closed += (_, _) => _messageRefreshTimer.Stop();
     }
 
-    private bool FilterVideosByFolder(object item) =>
-        item is AdminVideo video &&
-        (string.IsNullOrWhiteSpace(_selectedVideoFolderId) ||
-         string.Equals(video.FolderId, _selectedVideoFolderId, StringComparison.Ordinal));
+    private bool FilterVideosByFolder(object item)
+    {
+        if (item is not AdminVideo video) return false;
+        if (string.IsNullOrWhiteSpace(_selectedVideoFolderPath)) return true;
+        if (string.IsNullOrWhiteSpace(video.FolderPath)) return false;
+        var selected = _selectedVideoFolderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var folder = video.FolderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return string.Equals(folder, selected, StringComparison.OrdinalIgnoreCase) ||
+               folder.StartsWith(selected + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
+               folder.StartsWith(selected + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+    }
 
     private void RefreshVideoFoldersTree()
     {
