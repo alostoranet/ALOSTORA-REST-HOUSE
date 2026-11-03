@@ -80,8 +80,8 @@
 <TextBlock x:Name="StatusText" Text="اختر فيديو من القائمة لتعديل بياناته." Foreground="#526174" TextWrapping="Wrap" Margin="0,12,0,0"/>
 </StackPanel></ScrollViewer></TabItem>
 <TabItem Header="إدارة البرامج والمسلسلات"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
-<TextBlock Text="إدارة المسلسلات والمواسم والحلقات" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,5"/>
-<TextBlock Text="الترتيب الصحيح: اختر القسم الرئيسي ثم القسم الفرعي، أنشئ المسلسل، وبعدها أضف المواسم أو الأجزاء والحلقات. كل خطوة مرتبطة بما قبلها." TextWrapping="Wrap" Foreground="#64748B" FontSize="12" Margin="0,0,0,12"/>
+<TextBlock Text="إدارة البرامج والمسلسلات" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,5"/>
+<TextBlock Text="الترتيب الصحيح: اختر القسم الرئيسي ثم القسم الفرعي، أنشئ البرنامج أو المسلسل واحفظه. بعد ذلك انتقل إلى تبويب «إدارة المواسم والحلقات» لإضافة الحلقات وربط ملفاتها." TextWrapping="Wrap" Foreground="#64748B" FontSize="12" Margin="0,0,0,12"/>
 <TextBlock Text="اختر مسلسلًا موجودًا أو اكتب بيانات مسلسل جديد."/>
 <WrapPanel Margin="0,5,0,8"><Button Content="مسلسل جديد" Click="NewSeries_Click" Padding="10,7" Margin="0,0,6,0"/><Button Content="إنشاء مسلسل من الفيديو المحدد" Click="CreateSeriesFromVideo_Click" Padding="10,7" Margin="0,0,6,0"/></WrapPanel><TextBlock Text="سجل المسلسلات المضافة — اختر أي مسلسل لفتح بياناته وتعديلها" Foreground="#64748B" FontSize="12" Margin="0,0,0,6"/><DataGrid x:Name="SeriesPicker" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="SeriesPicker_SelectionChanged" CanUserAddRows="False" Height="145" Margin="0,0,0,10"><DataGrid.Columns><DataGridTextColumn Header="المسلسل" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="السنة" Binding="{Binding Year}" Width="60"/><DataGridTextColumn Header="القسم" Binding="{Binding CategoryTitle}" Width="105"/><DataGridTextColumn Header="التنظيم" Binding="{Binding OrganizationTypeLabel}" Width="95"/><DataGridTextColumn Header="النشر" Binding="{Binding PublishStatus}" Width="70"/></DataGrid.Columns></DataGrid>
 <TextBlock Text="معرّف المسلسل (اتركه فارغًا لإنشاء معرّف تلقائي)"/><TextBox x:Name="SeriesIdBox" Padding="8" Margin="0,4,0,8"/>
@@ -138,8 +138,7 @@
 <DataGrid x:Name="MissingEpisodesGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single" Height="135" Margin="0,0,0,10">
 <DataGrid.Columns><DataGridTextColumn Header="المسلسل" Binding="{Binding SeriesTitle}" Width="*"/><DataGridTextColumn Header="الموسم" Binding="{Binding SeasonNumber}" Width="55"/><DataGridTextColumn Header="الحلقة" Binding="{Binding EpisodeNumber}" Width="55"/><DataGridTextColumn Header="اسم الحلقة" Binding="{Binding Title}" Width="*"/></DataGrid.Columns></DataGrid>
 
-</StackPanel></ScrollViewer>
-
+</StackPanel></ScrollViewer></TabItem>
 <TabItem Header="الأقسام الرئيسية والفرعية">
 <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
 <TextBlock Text="إدارة الأقسام الرئيسية والفرعية" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,5"/>
