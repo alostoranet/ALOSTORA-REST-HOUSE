@@ -94,70 +94,57 @@ public sealed class CatalogCategoryService
     }
     public void Delete(string id)
     {
-        using var c=Open();
-        using var transaction=c.BeginTransaction();
-        using (var exists=c.CreateCommand())
-        {
-            exists.Transaction=transaction;
-            exists.CommandText="SELECT COUNT(*) FROM CatalogCategories WHERE CategoryId=$id";
-            exists.Parameters.AddWithValue("$id",id);
-            if(Convert.ToInt32(exists.ExecuteScalar())==0)throw new KeyNotFoundException("القسم غير موجود");
-        }
+        if (string.IsNullOrWhiteSpace(id))
+            throw new ArgumentException("معرّف القسم غير صالح", nameof(id));
 
-        // Delete catalog metadata and series links for the complete category branch.
-        // Physical video files are intentionally never touched.
-        if(TableExists(c,transaction,"VideoMetadata"))
+        using var c = Open();
+        using var transaction = c.BeginTransaction();
+        var updatedUtc = DateTime.UtcNow.ToString("O");
+
+        // Detach and unpublish content rather than deleting its metadata or playback links.
+        // The original media files and series/episode records remain available for reassignment.
+        if (TableExists(c, transaction, "VideoMetadata"))
         {
-            using var videos=c.CreateCommand();
-            videos.Transaction=transaction;
-            videos.CommandText="""
-                DELETE FROM VideoMetadata
-                WHERE CategoryId IN (SELECT CategoryId FROM CatalogCategories WHERE CategoryId=$id OR ParentId=$id)
-                   OR VideoId IN (
-                     SELECT se.VideoId
-                     FROM SeriesEpisodes se
-                     JOIN SeriesSeasons ss ON ss.SeasonId=se.SeasonId
-                     JOIN SeriesCatalog sc ON sc.SeriesId=ss.SeriesId
-                     WHERE sc.CategoryId IN (SELECT CategoryId FROM CatalogCategories WHERE CategoryId=$id OR ParentId=$id)
-                   )
-                   OR VideoId IN (
-                     SELECT sd.VideoId
-                     FROM SeriesDirectVideos sd
-                     JOIN SeriesCatalog sc ON sc.SeriesId=sd.SeriesId
-                     WHERE sc.CategoryId IN (SELECT CategoryId FROM CatalogCategories WHERE CategoryId=$id OR ParentId=$id)
-                   );
+            using var videos = c.CreateCommand();
+            videos.Transaction = transaction;
+            videos.CommandText = """
+                UPDATE VideoMetadata
+                SET CategoryId = NULL, IsPublished = 0, UpdatedUtc = $updated
+                WHERE CategoryId IN (
+                    SELECT CategoryId FROM CatalogCategories
+                    WHERE CategoryId = $id OR ParentId = $id
+                )
                 """;
-            videos.Parameters.AddWithValue("$id",id);
-            // Older or partially initialized databases may not have series tables yet.
-            if(TableExists(c,transaction,"SeriesCatalog") &&
-               TableExists(c,transaction,"SeriesSeasons") &&
-               TableExists(c,transaction,"SeriesEpisodes") &&
-               TableExists(c,transaction,"SeriesDirectVideos"))
-                videos.ExecuteNonQuery();
-            else
-            {
-                using var simple=c.CreateCommand();
-                simple.Transaction=transaction;
-                simple.CommandText="DELETE FROM VideoMetadata WHERE CategoryId IN (SELECT CategoryId FROM CatalogCategories WHERE CategoryId=$id OR ParentId=$id)";
-                simple.Parameters.AddWithValue("$id",id);
-                simple.ExecuteNonQuery();
-            }
+            videos.Parameters.AddWithValue("$updated", updatedUtc);
+            videos.Parameters.AddWithValue("$id", id);
+            videos.ExecuteNonQuery();
         }
 
-        if(TableExists(c,transaction,"SeriesCatalog"))
+        if (TableExists(c, transaction, "SeriesCatalog"))
         {
-            using var shows=c.CreateCommand();
-            shows.Transaction=transaction;
-            shows.CommandText="DELETE FROM SeriesCatalog WHERE CategoryId IN (SELECT CategoryId FROM CatalogCategories WHERE CategoryId=$id OR ParentId=$id)";
-            shows.Parameters.AddWithValue("$id",id);
-            shows.ExecuteNonQuery();
+            using var series = c.CreateCommand();
+            series.Transaction = transaction;
+            series.CommandText = """
+                UPDATE SeriesCatalog
+                SET CategoryId = NULL, IsPublished = 0, UpdatedUtc = $updated
+                WHERE CategoryId IN (
+                    SELECT CategoryId FROM CatalogCategories
+                    WHERE CategoryId = $id OR ParentId = $id
+                )
+                """;
+            series.Parameters.AddWithValue("$updated", updatedUtc);
+            series.Parameters.AddWithValue("$id", id);
+            series.ExecuteNonQuery();
         }
 
-        using var cmd=c.CreateCommand();
-        cmd.Transaction=transaction;
-        cmd.CommandText="DELETE FROM CatalogCategories WHERE CategoryId=$id";
-        cmd.Parameters.AddWithValue("$id",id);
-        cmd.ExecuteNonQuery();
+        using var cmd = c.CreateCommand();
+        cmd.Transaction = transaction;
+        cmd.CommandText = "DELETE FROM CatalogCategories WHERE CategoryId = $id";
+        cmd.Parameters.AddWithValue("$id", id);
+        if (cmd.ExecuteNonQuery() == 0)
+            throw new KeyNotFoundException("القسم غير موجود");
+
+        // ParentId has ON DELETE CASCADE; the category tree is removed in this transaction.
         transaction.Commit();
     }
 
