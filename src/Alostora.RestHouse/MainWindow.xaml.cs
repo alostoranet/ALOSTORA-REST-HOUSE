@@ -28,7 +28,7 @@ public partial class MainWindow : Window
     private readonly HttpClient _http = new() { BaseAddress = new Uri("http://127.0.0.1:8096") };
     private readonly ObservableCollection<AdminVideo> _videos = new();
     private ICollectionView? _videosView;
-    private string? _selectedVideoFolderId;
+    private string? _selectedVideoFolderPath;
     private readonly ObservableCollection<EpisodeCandidate> _episodeCandidates = new();
     private CategoryAdmin[] _categories = Array.Empty<CategoryAdmin>();
     private bool _suppressCustomerMessagePopup;
@@ -57,10 +57,16 @@ public partial class MainWindow : Window
         Closed += (_, _) => _messageRefreshTimer.Stop();
     }
 
-    private bool FilterVideosByFolder(object item) =>
-        item is AdminVideo video &&
-        (string.IsNullOrWhiteSpace(_selectedVideoFolderId) ||
-         string.Equals(video.FolderId, _selectedVideoFolderId, StringComparison.Ordinal));
+    private bool FilterVideosByFolder(object item)
+    {
+        if (item is not AdminVideo video) return false;
+        if (string.IsNullOrWhiteSpace(_selectedVideoFolderPath)) return true;
+        if (string.IsNullOrWhiteSpace(video.FolderPath)) return false;
+        var selected = _selectedVideoFolderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return string.Equals(video.FolderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), selected, StringComparison.OrdinalIgnoreCase)
+            || video.FolderPath.StartsWith(selected + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            || video.FolderPath.StartsWith(selected + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+    }
 
     private void RefreshVideoFoldersTree()
     {
@@ -68,28 +74,58 @@ public partial class MainWindow : Window
         VideoFoldersTree.Items.Clear();
         var all = new TreeViewItem { Header = $"كل المجلدات ({_videos.Count})", Tag = null, IsSelected = true };
         VideoFoldersTree.Items.Add(all);
-        var groups = _videos
-            .GroupBy(x => new { x.FolderId, x.FolderName })
-            .OrderBy(x => x.Key.FolderName, StringComparer.CurrentCultureIgnoreCase);
-        foreach (var group in groups)
+
+        var folderPaths = _videos
+            .Select(x => x.FolderPath)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => Path.GetFullPath(x!))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x.Count(ch => ch == Path.DirectorySeparatorChar || ch == Path.AltDirectorySeparatorChar))
+            .ThenBy(x => x, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+
+        var nodes = new Dictionary<string, TreeViewItem>(StringComparer.OrdinalIgnoreCase);
+        foreach (var folderPath in folderPaths)
         {
-            var folder = new TreeViewItem
+            var rootPath = Path.GetPathRoot(folderPath);
+            if (string.IsNullOrWhiteSpace(rootPath)) rootPath = folderPath;
+            if (!nodes.TryGetValue(rootPath, out var parent))
             {
-                Header = $"{group.Key.FolderName} ({group.Count()})",
-                Tag = group.Key.FolderId
-            };
-            VideoFoldersTree.Items.Add(folder);
+                parent = new TreeViewItem { Header = rootPath, Tag = rootPath };
+                nodes[rootPath] = parent;
+                VideoFoldersTree.Items.Add(parent);
+            }
+
+            var relative = folderPath.Length > rootPath.Length ? folderPath[rootPath.Length..] : "";
+            var segments = relative.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+            var currentPath = rootPath;
+            foreach (var segment in segments)
+            {
+                currentPath = Path.Combine(currentPath, segment);
+                if (!nodes.TryGetValue(currentPath, out var node))
+                {
+                    var normalized = currentPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    var count = _videos.Count(v => !string.IsNullOrWhiteSpace(v.FolderPath) &&
+                        (string.Equals(v.FolderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), normalized, StringComparison.OrdinalIgnoreCase)
+                         || v.FolderPath.StartsWith(normalized + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                         || v.FolderPath.StartsWith(normalized + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)));
+                    node = new TreeViewItem { Header = $"{segment} ({count})", Tag = currentPath };
+                    nodes[currentPath] = node;
+                    parent.Items.Add(node);
+                }
+                parent = node;
+            }
         }
-        _selectedVideoFolderId = null;
+
+        _selectedVideoFolderPath = null;
         _videosView?.Refresh();
     }
 
     private void VideoFoldersTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
-        if (VideoFoldersTree.SelectedItem is TreeViewItem selected)
-            _selectedVideoFolderId = selected.Tag as string;
-        else
-            _selectedVideoFolderId = null;
+        _selectedVideoFolderPath = VideoFoldersTree.SelectedItem is TreeViewItem selected
+            ? selected.Tag as string
+            : null;
         _videosView?.Refresh();
     }
 
@@ -2076,6 +2112,7 @@ public partial class MainWindow : Window
         public string Id { get; set; } = "";
         public string? Title { get; set; }
         public string? FolderId { get; set; }
+        public string FolderPath { get; set; } = "";
         public string FolderName { get; set; } = "المكتبة";
         public string? Description { get; set; }
         public int? Year { get; set; }
