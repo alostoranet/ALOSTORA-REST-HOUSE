@@ -20,6 +20,31 @@ main{max-width:1200px;margin:auto;padding:24px}h2{font-size:22px}
 .developer-credit{margin:26px auto 14px;text-align:center;color:#64748b;font-size:13px;font-weight:700;padding:12px;border-top:1px solid #e2e8f0;max-width:1100px}
 
 .catalog-page-head{display:flex;align-items:center;gap:14px;padding:12px 0 18px;border-bottom:1px solid #38516d;margin-bottom:20px}.catalog-back{border:1px solid #526b85;background:#1b3550;color:#fff;border-radius:9px;padding:10px 18px;font:inherit;font-weight:bold;cursor:pointer}.catalog-back:hover{background:#c93640}.catalog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:18px}.catalog-card{display:flex;flex-direction:column;text-align:right;gap:9px;background:#172b42;border:1px solid #38516d;border-radius:14px;padding:12px;color:#f5f7fb;cursor:pointer;min-width:0;transition:transform .16s,border-color .16s}.catalog-card:hover{transform:translateY(-3px);border-color:#c93640}.catalog-card img,.catalog-card .poster-empty{width:100%;height:230px;object-fit:cover;border-radius:9px;margin:0}.catalog-card h3{font-size:16px;margin:2px 0 0;overflow-wrap:anywhere}.catalog-card small{color:#bdcadd;line-height:1.7}.catalog-card button.secondary{background:#315577;color:#fff;border:0;border-radius:8px;padding:8px 10px;font:inherit;font-weight:bold;cursor:pointer}.catalog-hero{display:flex;gap:20px;align-items:flex-start;background:#14283e;border:1px solid #38516d;border-radius:15px;padding:18px;margin-bottom:22px}.catalog-hero img,.catalog-hero .poster-empty{width:170px;height:225px;object-fit:cover;border-radius:10px;flex:0 0 170px;margin:0}.catalog-hero-copy{min-width:0}.catalog-hero-copy h2{margin:0 0 10px}.catalog-hero-copy p{color:#c4d2e1;line-height:1.9}.catalog-section-title{margin:24px 0 12px;font-size:19px}.catalog-empty{padding:22px;border:1px dashed #526b85;border-radius:12px;color:#bdcadd;text-align:center}.catalog-episode{display:flex;align-items:center;justify-content:space-between;gap:14px;background:#1c344d;border:1px solid #38516d;border-radius:11px;padding:13px;margin:9px 0}.catalog-episode button{flex:0 0 auto}.catalog-episode strong{display:block;margin-bottom:5px}.catalog-episode small{color:#c4d2e1;line-height:1.7}.catalog-player-page{max-width:1050px;margin:0 auto}.catalog-player-page video{max-height:72vh}.catalog-hidden{display:none!important}@media(max-width:600px){.catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.catalog-card{padding:8px}.catalog-card img,.catalog-card .poster-empty{height:170px}.catalog-hero{display:block}.catalog-hero img,.catalog-hero .poster-empty{width:118px;height:155px;float:right;margin:0 0 10px 14px}.catalog-episode{align-items:flex-start}.catalog-episode button{white-space:nowrap;padding:9px 11px}}
+/* Emby / YeTech inspired catalogue presentation: clean hierarchy, artwork-first cards, independent page levels. */
+.catalog-grid{grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:20px;align-items:stretch}
+.catalog-card{background:linear-gradient(155deg,#1b3049 0%,#122238 100%);border:1px solid #304a66;border-radius:17px;padding:11px;gap:10px;box-shadow:0 8px 22px rgba(0,0,0,.16);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.catalog-card:hover{transform:translateY(-4px);border-color:#d34a50;box-shadow:0 14px 28px rgba(0,0,0,.24)}
+.catalog-card img,.catalog-card .poster-empty{height:270px;border-radius:12px;background:#20364f}
+.catalog-card h3{font-size:16px;line-height:1.5;margin:2px 2px 0}
+.catalog-card small{font-size:12px;color:#c5d3e2;margin:0 2px 2px}
+.catalog-hero{background:linear-gradient(120deg,#1a3049,#102136);border:1px solid #38516d;border-radius:18px;padding:20px;box-shadow:0 10px 28px rgba(0,0,0,.18)}
+.catalog-hero img,.catalog-hero .poster-empty{border-radius:13px}
+.catalog-section-title{display:flex;align-items:center;gap:10px;margin:28px 0 14px;font-size:20px}
+.catalog-section-title:before{content:"";width:4px;height:23px;background:#c93640;border-radius:4px}
+.catalog-episode{background:#182e46;border:1px solid #304a66;border-radius:13px;padding:15px 17px;margin:10px 0}
+.catalog-back{background:#1b3550;border-color:#49627d}
+.catalog-welcome{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 24px;margin:4px 0 22px;border:1px solid #38516d;border-radius:18px;background:radial-gradient(circle at 15% 30%,rgba(201,54,64,.22),transparent 34%),linear-gradient(115deg,#1a3049,#102136)}
+.catalog-welcome h2{margin:0 0 7px;font-size:23px}
+.catalog-welcome p{margin:0;color:#c6d4e3;line-height:1.8;font-size:13px}
+.catalog-welcome .welcome-mark{flex:0 0 auto;width:54px;height:54px;border-radius:15px;display:grid;place-items:center;background:#c93640;color:white;font-size:25px;font-weight:bold}
+@media(max-width:600px){
+ .catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+ .catalog-card{padding:8px;border-radius:13px}
+ .catalog-card img,.catalog-card .poster-empty{height:190px}
+ .catalog-welcome{padding:16px;align-items:flex-start}
+ .catalog-welcome h2{font-size:19px}
+ .catalog-welcome .welcome-mark{width:42px;height:42px;font-size:20px}
+}
 </style></head><body>
 <header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button></nav></header>
 <main><section id="homeView">
@@ -154,6 +179,13 @@ function renderCatalogPage(){
     ?seriesItems.some(show=>show.categoryId===sub.categoryId&&show.isPublished===true&&matches(show)&&matchesQuery(show))
     :items.some(video=>video.categoryId===sub.categoryId&&video.isPublished===true&&matches(video)&&matchesQuery(video))));
   });
+  const welcome=document.createElement('section');welcome.className='catalog-welcome';
+  const welcomeCopy=document.createElement('div');
+  const welcomeTitle=document.createElement('h2');welcomeTitle.textContent='مكتبة استراحة الأسطورة';
+  const welcomeText=document.createElement('p');welcomeText.textContent='اختر القسم لفتح مكتبته في صفحة مستقلة، ثم انتقل إلى البرنامج أو المسلسل والحلقات بسهولة.';
+  welcomeCopy.append(welcomeTitle,welcomeText);
+  const welcomeMark=document.createElement('div');welcomeMark.className='welcome-mark';welcomeMark.textContent='▶';
+  welcome.append(welcomeCopy,welcomeMark);content.append(welcome);
   const grid=document.createElement('div');grid.className='catalog-grid';
   for(const main of mains){
    const subs=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true);
