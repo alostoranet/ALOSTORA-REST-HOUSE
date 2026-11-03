@@ -661,6 +661,7 @@ public partial class MainWindow : Window
 
     private void NewCategory_Click(object sender, RoutedEventArgs e)
     {
+        _pendingCategoryPosterPath = null;
         CategoriesGrid.UnselectAll();
         CategoryIdBox.Clear();
         CategoryTitleBox.Clear();
@@ -675,10 +676,15 @@ public partial class MainWindow : Window
 
     private void NewSubCategory_Click(object sender, RoutedEventArgs e)
     {
+        var selectedCategory = CategoriesGrid.SelectedItem as CategoryAdmin;
+        var suggestedParentId = selectedCategory is null
+            ? null
+            : selectedCategory.ContentKind == "Group" ? selectedCategory.CategoryId : selectedCategory.ParentId;
+        _pendingCategoryPosterPath = null;
         CategoriesGrid.UnselectAll();
         CategoryIdBox.Clear();
         CategoryTitleBox.Clear();
-        CategoryParentPicker.SelectedIndex = -1;
+        CategoryParentPicker.SelectedValue = suggestedParentId;
         CategoryKindPicker.SelectedItem = CategoryKindPicker.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == "Movie");
         CategoryPosterPathBox.Clear();
         CategoryPublishBox.IsChecked = true;
@@ -706,6 +712,7 @@ public partial class MainWindow : Window
         CategoryTitleBox.Text = row.Title;
         CategoryParentPicker.SelectedValue = row.ParentId;
         CategoryKindPicker.SelectedItem = CategoryKindPicker.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == row.ContentKind);
+        _pendingCategoryPosterPath = null;
         CategoryPosterPathBox.Text = row.PosterPath ?? "";
         CategoryPublishBox.IsChecked = row.IsPublished;
         CategoryPosterStatusText.Text = string.IsNullOrWhiteSpace(row.PosterPath) ? "لا يوجد غلاف. يمكنك نشر القسم بدونه أو رفع غلاف اختياري." : "تم حفظ غلاف هذا القسم.";
