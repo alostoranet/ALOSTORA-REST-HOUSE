@@ -201,6 +201,14 @@ if ($xaml -notmatch '<DataGrid x:Name="VideosGrid"' -or
     throw "The editable video, series, or category registers are incomplete."
 }
 Write-Host "PASS: videos, series, and categories have separate editable registers and save confirmations."
+if ($xaml -notmatch 'x:Name="SeriesPosterPreview"' -or
+    $xaml -notmatch 'Header="🗂️ المواسم والحلقات"' -or
+    $xaml -notmatch 'x:Name="SeriesStatusText"' -or
+    $code -notmatch 'UpdateSeriesPosterPreview\(' -or
+    $code -notmatch 'PublishBox\.IsChecked\s*==\s*true\s*&&\s*selectedCategory\s+is\s+null') {
+    throw "Series artwork preview, separate season management, or published-video category guidance is incomplete."
+}
+Write-Host "PASS: series artwork preview, separate season management, and video category guidance are wired."
 
 # The customer-message list must open details in a modal popup instead of a bottom details panel.
 if ($xaml -match 'CustomerMessageDetailsText' -or
