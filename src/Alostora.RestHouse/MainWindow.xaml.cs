@@ -26,7 +26,7 @@ public partial class MainWindow : Window
     private string? _ffmpegPath;
     private string? _pendingSeriesPosterPath;
     private string? _pendingCategoryPosterPath;
-    private readonly HttpClient _http = new() { BaseAddress = new Uri("http://127.0.0.1:8096") };
+    private readonly HttpClient _http = new() { BaseAddress = new Uri("http://127.0.0.1:8097") };
     private readonly ObservableCollection<AdminVideo> _videos = new();
     private ICollectionView? _videosView;
     private string? _selectedVideoFolderPath;
@@ -47,7 +47,7 @@ public partial class MainWindow : Window
         LibraryBox.Text = library;
         MediaFolderBox.Text = library;
         PostersFolderBox.Text = posters;
-        AddressBox.Text = $"رابط المشاهدة: http://{GetLanAddress()}:8096";
+        AddressBox.Text = $"رابط المشاهدة: http://{GetLanAddress()}:8097";
         _videosView = CollectionViewSource.GetDefaultView(_videos);
         _videosView.Filter = FilterVideosByFolder;
         VideosGrid.ItemsSource = _videosView;
@@ -419,11 +419,11 @@ public partial class MainWindow : Window
 
     private async void EnableFirewall_Click(object sender, RoutedEventArgs e)
     {
-        const string ruleName = "ALOSTORA REST HOUSE TCP 8096";
+        const string ruleName = "ALOSTORA REST HOUSE TCP 8097";
         var startInfo = new ProcessStartInfo
         {
             FileName = "powershell.exe",
-            Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='Stop'; try { Get-NetFirewallRule -DisplayName '" + ruleName + "' -ErrorAction SilentlyContinue | Remove-NetFirewallRule; New-NetFirewallRule -DisplayName '" + ruleName + "' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8096 -Profile Private | Out-Null; exit 0 } catch { Write-Error $_; exit 1 }\"",
+            Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='Stop'; try { Get-NetFirewallRule -DisplayName '" + ruleName + "' -ErrorAction SilentlyContinue | Remove-NetFirewallRule; New-NetFirewallRule -DisplayName '" + ruleName + "' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8097 -Profile Private | Out-Null; exit 0 } catch { Write-Error $_; exit 1 }\"",
             UseShellExecute = true,
             Verb = "runas",
             WindowStyle = ProcessWindowStyle.Hidden
@@ -439,7 +439,7 @@ public partial class MainWindow : Window
             }
             await process.WaitForExitAsync();
             if (process.ExitCode == 0)
-                MessageBox.Show("تم السماح باتصالات TCP على المنفذ 8096 ضمن ملف تعريف الشبكة الخاصة. تأكد أن شبكة Windows مضبوطة على «خاصة».", "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("تم السماح باتصالات TCP على المنفذ 8097 ضمن ملف تعريف الشبكة الخاصة. تأكد أن شبكة Windows مضبوطة على «خاصة».", "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Information);
             else
                 MessageBox.Show("لم يتمكن Windows من إضافة قاعدة جدار الحماية. شغّل البرنامج بصلاحية مسؤول وحاول مجدداً.", "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
