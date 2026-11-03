@@ -35,6 +35,7 @@ public partial class MainWindow : Window
     private string? _pendingCategoryPosterPath;
     private readonly HttpClient _http = new();
     private readonly int _port;
+    private string? _dashboardKindFilter;
     private Window? _activeEditorWindow;
     private Expander? _activeEditorExpander;
     private object? _activeEditorContent;
@@ -48,6 +49,11 @@ public partial class MainWindow : Window
     private bool _customerMessagesInitialized;
     private bool _suppressVideoSeriesPickerEvent;
     private readonly DispatcherTimer _messageRefreshTimer = new() { Interval = TimeSpan.FromSeconds(30) };
+
+    public MainWindow(string root, string library, string posters, string? ffmpegPath)
+        : this(root, library, posters, ffmpegPath, 8097)
+    {
+    }
 
     public MainWindow(string root, string library, string posters, string? ffmpegPath, int port)
     {
@@ -124,6 +130,7 @@ public partial class MainWindow : Window
     private bool FilterVideosByFolder(object item)
     {
         if (item is not AdminVideo video) return false;
+        if (!string.IsNullOrWhiteSpace(_dashboardKindFilter) && !string.Equals(video.Kind, _dashboardKindFilter, StringComparison.OrdinalIgnoreCase)) return false;
         if (string.IsNullOrWhiteSpace(_selectedVideoFolderPath)) return true;
         if (string.IsNullOrWhiteSpace(video.FolderPath)) return false;
         var selected = _selectedVideoFolderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
@@ -506,6 +513,7 @@ public partial class MainWindow : Window
         _activeEditorWindow = window;
         window.Closed += (_, _) =>
         {
+            window.Content = null;
             if (_activeEditorExpander is not null)
             {
                 _activeEditorExpander.Content = _activeEditorContent;
@@ -2115,15 +2123,21 @@ public partial class MainWindow : Window
             return;
 
         var parts = element.Tag?.ToString()?.Split(':');
-        if (parts is null || parts.Length != 2 ||
+        if (parts is null || parts.Length is < 2 or > 3 ||
             !int.TryParse(parts[0], out var tabIndex) ||
             !int.TryParse(parts[1], out var subTabIndex) ||
             tabIndex < 1 || tabIndex >= MainNavigationTabs.Items.Count)
             return;
 
         MainNavigationTabs.SelectedIndex = tabIndex;
-        if (tabIndex == 1 && subTabIndex >= 0 && subTabIndex < LibraryTabs.Items.Count)
-            LibraryTabs.SelectedIndex = subTabIndex;
+        if (tabIndex == 1)
+        {
+            _dashboardKindFilter = parts.Length == 3 && (parts[2] == "Movie" || parts[2] == "Series") ? parts[2] : null;
+            _videosView?.Refresh();
+            VideosGrid.SelectedIndex = -1;
+            if (subTabIndex >= 0 && subTabIndex < LibraryTabs.Items.Count)
+                LibraryTabs.SelectedIndex = subTabIndex;
+        }
 
         e.Handled = true;
     }
