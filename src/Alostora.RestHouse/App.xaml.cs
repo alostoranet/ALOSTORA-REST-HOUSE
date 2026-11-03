@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using System.IO;
@@ -39,7 +40,14 @@ public partial class App : Application
    Directory.CreateDirectory(posters);
    var webRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
    var builder=WebApplication.CreateBuilder(new WebApplicationOptions { ContentRootPath = AppContext.BaseDirectory, WebRootPath = Directory.Exists(webRoot) ? webRoot : null });
-   builder.WebHost.UseUrls("http://0.0.0.0:8096");
+   var adminCertificatePath=Environment.GetEnvironmentVariable("ALOSTORA_HTTPS_CERT_PATH");
+   var adminCertificatePassword=Environment.GetEnvironmentVariable("ALOSTORA_HTTPS_CERT_PASSWORD");
+   var adminHttpsEnabled=!string.IsNullOrWhiteSpace(adminCertificatePath)&&File.Exists(adminCertificatePath);
+   builder.WebHost.ConfigureKestrel(options =>
+   {
+    options.ListenAnyIP(8096);
+    if(adminHttpsEnabled) options.ListenAnyIP(8443,listen=>listen.UseHttps(adminCertificatePath!,adminCertificatePassword));
+   });
    var supabaseUrl=(Environment.GetEnvironmentVariable("ALOSTORA_SUPABASE_URL")??"https://erxbnboohjiylzbafqho.supabase.co").TrimEnd('/');
    var supabasePublishableKey=Environment.GetEnvironmentVariable("ALOSTORA_SUPABASE_PUBLISHABLE_KEY")??"sb_publishable_IVA_HybnOmyw0bp-tkJfpw_5VyYr1aV";
    var libraryService = new LibraryService(library,Path.Combine(root,"resthouse.db"));
@@ -96,6 +104,12 @@ public partial class App : Application
     {
      context.Items["alostora.admin"]=true;
      await next();
+     return;
+    }
+    if(!context.Request.IsHttps)
+    {
+     context.Response.StatusCode=StatusCodes.Status426UpgradeRequired;
+     await context.Response.WriteAsJsonAsync(new{error="تسجيل دخول الإدارة يتطلب HTTPS. فعّل شهادة TLS على المنفذ 8443."});
      return;
     }
     if(!context.Request.Headers.TryGetValue("Authorization",out var authorization) ||
@@ -168,7 +182,12 @@ public partial class App : Application
     }
     catch{return false;}
    }
-   _server.MapGet("/admin",()=>Results.Redirect("/admin.html"));
+   _server.MapGet("/admin",(HttpContext c) =>
+   {
+    if(IsLocal(c)) return Results.Redirect("/admin.html");
+    if(adminHttpsEnabled) return Results.Redirect($"https://{c.Request.Host.Host}:8443/admin");
+    return Results.Problem("إدارة الاستراحة عن بُعد تحتاج شهادة HTTPS. اضبط ALOSTORA_HTTPS_CERT_PATH وALOSTORA_HTTPS_CERT_PASSWORD أولاً.",statusCode:503);
+   });
    _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
    _server.MapGet("/api/profile",(RestHouseProfileService profile)=>Results.Ok(profile.Load()));
    _server.MapPost("/api/messages",(CreateCustomerMessageRequest request,CustomerMessageService messages)=>{
