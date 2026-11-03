@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using System.IO;
 using System.Net;
+using System.Net.Http.Headers;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows;
 
@@ -24,6 +26,7 @@ public sealed record PreparePlaybackRequest(int? AudioStreamIndex);
 public partial class App : Application
 {
  private WebApplication? _server;
+ private static readonly HttpClient SupabaseAuthHttpClient = new();
  private async void OnStartup(object sender, StartupEventArgs e)
  {
   try {
@@ -37,6 +40,8 @@ public partial class App : Application
    var webRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
    var builder=WebApplication.CreateBuilder(new WebApplicationOptions { ContentRootPath = AppContext.BaseDirectory, WebRootPath = Directory.Exists(webRoot) ? webRoot : null });
    builder.WebHost.UseUrls("http://0.0.0.0:8096");
+   var supabaseUrl=(Environment.GetEnvironmentVariable("ALOSTORA_SUPABASE_URL")??"https://erxbnboohjiylzbafqho.supabase.co").TrimEnd('/');
+   var supabasePublishableKey=Environment.GetEnvironmentVariable("ALOSTORA_SUPABASE_PUBLISHABLE_KEY")??"sb_publishable_IVA_HybnOmyw0bp-tkJfpw_5VyYr1aV";
    var libraryService = new LibraryService(library,Path.Combine(root,"resthouse.db"));
    builder.Services.AddSingleton(libraryService);
    builder.Services.AddSingleton(new MediaConversionService(libraryService,settings.FfmpegPath,Path.Combine(root,"TranscodeCache")));
@@ -79,6 +84,78 @@ public partial class App : Application
     if(address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
     return IPAddress.IsLoopback(address);
    }
+   static bool IsAdmin(HttpContext c) => IsLocal(c) || (c.Items.TryGetValue("alostora.admin",out var allowed) && allowed is true);
+   _server.Use(async (context,next) =>
+   {
+    if(!context.Request.Path.StartsWithSegments("/api/admin"))
+    {
+     await next();
+     return;
+    }
+    if(IsLocal(context))
+    {
+     context.Items["alostora.admin"]=true;
+     await next();
+     return;
+    }
+    if(!context.Request.Headers.TryGetValue("Authorization",out var authorization) ||
+       !AuthenticationHeaderValue.TryParse(authorization.ToString(),out var bearer) ||
+       !string.Equals(bearer.Scheme,"Bearer",StringComparison.OrdinalIgnoreCase) ||
+       string.IsNullOrWhiteSpace(bearer.Parameter))
+    {
+     context.Response.StatusCode=StatusCodes.Status401Unauthorized;
+     await context.Response.WriteAsJsonAsync(new{error="يلزم تسجيل الدخول للوصول إلى الإدارة."});
+     return;
+    }
+    if(string.IsNullOrWhiteSpace(supabasePublishableKey))
+    {
+     context.Response.StatusCode=StatusCodes.Status503ServiceUnavailable;
+     await context.Response.WriteAsJsonAsync(new{error="إعدادات Supabase Auth غير مكتملة على الخادم."});
+     return;
+    }
+    try
+    {
+     using var request=new HttpRequestMessage(HttpMethod.Get,supabaseUrl+"/auth/v1/user");
+     request.Headers.TryAddWithoutValidation("apikey",supabasePublishableKey);
+     request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",bearer.Parameter);
+     using var response=await SupabaseAuthHttpClient.SendAsync(request,context.RequestAborted);
+     if(!response.IsSuccessStatusCode)
+     {
+      context.Response.StatusCode=StatusCodes.Status401Unauthorized;
+      await context.Response.WriteAsJsonAsync(new{error="جلسة الدخول غير صالحة أو انتهت. سجّل الدخول مجدداً."});
+      return;
+     }
+     await using var stream=await response.Content.ReadAsStreamAsync(context.RequestAborted);
+     using var user=await JsonDocument.ParseAsync(stream,cancellationToken:context.RequestAborted);
+     if(!user.RootElement.TryGetProperty("app_metadata",out var metadata) ||
+        metadata.ValueKind!=JsonValueKind.Object ||
+        !metadata.TryGetProperty("role",out var role) ||
+        !string.Equals(role.GetString(),"admin",StringComparison.OrdinalIgnoreCase))
+     {
+      context.Response.StatusCode=StatusCodes.Status403Forbidden;
+      await context.Response.WriteAsJsonAsync(new{error="تم تسجيل الدخول، لكن هذا الحساب لا يملك صلاحية إدارة الاستراحة."});
+      return;
+     }
+     context.Items["alostora.admin"]=true;
+    }
+    catch(OperationCanceledException) when(context.RequestAborted.IsCancellationRequested)
+    {
+     return;
+    }
+    catch(HttpRequestException)
+    {
+     context.Response.StatusCode=StatusCodes.Status503ServiceUnavailable;
+     await context.Response.WriteAsJsonAsync(new{error="تعذر الاتصال بخدمة التحقق من Supabase. تم رفض طلب الإدارة لحماية النظام."});
+     return;
+    }
+    catch(JsonException)
+    {
+     context.Response.StatusCode=StatusCodes.Status401Unauthorized;
+     await context.Response.WriteAsJsonAsync(new{error="تعذر التحقق من جلسة الدخول."});
+     return;
+    }
+    await next();
+   });
    static bool PosterExists(string? posterPath,string postersRoot)
    {
     if(string.IsNullOrWhiteSpace(posterPath)||!posterPath.StartsWith("/posters/",StringComparison.OrdinalIgnoreCase))return false;
@@ -91,6 +168,7 @@ public partial class App : Application
     }
     catch{return false;}
    }
+   _server.MapGet("/admin",()=>Results.Redirect("/admin.html"));
    _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
    _server.MapGet("/api/profile",(RestHouseProfileService profile)=>Results.Ok(profile.Load()));
    _server.MapPost("/api/messages",(CreateCustomerMessageRequest request,CustomerMessageService messages)=>{
@@ -101,22 +179,22 @@ public partial class App : Application
     return Results.Ok(new{sent=true,id,message="وصلت رسالتك إلى إدارة استراحة الأسطورة، شكراً لتواصلك."});
    });
    _server.MapGet("/api/admin/messages",(HttpContext c,CustomerMessageService messages)=>
-    IsLocal(c)?Results.Ok(messages.List()):Results.NotFound());
+    IsAdmin(c)?Results.Ok(messages.List()):Results.NotFound());
    _server.MapPost("/api/admin/messages/{id:long}/status",(HttpContext c,long id,CustomerMessageStatusRequest request,CustomerMessageService messages)=>{
-    if(!IsLocal(c))return Results.NotFound();
+    if(!IsAdmin(c))return Results.NotFound();
     if(request.Status is not ("جديد" or "قيد المتابعة" or "تمت المعالجة"))return Results.BadRequest(new{error="حالة الرسالة غير صالحة"});
     return messages.SetStatus(id,request.Status)?Results.Ok(new{updated=true}):Results.NotFound(new{error="الرسالة غير موجودة"});
    });
    _server.MapDelete("/api/admin/messages/{id:long}",(HttpContext c,long id,CustomerMessageService messages)=>{
-    if(!IsLocal(c))return Results.NotFound();
+    if(!IsAdmin(c))return Results.NotFound();
     return messages.Delete(id)?Results.Ok(new{deleted=true}):Results.NotFound(new{error="الرسالة غير موجودة"});
    });
 
    _server.MapGet("/api/admin/profile",(HttpContext c,RestHouseProfileService profile)=>
-    IsLocal(c)?Results.Ok(profile.Load()):Results.NotFound());
+    IsAdmin(c)?Results.Ok(profile.Load()):Results.NotFound());
    _server.MapPost("/api/admin/profile",(HttpContext c,RestHouseProfile request,RestHouseProfileService profile)=>
    {
-    if(!IsLocal(c))return Results.NotFound();
+    if(!IsAdmin(c))return Results.NotFound();
     if(request is null||(request.LogoPath is not null&&!PosterExists(request.LogoPath,posters)))
      return Results.BadRequest(new{error="مسار شعار الشبكة غير صالح أو أن الصورة غير موجودة"});
     try{profile.Save(request);return Results.Ok(new{saved=true,profile=profile.Load()});}
@@ -124,7 +202,7 @@ public partial class App : Application
    });
    _server.MapPost("/api/admin/profile/logo",async (HttpContext c,RestHouseProfileService profile)=>
    {
-    if(!IsLocal(c))return Results.NotFound();
+    if(!IsAdmin(c))return Results.NotFound();
     if(c.Request.ContentLength is > 5_242_880)return Results.StatusCode(413);
     var contentType=c.Request.ContentType?.Split(';')[0].Trim().ToLowerInvariant();
     var ext=contentType switch{"image/jpeg"=>".jpg","image/png"=>".png","image/webp"=>".webp",_=>null};
@@ -148,9 +226,9 @@ public partial class App : Application
    });
 
    _server.MapGet("/api/catalog-categories",(CatalogCategoryService categories)=>Results.Ok(categories.List(publishedOnly:true)));
-   _server.MapGet("/api/admin/catalog-categories",(HttpContext c,CatalogCategoryService categories)=>IsLocal(c)?Results.Ok(categories.List()):Results.NotFound());
+   _server.MapGet("/api/admin/catalog-categories",(HttpContext c,CatalogCategoryService categories)=>IsAdmin(c)?Results.Ok(categories.List()):Results.NotFound());
    _server.MapPost("/api/admin/catalog-categories",(HttpContext c,SaveCatalogCategoryRequest request,CatalogCategoryService categories)=>{
-    if(!IsLocal(c))return Results.NotFound();
+    if(!IsAdmin(c))return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.Title)||(request.Title?.Length??0)>100||(request.PosterPath?.Length??0)>240)return Results.BadRequest(new{error="اسم القسم أو الغلاف غير صالح"});
     if(!string.IsNullOrWhiteSpace(request.PosterPath)&&!PosterExists(request.PosterPath,posters))return Results.BadRequest(new{error="مسار غلاف القسم غير صالح أو أن ملف الصورة غير موجود"});
     if(request.ParentId is not null){var parent=categories.Get(request.ParentId);if(parent is null||parent.ParentId is not null||parent.ContentKind!="Group")return Results.BadRequest(new{error="اختر قسماً رئيسياً صحيحاً"});
@@ -158,10 +236,10 @@ public partial class App : Application
     try{categories.Save(request);return Results.Ok(new{saved=true});}catch(Exception ex) when(ex is ArgumentException or InvalidOperationException or Microsoft.Data.Sqlite.SqliteException){return Results.BadRequest(new{error=ex.Message});}
    });
    _server.MapDelete("/api/admin/catalog-categories/{id}",(HttpContext c,string id,CatalogCategoryService categories)=>{
-    if(!IsLocal(c))return Results.NotFound();try{categories.Delete(id);return Results.Ok(new{deleted=true});}catch(KeyNotFoundException ex){return Results.NotFound(new{error=ex.Message});}catch(InvalidOperationException ex){return Results.Conflict(new{error=ex.Message});}
+    if(!IsAdmin(c))return Results.NotFound();try{categories.Delete(id);return Results.Ok(new{deleted=true});}catch(KeyNotFoundException ex){return Results.NotFound(new{error=ex.Message});}catch(InvalidOperationException ex){return Results.Conflict(new{error=ex.Message});}
    });
    _server.MapPost("/api/admin/catalog-categories/{id}/poster",async (HttpContext c,string id,CatalogCategoryService categories)=>{
-    if(!IsLocal(c))return Results.NotFound();if(categories.Get(id) is null)return Results.NotFound(new{error="القسم غير موجود"});
+    if(!IsAdmin(c))return Results.NotFound();if(categories.Get(id) is null)return Results.NotFound(new{error="القسم غير موجود"});
     if(c.Request.ContentLength is > 5_242_880)return Results.StatusCode(413);
     var type=c.Request.ContentType?.Split(';')[0].Trim().ToLowerInvariant();var ext=type switch{"image/jpeg"=>".jpg","image/png"=>".png","image/webp"=>".webp",_=>null};
     if(ext is null)return Results.BadRequest(new{error="الصيغ المسموحة JPG وPNG وWEBP"});
@@ -253,22 +331,22 @@ public partial class App : Application
     }
     return Results.Ok(series.GetCatalog(files,meta,allowedSeriesIds,IsLocal(c)?null:publicCatalog.GetPublishedVideoIds()));
    });
-   _server.MapGet("/api/admin/series",(HttpContext c,SeriesCatalogService series,LibraryService files)=>{ if(!IsLocal(c)) return Results.NotFound(); var rows=series.ListSeries(); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.EnsureFolderRegistered(row.FolderPath); return Results.Ok(rows); });
+   _server.MapGet("/api/admin/series",(HttpContext c,SeriesCatalogService series,LibraryService files)=>{ if(!IsAdmin(c)) return Results.NotFound(); var rows=series.ListSeries(); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.EnsureFolderRegistered(row.FolderPath); return Results.Ok(rows); });
    _server.MapDelete("/api/admin/series/{seriesId}",(HttpContext c,string seriesId,SeriesCatalogService series)=>
    {
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(seriesId)||seriesId.Length>80) return Results.BadRequest(new{error="معرّف المسلسل غير صالح"});
     try { series.DeleteSeries(seriesId); return Results.Ok(new{deleted=true,message="تم حذف بيانات المسلسل ومواسمه وروابط حلقاته دون حذف ملفات الفيديو الأصلية"}); }
     catch(KeyNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
    });
    _server.MapDelete("/api/admin/seasons/{seasonId:long}",(HttpContext c,long seasonId,SeriesCatalogService series)=>
    {
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     try { series.DeleteSeason(seasonId); return Results.Ok(new{deleted=true,message="تم حذف الموسم وروابط حلقاته دون حذف ملفات الفيديو"}); }
     catch(KeyNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
    });
    _server.MapPost("/api/admin/series",(HttpContext c,SaveSeriesRequest request,SeriesCatalogService series,LibraryService files,CatalogCategoryService categories)=>{
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeriesId.Length>80||string.IsNullOrWhiteSpace(request.Title)||request.Title.Length>160||(request.Description?.Length??0)>2000||(request.Genre?.Length??0)>80||(request.Year is not null&&(request.Year<1888||request.Year>DateTime.UtcNow.Year+5))||(request.PosterPath?.Length??0)>200||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))||request.OrganizationType is not ("None" or "Seasons" or "Parts")) return Results.BadRequest(new{error="تحقق من بيانات المسلسل وطريقة تنظيمه"});
     if(request.OrganizationType=="None"&&series.ListSeasons(request.SeriesId).Count>0)return Results.BadRequest(new{error="هذا المسلسل يحتوي على مواسم أو أجزاء مسجلة. لا يمكن تحويله إلى تنظيم مباشر قبل نقل محتواها."});
     if(request.IsPublished)
@@ -282,9 +360,9 @@ public partial class App : Application
     }
     series.SaveSeries(request); if(!string.IsNullOrWhiteSpace(request.FolderPath)) files.RegisterFolder(request.FolderPath); return Results.Ok(new{saved=true});
    });
-   _server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalogService series,LibraryService files)=>{ if(!IsLocal(c)) return Results.NotFound(); var rows=series.ListSeasons(seriesId); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.RegisterFolder(row.FolderPath); return Results.Ok(rows); });
+   _server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalogService series,LibraryService files)=>{ if(!IsAdmin(c)) return Results.NotFound(); var rows=series.ListSeasons(seriesId); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.RegisterFolder(row.FolderPath); return Results.Ok(rows); });
    _server.MapPost("/api/admin/seasons",(HttpContext c,SaveSeasonRequest request,SeriesCatalogService series,LibraryService files)=>{
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeasonNumber<1||request.SeasonNumber>500||(request.Title?.Length??0)>120||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="بيانات الموسم أو الجزء غير صحيحة أو مجلده غير موجود"});
     var ownerSeries=series.GetSeries(request.SeriesId);
     if(ownerSeries is null)return Results.NotFound(new{error="المسلسل غير موجود"});
@@ -292,13 +370,13 @@ public partial class App : Application
     try { var id=series.AddSeason(request); if(!string.IsNullOrWhiteSpace(request.FolderPath)) files.RegisterFolder(request.FolderPath); return Results.Ok(new{seasonId=id}); } catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="المسلسل غير موجود أو رقم الموسم مكرر"}); }
    });
    _server.MapPost("/api/admin/seasons/{seasonId:long}/folder",(HttpContext c,long seasonId,UpdateSeasonFolderRequest request,SeriesCatalogService series)=>{
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if((request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="مجلد الموسم غير موجود"});
     try { series.UpdateSeasonFolder(seasonId,request.FolderPath); return Results.Ok(new{saved=true}); }
     catch(KeyNotFoundException) { return Results.NotFound(new{error="الموسم غير موجود"}); }
    });
    _server.MapGet("/api/admin/seasons/{seasonId:long}/preview",(HttpContext c,long seasonId,SeriesCatalogService series,LibraryService files)=>{
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     var season=series.GetSeason(seasonId);
     if(season is null) return Results.NotFound(new{error="الموسم غير موجود"});
     if(string.IsNullOrWhiteSpace(season.FolderPath)||!Directory.Exists(season.FolderPath)) return Results.BadRequest(new{error="حدد مجلد الموسم واحفظ مساره أولاً"});
@@ -315,7 +393,7 @@ public partial class App : Application
     return Results.Ok(candidates);
    });
    _server.MapPost("/api/admin/seasons/{seasonId:long}/link-detected",(HttpContext c,long seasonId,LinkDetectedEpisodesRequest request,SeriesCatalogService series,LibraryService files)=>{
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(request.Episodes is null||request.Episodes.Count>1000) return Results.BadRequest(new{error="قائمة الحلقات غير صالحة"});
     if(series.GetSeason(seasonId) is null) return Results.NotFound(new{error="الموسم غير موجود"});
     var existing=series.ListEpisodes(seasonId);
@@ -335,14 +413,14 @@ public partial class App : Application
    });
    _server.MapGet("/api/admin/preview-folder",(HttpContext c,string folderPath,LibraryService files)=>
    {
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(folderPath)||folderPath.Length>1000||!Directory.Exists(folderPath)) return Results.BadRequest(new{error="حدد مجلداً موجوداً ويمكن الوصول إليه"});
     try { return Results.Ok(files.PreviewFolder(folderPath)); }
     catch(Exception ex) { return Results.BadRequest(new{error=ex.Message}); }
    });
    _server.MapPost("/api/admin/register-files",(HttpContext c,RegisterFilesRequest request,LibraryService files)=>
    {
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(request.FilePaths is null||request.FilePaths.Count<1||request.FilePaths.Count>1000||request.FilePaths.Any(path=>string.IsNullOrWhiteSpace(path)||path.Length>2000))
      return Results.BadRequest(new{error="اختر ملفات فيديو صحيحة، بحد أقصى 1000 ملف في المرة الواحدة"});
     try { var count=files.RegisterFiles(request.FilePaths); return Results.Ok(new{registered=true,videoCount=count,message="تمت إضافة الملفات المحددة إلى المكتبة"}); }
@@ -350,29 +428,29 @@ public partial class App : Application
    });
    _server.MapPost("/api/admin/register-selected-files",(HttpContext c,RegisterSelectedFilesRequest request,LibraryService files)=>
    {
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.FolderPath)||request.FolderPath.Length>1000||!Directory.Exists(request.FolderPath)||request.FilePaths is null||request.FilePaths.Count>5000) return Results.BadRequest(new{error="بيانات المجلد أو قائمة الملفات غير صحيحة"});
     try { var count=files.RegisterSelectedFiles(request.FolderPath,request.FilePaths); return Results.Ok(new{registered=true,videoCount=count}); }
     catch(Exception ex) { return Results.BadRequest(new{error=ex.Message}); }
    });
    _server.MapPost("/api/admin/scan-folder",(HttpContext c,ScanFolderRequest request,LibraryService files)=>{
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.FolderPath)||(request.FolderPath.Length>1000)||!Directory.Exists(request.FolderPath)) return Results.BadRequest(new{error="حدد مجلداً موجوداً ويمكن الوصول إليه"});
     try { var count=files.RegisterFolder(request.FolderPath); return Results.Ok(new{registered=true,videoCount=count}); }
     catch(Exception ex) { return Results.BadRequest(new{error=ex.Message}); }
    });
    _server.MapPost("/api/admin/episodes",(HttpContext c,SaveEpisodeRequest request,LibraryService files,SeriesCatalogService series)=>{
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(request.SeasonId<1||request.EpisodeNumber<1||request.EpisodeNumber>10000||string.IsNullOrWhiteSpace(request.VideoId)||files.Resolve(request.VideoId) is null||(request.Title?.Length??0)>160) return Results.BadRequest(new{error="بيانات الحلقة غير صحيحة أو ملف الفيديو غير موجود"});
     try { var id=series.AddEpisode(request); return Results.Ok(new{episodeId=id}); } catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="الموسم غير موجود أو الملف مربوط بحلقة أخرى أو رقم الحلقة مكرر"}); }
    });
    _server.MapGet("/api/admin/seasons/{seasonId:long}/episodes",(HttpContext c,long seasonId,SeriesCatalogService series)=>{
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(series.GetSeason(seasonId) is null) return Results.NotFound(new{error="الموسم غير موجود"});
     return Results.Ok(series.ListEpisodes(seasonId));
    });
    _server.MapPut("/api/admin/episodes/{episodeId:long}",(HttpContext c,long episodeId,UpdateEpisodeRequest request,SeriesCatalogService series)=>{
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(request.EpisodeNumber<1||request.EpisodeNumber>10000||(request.Title?.Length??0)>160)
      return Results.BadRequest(new{error="رقم الحلقة أو اسمها غير صالح"});
     try { series.UpdateEpisode(episodeId,request.EpisodeNumber,request.Title); return Results.Ok(new{updated=true}); }
@@ -380,23 +458,23 @@ public partial class App : Application
     catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="رقم الحلقة مستخدم بالفعل في هذا الموسم"}); }
    });
    _server.MapDelete("/api/admin/episodes/{episodeId:long}",(HttpContext c,long episodeId,SeriesCatalogService series)=>{
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     try { var videoId=series.UnlinkEpisode(episodeId); return Results.Ok(new{unlinked=true,videoId,message="تم فك ربط الحلقة فقط، ولم يتم حذف ملف الفيديو"}); }
     catch(KeyNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
    });
    _server.MapGet("/api/admin/missing-episodes",(HttpContext c,SeriesCatalogService series,LibraryService files)=>
-    IsLocal(c)?Results.Ok(series.ListMissingEpisodes(files)):Results.NotFound());
+    IsAdmin(c)?Results.Ok(series.ListMissingEpisodes(files)):Results.NotFound());
    _server.MapPost("/api/admin/episodes/{episodeId:long}/relink",(HttpContext c,long episodeId,RelinkEpisodeRequest request,SeriesCatalogService series,LibraryService files,WatchProgressService progress)=>{
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.VideoId)||request.VideoId.Length!=24||!request.VideoId.All(Uri.IsHexDigit)||files.Resolve(request.VideoId) is null)
      return Results.BadRequest(new{error="ملف الفيديو الجديد غير موجود في المكتبة"});
     try { var oldVideoId=series.UpdateEpisodeVideo(episodeId,request.VideoId); progress.MoveVideoProgress(oldVideoId,request.VideoId); return Results.Ok(new{relinked=true,progressPreserved=true}); }
     catch(KeyNotFoundException) { return Results.NotFound(new{error="الحلقة غير موجودة"}); }
     catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="هذا الملف مربوط بحلقة أخرى بالفعل"}); }
    });
-   _server.MapGet("/api/admin/metadata",(HttpContext c,VideoMetadataService meta)=>IsLocal(c)?Results.Ok(meta.List()):Results.NotFound());
+   _server.MapGet("/api/admin/metadata",(HttpContext c,VideoMetadataService meta)=>IsAdmin(c)?Results.Ok(meta.List()):Results.NotFound());
    _server.MapPost("/api/admin/metadata",(HttpContext c,SaveVideoMetadataRequest request,LibraryService librarySvc,VideoMetadataService meta,CatalogCategoryService categories,SeriesCatalogService series)=>{
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.VideoId)||request.VideoId.Length!=24||!request.VideoId.All(Uri.IsHexDigit)||librarySvc.Resolve(request.VideoId) is null) return Results.BadRequest(new{error="الفيديو غير موجود"});
     if(string.IsNullOrWhiteSpace(request.Title)||request.Title.Length>160||(request.Description?.Length??0)>2000||(request.Genre?.Length??0)>80||(request.Year is not null&&(request.Year<1888||request.Year>DateTime.UtcNow.Year+5))||(request.PosterPath?.Length??0)>200||(request.Director?.Length??0)>160||(request.Cast?.Length??0)>1000||(request.Tags?.Length??0)>500||(request.Rating is <0 or >10)||(request.RuntimeMinutes is <1 or >1000)||(request.ReleaseDate?.Length??0)>10) return Results.BadRequest(new{error="تحقق من البيانات المدخلة"});
     if(request.IsPublished)
@@ -433,7 +511,7 @@ public partial class App : Application
     catch(Exception ex) when(ex is ArgumentException or InvalidOperationException or KeyNotFoundException){return Results.BadRequest(new{error=ex.Message});}
    });
    _server.MapPost("/api/admin/poster/{videoId}",async (HttpContext c,string videoId,LibraryService librarySvc,VideoMetadataService meta)=>{
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(videoId.Length!=24||!videoId.All(Uri.IsHexDigit)) return Results.BadRequest(new{error="معرّف الفيديو غير صالح"});
     var video=librarySvc.Resolve(videoId); if(video is null) return Results.NotFound(new{error="الفيديو غير موجود"});
     if(c.Request.ContentLength is > 5_242_880) return Results.StatusCode(413);
@@ -458,7 +536,7 @@ public partial class App : Application
     return Results.Ok(new{posterPath="/posters/"+fileName});
    });
    _server.MapPost("/api/admin/series-poster/{seriesId}",async (HttpContext c,string seriesId,SeriesCatalogService series)=>{
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(seriesId)||seriesId.Length>80) return Results.BadRequest(new{error="معرّف المسلسل غير صالح"});
     var old=series.GetSeries(seriesId); if(old is null) return Results.NotFound(new{error="المسلسل غير موجود"});
     if(c.Request.ContentLength is > 5_242_880) return Results.StatusCode(413);
@@ -500,7 +578,7 @@ public partial class App : Application
    });
    _server.MapPost("/api/admin/library/bulk-remove",(HttpContext c,BulkLibraryRequest request,LibraryService librarySvc)=>
    {
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(request.Ids is null||request.Ids.Count<1||request.Ids.Count>5000||request.Ids.Any(id=>string.IsNullOrWhiteSpace(id)||id.Length!=24||!id.All(Uri.IsHexDigit))) return Results.BadRequest(new{error="قائمة الملفات المحددة غير صالحة"});
     var ids=request.Ids.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     if(ids.Any(id=>librarySvc.Resolve(id) is null)) return Results.NotFound(new{error="بعض الملفات المحددة لم تعد موجودة في المكتبة"});
@@ -509,7 +587,7 @@ public partial class App : Application
    });
    _server.MapPost("/api/admin/library/bulk-delete",(HttpContext c,BulkLibraryRequest request,LibraryService librarySvc,VideoMetadataService metadata,WatchProgressService progress)=>
    {
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(request.Ids is null||request.Ids.Count<1||request.Ids.Count>5000||request.Ids.Any(id=>string.IsNullOrWhiteSpace(id)||id.Length!=24||!id.All(Uri.IsHexDigit))) return Results.BadRequest(new{error="قائمة الملفات المحددة غير صالحة"});
     var ids=request.Ids.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     if(ids.Any(id=>librarySvc.Resolve(id) is null)) return Results.NotFound(new{error="بعض الملفات المحددة لم تعد موجودة في المكتبة"});
@@ -518,7 +596,7 @@ public partial class App : Application
    });
    _server.MapPost("/api/admin/library/{id}/remove",(HttpContext c,string id,LibraryService librarySvc)=>
    {
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(id)||id.Length!=24||!Regex.IsMatch(id,"^[a-fA-F0-9]{24}$")) return Results.BadRequest(new{error="معرّف الفيديو غير صالح"});
     try { librarySvc.RemoveFromLibrary(id); return Results.Ok(new{removed=true,message="تمت إزالة الفيديو من المكتبة دون حذف الملف الأصلي"}); }
     catch(FileNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
@@ -526,7 +604,7 @@ public partial class App : Application
    });
    _server.MapDelete("/api/admin/library/{id}",(HttpContext c,string id,LibraryService librarySvc,VideoMetadataService metadata,WatchProgressService progress)=>
    {
-    if(!IsLocal(c)) return Results.NotFound();
+    if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(id)||id.Length!=24||!id.All(Uri.IsHexDigit)) return Results.BadRequest(new{error="معرّف الفيديو غير صالح"});
     try
     {
