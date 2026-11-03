@@ -70,46 +70,49 @@ public partial class MainWindow : Window
                folder.StartsWith(selected + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 
-    private void RefreshVideoFoldersTree()
+    private async System.Threading.Tasks.Task RefreshVideoFoldersTreeAsync()
     {
         if (VideoFoldersTree is null) return;
-        VideoFoldersTree.Items.Clear();
-        VideoFoldersTree.Items.Add(new TreeViewItem { Header = $"كل المجلدات ({_videos.Count})", Tag = null, IsSelected = true });
-
-        var nodes = new Dictionary<string, TreeViewItem>(StringComparer.OrdinalIgnoreCase);
-        var folders = _videos.Select(v => v.FolderPath)
-            .Where(path => !string.IsNullOrWhiteSpace(path))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(path => path, StringComparer.CurrentCultureIgnoreCase);
-
-        foreach (var folder in folders)
+        try
         {
-            var root = Path.GetPathRoot(folder!);
-            if (string.IsNullOrWhiteSpace(root)) continue;
-            if (!nodes.TryGetValue(root, out var parent))
-            {
-                parent = new TreeViewItem { Header = root, Tag = root };
-                nodes[root] = parent;
-                VideoFoldersTree.Items.Add(parent);
-            }
+            var previousPath = _selectedVideoFolderPath;
+            var folders = await _http.GetFromJsonAsync<LibraryFolderInfo[]>("/api/admin/library/folders")
+                ?? Array.Empty<LibraryFolderInfo>();
+            VideoFoldersTree.Items.Clear();
+            var all = new TreeViewItem { Header = $"كل المجلدات ({folders.Length})", Tag = null, IsExpanded = true };
+            var nodes = new Dictionary<string, TreeViewItem>(StringComparer.OrdinalIgnoreCase);
 
-            var current = root;
-            var parts = folder![root.Length..].Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
-            foreach (var part in parts)
+            foreach (var folder in folders.OrderBy(x => x.FullPath.Length).ThenBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase))
             {
-                current = Path.Combine(current, part);
-                if (!nodes.TryGetValue(current, out var child))
+                var node = new TreeViewItem
                 {
-                    child = new TreeViewItem { Header = part, Tag = current };
-                    nodes[current] = child;
-                    parent.Items.Add(child);
-                }
-                parent = child;
+                    Header = folder.Name + (folder.IsManaged ? "" : " (خارجي)"),
+                    Tag = folder.FullPath
+                };
+                if (!string.IsNullOrWhiteSpace(folder.ParentPath) && nodes.TryGetValue(folder.ParentPath, out var parent))
+                    parent.Items.Add(node);
+                else
+                    all.Items.Add(node);
+                nodes[folder.FullPath] = node;
             }
-        }
 
-        _selectedVideoFolderPath = null;
-        _videosView?.Refresh();
+            VideoFoldersTree.Items.Add(all);
+            if (!string.IsNullOrWhiteSpace(previousPath) && nodes.TryGetValue(previousPath, out var selectedNode))
+            {
+                selectedNode.IsSelected = true;
+                selectedNode.BringIntoView();
+            }
+            else
+            {
+                _selectedVideoFolderPath = null;
+                all.IsSelected = true;
+            }
+            _videosView?.Refresh();
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "تعذر تحميل شجرة مجلدات المكتبة: " + ex.Message;
+        }
     }
 
     private void VideoFoldersTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
@@ -551,6 +554,133 @@ public partial class MainWindow : Window
         StatusText.Text = "تم إلغاء تحديد الملفات.";
     }
 
+    private async void CreateLibraryFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Window
+        {
+            Title = "إنشاء مجلد فيديو جديد",
+            Width = 430,
+            Height = 205,
+            MinWidth = 390,
+            MinHeight = 190,
+            ResizeMode = ResizeMode.NoResize,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Owner = this,
+            FlowDirection = FlowDirection.RightToLeft,
+            Background = System.Windows.Media.Brushes.White
+        };
+        var panel = new StackPanel { Margin = new Thickness(18) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = "اكتب اسم المجلد. سينشأ داخل مجلد التخزين الرئيسي أو داخل المجلد المحدد.",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 10)
+        });
+        var nameBox = new TextBox { Padding = new Thickness(9), FontSize = 15 };
+        panel.Children.Add(nameBox);
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 14, 0, 0) };
+        var create = new Button { Content = "إنشاء المجلد", Padding = new Thickness(14, 7, 14, 7), Margin = new Thickness(0, 0, 7, 0), IsDefault = true };
+        var cancel = new Button { Content = "إلغاء", Padding = new Thickness(14, 7, 14, 7), IsCancel = true };
+        create.Click += (_, _) => { if (!string.IsNullOrWhiteSpace(nameBox.Text)) dialog.DialogResult = true; };
+        buttons.Children.Add(create);
+        buttons.Children.Add(cancel);
+        panel.Children.Add(buttons);
+        dialog.Content = panel;
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            var parentPath = _selectedVideoFolderPath ?? _library;
+            var response = await _http.PostAsJsonAsync("/api/admin/library/folders", new { parentPath, name = nameBox.Text.Trim() });
+            if (!response.IsSuccessStatusCode)
+            {
+                StatusText.Text = "تعذر إنشاء المجلد: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            _selectedVideoFolderPath = Path.GetFullPath(Path.Combine(parentPath, nameBox.Text.Trim()));
+            await RefreshVideoFoldersTreeAsync();
+            StatusText.Text = "تم إنشاء المجلد. يمكنك تحديده وإضافة الفيديوهات إليه.";
+        }
+        catch (Exception ex) { StatusText.Text = "تعذر إنشاء المجلد: " + ex.Message; }
+    }
+
+    private void OpenLibraryFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var path = _selectedVideoFolderPath ?? _library;
+        if (!Directory.Exists(path))
+        {
+            StatusText.Text = "المجلد المحدد غير موجود أو لم يعد متاحاً.";
+            return;
+        }
+        try
+        {
+            Process.Start(new ProcessStartInfo("explorer.exe", $"\\"{path}\\"") { UseShellExecute = true });
+        }
+        catch (Exception ex) { StatusText.Text = "تعذر فتح المجلد: " + ex.Message; }
+    }
+
+    private async void CopyVideosToSelectedFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = GetSelectedVideos();
+        if (selected.Length == 0)
+        {
+            StatusText.Text = "حدد فيديو واحداً أو أكثر من قائمة المكتبة أولاً.";
+            return;
+        }
+
+        var destination = Path.GetFullPath(_selectedVideoFolderPath ?? _library);
+        if (!Directory.Exists(destination))
+        {
+            StatusText.Text = "المجلد الهدف غير موجود. حدده مرة أخرى.";
+            return;
+        }
+
+        if (MessageBox.Show(
+            $"سيتم نسخ {selected.Length} ملف فيديو إلى المجلد المحدد دون نقل الملفات الأصلية أو استبدال أي ملف موجود. هل تريد المتابعة؟",
+            "تأكيد نسخ ملفات الفيديو", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            StatusText.Text = $"جارٍ نسخ {selected.Length} ملف فيديو...";
+            var result = await System.Threading.Tasks.Task.Run(() =>
+            {
+                var copied = 0;
+                var skipped = 0;
+                var errors = new List<string>();
+                foreach (var video in selected)
+                {
+                    try
+                    {
+                        if (string.IsNullOrWhiteSpace(video.FolderPath) || string.IsNullOrWhiteSpace(video.FileName))
+                        {
+                            skipped++;
+                            continue;
+                        }
+                        var source = Path.GetFullPath(Path.Combine(video.FolderPath, video.FileName));
+                        var target = Path.GetFullPath(Path.Combine(destination, Path.GetFileName(video.FileName)));
+                        if (!File.Exists(source) || string.Equals(source, target, StringComparison.OrdinalIgnoreCase) || File.Exists(target))
+                        {
+                            skipped++;
+                            continue;
+                        }
+                        File.Copy(source, target, overwrite: false);
+                        copied++;
+                    }
+                    catch (Exception ex) { errors.Add($"{video.FileName}: {ex.Message}"); }
+                }
+                return (Copied: copied, Skipped: skipped, Errors: errors);
+            });
+
+            await LoadVideosAsync();
+            StatusText.Text = $"اكتمل النسخ: {result.Copied} ملف. تم تجاوز {result.Skipped} ملف.";
+            if (result.Errors.Count > 0)
+                MessageBox.Show($"تم نسخ {result.Copied} ملف، وتعذر نسخ {result.Errors.Count} ملف:\n\n{string.Join(Environment.NewLine, result.Errors.Take(8))}",
+                    "نتيجة نسخ الفيديوهات", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        catch (Exception ex) { StatusText.Text = "تعذر نسخ ملفات الفيديو: " + ex.Message; }
+    }
+
     private async void RemoveVideoFromLibrary_Click(object sender, RoutedEventArgs e)
     {
         var selected = GetSelectedVideos();
@@ -876,7 +1006,7 @@ public partial class MainWindow : Window
             }
             EpisodeVideoPicker.ItemsSource = _videos;
             MissingEpisodeVideoPicker.ItemsSource = _videos;
-            RefreshVideoFoldersTree();
+            await RefreshVideoFoldersTreeAsync();
             CountText.Text = $"عدد ملفات الفيديو: {_videos.Count}";
             var incomplete = _videos.Count(x => !x.MetadataSaved);
             StatusText.Text = incomplete == 0
