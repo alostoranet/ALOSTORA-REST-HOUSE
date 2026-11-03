@@ -952,7 +952,6 @@ private void OpenVideoDetails_Click(object sender, RoutedEventArgs e)
         RuntimeBox.Text = v.RuntimeMinutes?.ToString() ?? "";
         ReleaseDateBox.Text = v.ReleaseDate ?? "";
         TagsBox.Text = v.Tags ?? "";
-        SectionBox.Text = v.Section ?? "عام";
         KindBox.SelectedIndex = string.Equals(v.Kind, "Series", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         var selectedVideoCategory = _categories.FirstOrDefault(x => x.CategoryId == v.CategoryId);
         VideoMainCategoryPicker.SelectedValue = selectedVideoCategory?.ParentId;
@@ -1081,7 +1080,7 @@ private void OpenVideoDetails_Click(object sender, RoutedEventArgs e)
             runtimeMinutes = runtime,
             releaseDate = string.IsNullOrWhiteSpace(ReleaseDateBox.Text) ? null : ReleaseDateBox.Text.Trim(),
             tags = TagsBox.Text,
-            section = string.IsNullOrWhiteSpace(SectionBox.Text) ? "عام" : SectionBox.Text.Trim(),
+            section = previousMetadata?.Section,
             categoryId = VideoCategoryPicker.SelectedValue as string,
             isPublished = PublishBox.IsChecked == true,
             seriesId = (VideoSeriesPicker.SelectedValue as string),
@@ -1177,7 +1176,6 @@ private void OpenVideoDetails_Click(object sender, RoutedEventArgs e)
         SeriesDescriptionBox.Clear();
         SeriesYearBox.Clear();
         SeriesGenreBox.Clear();
-        SeriesSectionBox.Text = "عام";
         SeriesStructureBox.SelectedIndex = 1;
         UpdateSeriesStructureLabels();
         var defaultParent = _categories.FirstOrDefault(x => x.ParentId is null && x.ContentKind == "Group" && x.IsPublished);
@@ -1249,7 +1247,6 @@ private void OpenVideoDetails_Click(object sender, RoutedEventArgs e)
         SeriesDescriptionBox.Text = s.Description ?? "";
         SeriesYearBox.Text = s.Year?.ToString() ?? "";
         SeriesGenreBox.Text = s.Genre ?? "";
-        SeriesSectionBox.Text = s.Section ?? "عام";
         var selectedSeriesCategory = _categories.FirstOrDefault(x => x.CategoryId == s.CategoryId);
         SeriesMainCategoryPicker.SelectedValue = selectedSeriesCategory?.ParentId;
         RefreshSeriesCategoryPicker(s.CategoryId);
@@ -1367,7 +1364,7 @@ private void OpenVideoDetails_Click(object sender, RoutedEventArgs e)
             SeriesStatusText.Text = "لن يُنشر المسلسل قبل اختيار قسم فرعي من نوع «مسلسلات» والتأكد من نشر القسم الرئيسي والفرعي.";
             return false;
         }
-        var request = new { seriesId = id, title = SeriesTitleBox.Text.Trim(), description = SeriesDescriptionBox.Text, year, genre = SeriesGenreBox.Text, posterPath = string.IsNullOrWhiteSpace(SeriesPosterPathBox.Text) ? null : SeriesPosterPathBox.Text.Trim(), folderPath, section = string.IsNullOrWhiteSpace(SeriesSectionBox.Text) ? "عام" : SeriesSectionBox.Text.Trim(), categoryId = SeriesCategoryPicker.SelectedValue as string, isPublished = SeriesPublishBox.IsChecked == true, organizationType = (SeriesStructureBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Seasons" };
+        var request = new { seriesId = id, title = SeriesTitleBox.Text.Trim(), description = SeriesDescriptionBox.Text, year, genre = SeriesGenreBox.Text, posterPath = string.IsNullOrWhiteSpace(SeriesPosterPathBox.Text) ? null : SeriesPosterPathBox.Text.Trim(), folderPath, section = (SeriesPicker.SelectedItem as SeriesAdmin)?.Section, categoryId = SeriesCategoryPicker.SelectedValue as string, isPublished = SeriesPublishBox.IsChecked == true, organizationType = (SeriesStructureBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Seasons" };
         try
         {
             var response = await _http.PostAsJsonAsync("/api/admin/series", request);
