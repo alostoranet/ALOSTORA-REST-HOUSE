@@ -300,3 +300,19 @@ foreach ($testName in @("SeriesCanUsePartsAndStoreVideosDirectlyUnderTheSeries",
     if (-not $seriesTests.Contains($testName)) { throw ("Missing series placement regression test: " + $testName) }
 }
 Write-Host "PASS: standalone series, seasons, parts, direct video links, and category inheritance are wired and regression-tested."
+
+# Series cover selection must preview immediately, after upload, and when an existing series is selected.
+if ($xaml -notmatch 'x:Name="SeriesPosterPreview"' -or
+    $xaml -notmatch 'غلاف بطاقة المسلسل' -or
+    $code -notmatch 'UpdateSeriesPosterPreview\(s\.PosterPath\)' -or
+    $code -notmatch 'UpdateSeriesPosterPreview\(path,\s*isLocalFile:\s*true\)' -or
+    $code -notmatch 'UpdateSeriesPosterPreview\(result\?\.PosterPath\)') {
+    throw "Series poster selection is missing its visible preview workflow."
+}
+Write-Host "PASS: series posters preview before upload, after upload, and when an existing series is selected."
+
+# A published standalone video must be assigned to a customer-facing subcategory.
+if ($code -notmatch 'PublishBox\.IsChecked\s*==\s*true\s*&&\s*selectedCategory\s+is\s+null') {
+    throw "Published videos must be linked to a valid customer-facing subcategory."
+}
+Write-Host "PASS: published videos cannot be saved without a customer-facing subcategory."
