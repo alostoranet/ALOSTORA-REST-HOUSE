@@ -7,6 +7,7 @@ using Microsoft.Data.Sqlite;
 namespace Alostora.RestHouse;
 
 public sealed record LibraryVideo(string Id, string Title, string FileName, string Url, long SizeBytes);
+public sealed record LibraryFolderInfo(string Name, string FullPath, string? ParentPath, bool IsManaged);
 public sealed record VideoFileCandidate(string FullPath, string FileName, long SizeBytes);
 public sealed record ResolvedVideo(string FullPath, string ContentType);
 public sealed record SubtitleTrack(string FileName, string Label, string Language, string Url, bool IsDefault, bool IsForced, bool IsSdh);
@@ -110,6 +111,90 @@ public sealed class LibraryService : IDisposable
         EnsureIndex();
         lock (_sync)
             return _videos!.ToArray();
+    }
+
+    public IReadOnlyList<LibraryFolderInfo> ListFolders()
+    {
+        var roots = new[] { _root }.Concat(GetScanRoots())
+            .Where(Directory.Exists)
+            .Select(Path.GetFullPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var folders = new Dictionary<string, LibraryFolderInfo>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var root in roots)
+        {
+            AddFolder(root);
+            var pending = new Stack<string>();
+            pending.Push(root);
+            while (pending.Count > 0)
+            {
+                var current = pending.Pop();
+                try
+                {
+                    foreach (var directory in Directory.EnumerateDirectories(current, "*", SearchOption.TopDirectoryOnly))
+                    {
+                        try
+                        {
+                            if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0)
+                                continue;
+                            var fullPath = Path.GetFullPath(directory);
+                            AddFolder(fullPath);
+                            pending.Push(fullPath);
+                        }
+                        catch (UnauthorizedAccessException) { }
+                        catch (IOException) { }
+                    }
+                }
+                catch (UnauthorizedAccessException) { }
+                catch (IOException) { }
+            }
+        }
+
+        return folders.Values
+            .OrderBy(x => x.ParentPath is null ? 0 : 1)
+            .ThenBy(x => x.FullPath.Length)
+            .ThenBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+
+        void AddFolder(string path)
+        {
+            if (folders.ContainsKey(path)) return;
+            var isRoot = roots.Contains(path, StringComparer.OrdinalIgnoreCase);
+            folders[path] = new LibraryFolderInfo(
+                Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)),
+                path,
+                isRoot ? null : Path.GetDirectoryName(path),
+                IsInsideRoot(path));
+        }
+    }
+
+    public string CreateFolder(string? parentPath, string name)
+    {
+        var folderName = (name ?? string.Empty).Trim();
+        if (folderName.Length is < 1 or > 80 ||
+            folderName is "." or ".." ||
+            folderName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
+            folderName.Contains(Path.DirectorySeparatorChar) ||
+            folderName.Contains(Path.AltDirectorySeparatorChar))
+            throw new ArgumentException("اسم المجلد غير صالح. استخدم اسماً قصيراً دون مسارات أو رموز ممنوعة.");
+
+        var parent = string.IsNullOrWhiteSpace(parentPath) ? _root : Path.GetFullPath(parentPath.Trim());
+        if (!Directory.Exists(parent))
+            throw new DirectoryNotFoundException("المجلد الأب غير موجود.");
+        if (!IsInsideRoot(parent))
+            throw new InvalidOperationException("إنشاء المجلدات متاح داخل مكتبة التخزين الرئيسية فقط. للمجلدات الخارجية استخدم خيار إضافة مجلد خارجي.");
+
+        var fullPath = Path.GetFullPath(Path.Combine(parent, folderName));
+        if (!IsInsideRoot(fullPath) ||
+            !string.Equals(Path.GetDirectoryName(fullPath), parent, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("مسار المجلد خارج مكتبة التخزين الرئيسية.");
+        if (Directory.Exists(fullPath) || File.Exists(fullPath))
+            throw new InvalidOperationException("يوجد ملف أو مجلد بهذا الاسم بالفعل.");
+
+        Directory.CreateDirectory(fullPath);
+        Invalidate();
+        return fullPath;
     }
 
     public IReadOnlyList<LibraryVideo> ListFolder(string folderPath)
