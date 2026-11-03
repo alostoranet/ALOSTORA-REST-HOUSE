@@ -44,9 +44,11 @@
 <TextBlock x:Name="StatusText" Text="اختر فيديو من القائمة لتعديل بياناته." Foreground="#526174" TextWrapping="Wrap" Margin="0,12,0,0"/>
 </StackPanel></ScrollViewer></Border>
 </Grid></TabItem>
-<TabItem Header="البرامج والمسلسلات"><Border Background="White" CornerRadius="10" Padding="16" Margin="8"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
-<TextBlock Text="إدارة المسلسلات والمواسم والحلقات" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,14"/>
-<TextBlock Text="اختر مسلسلاً من القائمة لتعديله، أو اضغط «مسلسل جديد». اربط المسلسل بقسم رئيسي ثم قسم فرعي قبل نشره للعميل."/>
+<TabItem Header="البرامج والمسلسلات"><Border Background="White" CornerRadius="10" Padding="16" Margin="8"><DockPanel LastChildFill="True">
+<TextBlock DockPanel.Dock="Top" Text="إدارة البرامج والمسلسلات" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,12"/>
+<TextBlock DockPanel.Dock="Bottom" x:Name="SeriesStatusText" Text="احفظ المسلسل أولاً، ثم أضف المواسم والحلقات." Foreground="#526174" TextWrapping="Wrap" Margin="0,12,0,0"/>
+<TabControl x:Name="SeriesManagementTabs" Background="#F8FAFC" BorderBrush="#D8E1EC">
+<TabItem Header="بيانات المسلسل"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="اختر مسلسلاً من القائمة لتعديله، أو اضغط «مسلسل جديد». اربط المسلسل بقسم رئيسي ثم قسم فرعي قبل نشره للعميل."/>
 <WrapPanel Margin="0,5,0,8"><Button Content="مسلسل جديد" Click="NewSeries_Click" Padding="10,7" Margin="0,0,6,0"/><Button Content="إنشاء مسلسل من الفيديو المحدد" Click="CreateSeriesFromVideo_Click" Padding="10,7" Margin="0,0,6,0"/></WrapPanel><TextBlock Text="سجل المسلسلات المضافة — اختر أي مسلسل لفتح بياناته وتعديلها" Foreground="#64748B" FontSize="12" Margin="0,0,0,6"/><DataGrid x:Name="SeriesPicker" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="SeriesPicker_SelectionChanged" CanUserAddRows="False" Height="145" Margin="0,0,0,10"><DataGrid.Columns><DataGridTextColumn Header="المسلسل" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="السنة" Binding="{Binding Year}" Width="60"/><DataGridTextColumn Header="القسم" Binding="{Binding CategoryTitle}" Width="105"/><DataGridTextColumn Header="التنظيم" Binding="{Binding OrganizationTypeLabel}" Width="95"/><DataGridTextColumn Header="النشر" Binding="{Binding PublishStatus}" Width="70"/></DataGrid.Columns></DataGrid>
 <TextBlock Text="معرّف المسلسل (اتركه فارغًا لإنشاء معرّف تلقائي)"/><TextBox x:Name="SeriesIdBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="اسم المسلسل أو البرنامج"/><TextBox x:Name="SeriesTitleBox" Padding="8" Margin="0,4,0,8"/>
@@ -59,8 +61,8 @@
 <TextBlock Text="مجلد ملفات المسلسل — اختياري، لتنظيم ملفات الحلقات"/><DockPanel Margin="0,4,0,8"><Button DockPanel.Dock="Left" Content="اختيار مجلد" Click="ChooseSeriesFolder_Click" Padding="10,6" Margin="6,0,0,0"/><TextBox x:Name="SeriesFolderPathBox" Padding="8" FlowDirection="LeftToRight"/></DockPanel>
 <TextBlock Text="صورة غلاف المسلسل المحفوظة"/><TextBox x:Name="SeriesPosterPathBox" IsReadOnly="True" Padding="8" Margin="0,4,0,8" ToolTip="يتم تعبئة هذا المسار تلقائياً بعد رفع الغلاف"/><Button Content="اختيار صورة الغلاف ورفعها الآن" Click="UploadSeriesPoster_Click" Padding="10,8" HorizontalAlignment="Right" Margin="0,0,0,10"/>
 <WrapPanel Margin="0,3,0,14"><Button Content="حفظ بيانات المسلسل" Click="SaveSeries_Click" Background="#C93640" Foreground="White" FontWeight="Bold" Padding="12,9" BorderThickness="0" Margin="0,0,6,0"/><Button Content="حذف المسلسل وبياناته" Click="DeleteSeries_Click" Background="#FCE8E8" Foreground="#9F2630" Padding="12,9" BorderThickness="0"/></WrapPanel>
-<Separator/>
-<StackPanel x:Name="SeasonManagementPanel"><TextBlock x:Name="SeasonSectionTitle" Text="المواسم" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,12,0,8"/>
+</StackPanel></ScrollViewer></TabItem>
+<TabItem x:Name="SeriesSeasonsTab" Header="المواسم والأجزاء"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel x:Name="SeasonManagementPanel"><TextBlock x:Name="SeasonSectionTitle" Text="المواسم" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,12,0,8"/>
 <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="90"/></Grid.ColumnDefinitions>
 <StackPanel Grid.Column="0" Margin="0,0,6,8"><TextBox x:Name="SeasonTitleBox" Padding="8" Margin="0,0,0,5" ToolTip="اسم الموسم (اختياري)"/><DockPanel><Button x:Name="SeasonFolderButton" DockPanel.Dock="Left" Content="مجلد الموسم" Click="ChooseSeasonFolder_Click" Padding="8,5" Margin="0,0,5,0"/><TextBox x:Name="SeasonFolderPathBox" Padding="7" FlowDirection="LeftToRight" ToolTip="مسار مجلد ملفات هذا الموسم"/></DockPanel></StackPanel>
 <TextBox x:Name="SeasonNumberBox" Grid.Column="1" Padding="8" Margin="0,0,0,8" Text="1" ToolTip="رقم الموسم أو الجزء"/>
@@ -68,7 +70,8 @@
 <WrapPanel HorizontalAlignment="Right" Margin="0,0,0,6"><Button x:Name="AddSeasonButton" Content="إضافة الموسم" Click="AddSeason_Click" Padding="12,8" Margin="0,0,6,0"/><Button x:Name="SaveSeasonFolderButton" Content="حفظ مسار الموسم المحدد وفحص ملفاته" Click="SaveSeasonFolder_Click" Padding="12,8" Margin="0,0,6,0"/><Button x:Name="DeleteSeasonButton" Content="حذف الموسم المحدد" Click="DeleteSeason_Click" Padding="12,8" Background="#FCE8E8" Foreground="#9F2630"/></WrapPanel>
 <DataGrid x:Name="SeasonsGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="SeasonsGrid_SelectionChanged" CanUserAddRows="False" Height="135" Margin="0,8,0,12">
 <DataGrid.Columns><DataGridTextColumn Header="رقم الموسم" Binding="{Binding SeasonNumber}" Width="95"/><DataGridTextColumn Header="اسم الموسم" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="المعرّف" Binding="{Binding SeasonId}" Width="75"/></DataGrid.Columns></DataGrid>
-<TextBlock x:Name="EpisodesSectionTitle" Text="حلقات الموسم المحدد" FontSize="16" FontWeight="Bold" Foreground="#142D4A" Margin="0,8,0,6"/>
+</StackPanel></ScrollViewer></TabItem>
+<TabItem x:Name="SeriesEpisodesTab" Header="الحلقات"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel x:Name="EpisodeManagementPanel"><TextBlock x:Name="EpisodesSectionTitle" Text="حلقات الموسم المحدد" FontSize="16" FontWeight="Bold" Foreground="#142D4A" Margin="0,8,0,6"/>
 <DataGrid x:Name="EpisodesGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single" SelectionChanged="EpisodesGrid_SelectionChanged" Height="150" Margin="0,0,0,8"><DataGrid.Columns><DataGridTextColumn Header="رقم الحلقة" Binding="{Binding EpisodeNumber}" Width="90"/><DataGridTextColumn Header="اسم الحلقة" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="معرّف ملف الفيديو" Binding="{Binding VideoId}" Width="190"/></DataGrid.Columns></DataGrid>
 <WrapPanel Margin="0,0,0,10"><Button Content="حفظ تعديل الحلقة المحددة" Click="UpdateEpisode_Click" Padding="10,7" Margin="0,0,6,0"/><Button Content="فك ربط الحلقة المحددة فقط" Click="UnlinkEpisode_Click" Padding="10,7" Background="#FCE8E8" Foreground="#9F2630"/></WrapPanel>
 <WrapPanel Margin="0,8"><Button x:Name="PreviewSeasonFolderButton" Content="اكتشاف حلقات الموسم" Click="PreviewSeasonFolder_Click" Padding="10,7" Margin="0,0,6,0"/><Button Content="اعتماد ربط الحلقات المحددة" Click="LinkDetectedEpisodes_Click" Padding="10,7"/></WrapPanel>
@@ -80,17 +83,19 @@
 <TextBox x:Name="EpisodeTitleBox" Grid.Column="0" Padding="8" Margin="0,0,6,8" ToolTip="اسم الحلقة (اختياري)"/>
 <TextBox x:Name="EpisodeNumberBox" Grid.Column="1" Padding="8" Margin="0,0,0,8" Text="1" ToolTip="رقم الحلقة"/>
 </Grid>
-<Button Content="ربط الفيديو كحلقة" Click="AddEpisode_Click" HorizontalAlignment="Right" Padding="12,8"/></StackPanel>
-<Separator/>
-<WrapPanel Margin="0,10,0,6"><TextBlock Text="الحلقات التي فقدت ملفاتها" FontSize="15" FontWeight="Bold" Foreground="#142D4A" VerticalAlignment="Center" Margin="0,0,8,0"/><Button Content="فحص الملفات المفقودة" Click="RefreshMissingEpisodes_Click" Padding="10,6"/><Button Content="إعادة ربط الحلقة بالملف المختار" Click="RelinkMissingEpisode_Click" Padding="10,6" Margin="6,0,0,0"/></WrapPanel>
+<Button Content="ربط الفيديو كحلقة" Click="AddEpisode_Click" HorizontalAlignment="Right" Padding="12,8"/></StackPanel></ScrollViewer></TabItem>
+<TabItem x:Name="SeriesMissingEpisodesTab" Header="الحلقات المفقودة"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><WrapPanel Margin="0,10,0,6"><TextBlock Text="الحلقات التي فقدت ملفاتها" FontSize="15" FontWeight="Bold" Foreground="#142D4A" VerticalAlignment="Center" Margin="0,0,8,0"/><Button Content="فحص الملفات المفقودة" Click="RefreshMissingEpisodes_Click" Padding="10,6"/><Button Content="إعادة ربط الحلقة بالملف المختار" Click="RelinkMissingEpisode_Click" Padding="10,6" Margin="6,0,0,0"/></WrapPanel>
 <DataGrid x:Name="MissingEpisodesGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single" Height="135" Margin="0,0,0,10">
 <DataGrid.Columns><DataGridTextColumn Header="المسلسل" Binding="{Binding SeriesTitle}" Width="*"/><DataGridTextColumn Header="الموسم" Binding="{Binding SeasonNumber}" Width="55"/><DataGridTextColumn Header="الحلقة" Binding="{Binding EpisodeNumber}" Width="55"/><DataGridTextColumn Header="اسم الحلقة" Binding="{Binding Title}" Width="*"/></DataGrid.Columns></DataGrid>
-<TextBlock x:Name="SeriesStatusText" Text="احفظ المسلسل أولاً، ثم أضف المواسم والحلقات." Foreground="#526174" TextWrapping="Wrap" Margin="0,12,0,0"/>
-</StackPanel></ScrollViewer></Border></TabItem>
-<TabItem Header="الأقسام الرئيسية والفرعية"><Border Background="White" CornerRadius="10" Padding="16" Margin="8"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
-<TextBlock Text="بناء أقسام المكتبة للعميل" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,8"/>
-<TextBlock Text="أنشئ قسماً رئيسياً أولاً، ثم أضف تحته أقسام الأفلام أو المسلسلات. القسم المنشور يظهر للعميل مباشرة، والغلاف اختياري ويمكن رفعه لاحقاً." TextWrapping="Wrap" Foreground="#526174" Margin="0,0,0,12"/>
-<TextBlock Text="اسم القسم"/><TextBox x:Name="CategoryTitleBox" Padding="8" Margin="0,4,0,8"/>
+</StackPanel></ScrollViewer></TabItem>
+</TabControl>
+</DockPanel></Border></TabItem>
+<TabItem Header="الأقسام الرئيسية والفرعية"><Border Background="White" CornerRadius="10" Padding="16" Margin="8"><DockPanel LastChildFill="True">
+<TextBlock DockPanel.Dock="Top" Text="إدارة الأقسام الرئيسية والفرعية" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,8"/>
+<TextBlock DockPanel.Dock="Top" Text="أنشئ قسماً رئيسياً أولاً، ثم أضف تحته أقسام الأفلام أو المسلسلات. القسم المنشور يظهر للعميل مباشرة، والغلاف اختياري ويمكن رفعه لاحقاً." TextWrapping="Wrap" Foreground="#526174" Margin="0,0,0,12"/>
+<TextBlock DockPanel.Dock="Bottom" x:Name="CategoryStatusText" Text="ابدأ بإنشاء قسم رئيسي ثم أضف الأقسام الفرعية." Foreground="#526174" TextWrapping="Wrap" Margin="0,10,0,0"/>
+<TabControl x:Name="CategoryManagementTabs" Background="#F8FAFC" BorderBrush="#D8E1EC">
+<TabItem Header="إضافة قسم أو تعديل"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="اسم القسم"/><TextBox x:Name="CategoryTitleBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="مستوى القسم"/><ComboBox x:Name="CategoryLevelPicker" Padding="8" Margin="0,4,0,8" SelectionChanged="CategoryLevelPicker_SelectionChanged">
 <ComboBoxItem Content="قسم رئيسي — يظهر في الصفحة الأولى" Tag="Main" IsSelected="True"/><ComboBoxItem Content="قسم فرعي — داخل قسم رئيسي" Tag="Child"/>
 </ComboBox>
@@ -103,11 +108,12 @@
 <TextBlock x:Name="CategoryPosterStatusText" Text="الغلاف اختياري. يمكنك نشر القسم بدونه." Foreground="#64748B" Margin="0,0,0,8"/>
 <WrapPanel Margin="0,0,0,10"><Button Content="قسم جديد" Click="NewCategory_Click" Padding="12,8" Margin="0,0,6,0"/><Button Content="حفظ القسم" Click="SaveCategory_Click" Padding="12,8" Background="#C93640" Foreground="White" Margin="0,0,6,0"/><Button Content="نشر القسم المحدد" Click="PublishCategory_Click" Padding="12,8" Background="#E7F5EC" Foreground="#176B3A" Margin="0,0,6,0"/><Button Content="اختيار صورة الغلاف ورفعها" Click="UploadCategoryPoster_Click" Padding="12,8" Margin="0,0,6,0"/><Button Content="حذف القسم المحدد" Click="DeleteCategory_Click" Padding="12,8" Background="#FCE8E8" Foreground="#9F2630"/></WrapPanel>
 <CheckBox x:Name="CategoryPublishBox" Content="نشر القسم للعميل وإظهاره في الواجهة الرئيسية" IsChecked="True" Margin="0,0,0,12"/>
-<DataGrid x:Name="CategoriesGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="CategoriesGrid_SelectionChanged" CanUserAddRows="False" Height="260">
+</StackPanel></ScrollViewer></TabItem>
+<TabItem x:Name="CategoryListTab" Header="قائمة الأقسام"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><DataGrid x:Name="CategoriesGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="CategoriesGrid_SelectionChanged" CanUserAddRows="False" Height="260">
 <DataGrid.Columns><DataGridTextColumn Header="القسم" Binding="{Binding DisplayTitle}" Width="*"/><DataGridTextColumn Header="النوع" Binding="{Binding ContentKindLabel}" Width="100"/><DataGridCheckBoxColumn Header="منشور" Binding="{Binding IsPublished}" Width="65"/><DataGridTextColumn Header="الغلاف" Binding="{Binding PosterPath}" Width="*"/></DataGrid.Columns>
-</DataGrid>
-<TextBlock x:Name="CategoryStatusText" Text="ابدأ بإنشاء قسم رئيسي ثم أضف الأقسام الفرعية." Foreground="#526174" TextWrapping="Wrap" Margin="0,10,0,0"/>
-</StackPanel></ScrollViewer></Border></TabItem>
+</DataGrid></StackPanel></ScrollViewer></TabItem>
+</TabControl>
+</DockPanel></Border></TabItem>
 <TabItem Header="رسائل العملاء"><Border Background="White" CornerRadius="10" Padding="16" Margin="8"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
 <TextBlock Text="رسائل العملاء وطلبات المحتوى" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,8"/>
 <TextBlock Text="تظهر هنا طلبات المسلسلات وبلاغات المشاكل والاقتراحات التي يرسلها العملاء من صفحة المشاهدة. يتم تحديث القائمة تلقائياً كل 30 ثانية." TextWrapping="Wrap" Foreground="#526174" Margin="0,0,0,10"/>
