@@ -80,13 +80,12 @@ main{max-width:1320px;padding:26px 28px 18px}
 <section id="mediaLibrary" hidden><h2 id="mediaLibraryTitle">المكتبات الإضافية</h2><div id="mediaGrid" class="catalog-grid"></div><p id="mediaPlayerHint" class="empty"></p></section>
 <section id="catalogView" aria-live="polite">
 <div class="catalog-page-head"><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div></div>
-<div id="catalogContent">
+<div id="catalogContent"></div>
 <section id="playerSection" aria-live="polite" hidden>
 <h2 id="nowPlayingTitle">المشغل</h2><video id="player" controls playsinline preload="metadata"></video>
 <div id="audioControls" hidden><label for="audioTrack">المسار الصوتي:</label><select id="audioTrack"></select><button id="applyAudio" type="button">تشغيل بالصوت المحدد</button></div>
 <p id="playbackHint"></p><p id="subtitleHint" class="meta">تُكتشف الترجمات الخارجية تلقائياً بجانب ملف الفيديو.</p>
 </section>
-</div>
 </section>
 <section id="continueSection"><h2>متابعة المشاهدة</h2><p id="continueEmpty">جارٍ تحميل سجل المشاهدة...</p><div id="continueGrid"></div></section>
 </section>
@@ -198,8 +197,7 @@ function renderCatalogPage(){
  const toolbar=document.querySelector('#catalogToolbar'),continueSection=document.querySelector('#continueSection'),message=document.querySelector('#message');
  const welcomePanel=document.querySelector('#welcomePanel');
  const playerSection=document.querySelector('#playerSection');
- if(!content||!catalogPage)return;
- content.replaceChildren();
+ if(!content||!catalogPage||!playerSection)return;
  const pageType=catalogPage.type||'home';
  toolbar.hidden=pageType==='player';
  if(welcomePanel)welcomePanel.hidden=pageType!=='home';
@@ -220,10 +218,14 @@ function renderCatalogPage(){
   return String(a.title||'').localeCompare(String(b.title||''),'ar',{sensitivity:'base'});
  });
  if(pageType==='player'){
-  content.className='catalog-player-page';playerSection.hidden=false;playerSection.style.display='block';content.append(playerSection);
+  content.hidden=true;
+  playerSection.hidden=false;playerSection.style.display='block';
   document.querySelector('#nowPlayingTitle').textContent='يتم تشغيل: '+(catalogPage.title||'الفيديو المحدد');
   return;
  }
+ content.hidden=false;
+ playerSection.hidden=true;playerSection.style.display='none';
+ content.replaceChildren();
  content.className='';
  if(pageType==='home'){
   const mains=categories.filter(x=>x.parentId==null&&x.isPublished===true).filter(main=>{
