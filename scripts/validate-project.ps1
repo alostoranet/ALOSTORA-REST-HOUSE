@@ -9,6 +9,11 @@ $xaml = Get-Content $xamlPath -Raw
 $code = Get-Content $codePath -Raw
 $app = Get-Content $appPath -Raw
 $html = Get-Content $htmlPath -Raw
+$legacyHtmlPath = Join-Path $root "Alostora.RestHouse/wwwroot/index.html"
+$legacyHtml = Get-Content $legacyHtmlPath -Raw
+if ($html -cne $legacyHtml) {
+    throw "The legacy customer page copy and the published customer page have drifted apart."
+}
 
 # Every event wired in XAML must have a real code-behind handler.
 $events = [regex]::Matches($xaml, '\b(?:Click|SelectionChanged|Loaded|Checked|Unchecked|TextChanged|Drop|DragOver)="([A-Za-z_]\w*)"') |
