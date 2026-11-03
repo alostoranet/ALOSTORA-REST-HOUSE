@@ -1319,6 +1319,12 @@ public partial class MainWindow : Window
     private async void SaveSeries_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(SeriesTitleBox.Text)) { SeriesStatusText.Text = "اكتب اسم المسلسل أولاً."; return; }
+        if (SeriesPublishBox.IsChecked == true && string.IsNullOrWhiteSpace(SeriesCategoryPicker.SelectedValue as string))
+        {
+            SeriesStatusText.Text = "لا يمكن نشر المسلسل قبل ربطه بقسم فرعي. اختر القسم الرئيسي ثم القسم الفرعي الذي سيظهر فيه المسلسل للعميل.";
+            SeriesMainCategoryPicker.Focus();
+            return;
+        }
         int? year = null;
         if (!string.IsNullOrWhiteSpace(SeriesYearBox.Text))
         {
