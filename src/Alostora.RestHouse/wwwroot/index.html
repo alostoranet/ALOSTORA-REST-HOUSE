@@ -355,7 +355,7 @@ function renderCatalogPage(){
    const detail=ep.isMissing?'ملف الحلقة غير موجود حالياً.':(ep.runtimeMinutes?ep.runtimeMinutes+' دقيقة':'جاهزة للمشاهدة');
    const row=catalogRow(episodeTitle,detail,()=>{
     if(ep.isMissing||!ep.url)return;
-    if(window.confirm('هل تريد تشغيل '+episodeTitle+'؟'))play({id:ep.videoId,url:ep.url,title:episodeTitle});
+    play({id:ep.videoId,url:ep.url,title:episodeTitle});
    });
    if(ep.isMissing||!ep.url){row.disabled=true;row.classList.add('is-disabled');}
    content.append(row);
