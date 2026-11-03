@@ -99,7 +99,7 @@
 <TextBlock Text="إدارة المسلسلات والمواسم والحلقات" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,14"/>
 <TextBlock Text="اختر مسلسلًا موجودًا أو اكتب بيانات مسلسل جديد."/>
 <WrapPanel Margin="0,5,0,8"><Button Content="مسلسل جديد" Click="NewSeries_Click" Padding="10,7" Margin="0,0,6,0"/><Button Content="إنشاء مسلسل من الفيديو المحدد" Click="CreateSeriesFromVideo_Click" Padding="10,7" Margin="0,0,6,0"/></WrapPanel><TextBlock Text="سجل المسلسلات المضافة — اختر أي مسلسل لفتح بياناته وتعديلها" Foreground="#64748B" FontSize="12" Margin="0,0,0,6"/><DataGrid x:Name="SeriesPicker" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="SeriesPicker_SelectionChanged" CanUserAddRows="False" Height="145" Margin="0,0,0,10"><DataGrid.Columns><DataGridTextColumn Header="المسلسل" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="السنة" Binding="{Binding Year}" Width="60"/><DataGridTextColumn Header="القسم" Binding="{Binding CategoryTitle}" Width="105"/><DataGridTextColumn Header="التنظيم" Binding="{Binding OrganizationTypeLabel}" Width="95"/><DataGridTextColumn Header="النشر" Binding="{Binding PublishStatus}" Width="70"/></DataGrid.Columns></DataGrid>
-<TextBlock Text="معرّف المسلسل (اتركه فارغًا لإنشاء معرّف تلقائي)"/><TextBox x:Name="SeriesIdBox" IsReadOnly="True" Padding="8" Margin="0,4,0,8" ToolTip="ينشئه البرنامج تلقائياً."/>
+<TextBlock Text="معرّف المسلسل (تلقائي)" Visibility="Collapsed"/><TextBox x:Name="SeriesIdBox" IsReadOnly="True" Padding="8" Margin="0,4,0,8" ToolTip="ينشئه البرنامج تلقائياً." Visibility="Collapsed"/>
 <TextBlock Text="اسم المسلسل أو البرنامج"/><TextBox x:Name="SeriesTitleBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="الوصف"/><TextBox x:Name="SeriesDescriptionBox" Padding="8" Margin="0,4,0,8" Height="65" AcceptsReturn="True" TextWrapping="Wrap"/>
 <TextBlock Text="السنة"/><TextBox x:Name="SeriesYearBox" Padding="8" Margin="0,4,0,8"/>
@@ -108,7 +108,18 @@
 <TextBlock Text="الخطوة 1: اختر القسم الرئيسي الذي سيظهر المسلسل بداخله" FontWeight="Bold" Foreground="#142D4A"/><ComboBox x:Name="SeriesMainCategoryPicker" DisplayMemberPath="Title" SelectedValuePath="CategoryId" SelectionChanged="SeriesMainCategoryPicker_SelectionChanged" Padding="8" Margin="0,4,0,3"/><TextBlock Text="الخطوة 2: اختر قسم المسلسلات الفرعي التابع للقسم الرئيسي" FontWeight="Bold" Foreground="#142D4A"/><ComboBox x:Name="SeriesCategoryPicker" DisplayMemberPath="DisplayTitle" SelectedValuePath="CategoryId" Padding="8" Margin="0,4,0,3"/><TextBlock x:Name="SeriesCategoryStatusText" Text="يتم تحميل الأقسام الفرعية للمسلسلات..." Foreground="#64748B" FontSize="11" Margin="0,0,0,8"/>
 <CheckBox x:Name="SeriesPublishBox" Content="نشر المسلسل في واجهة العميل (بعد اختيار القسم)" IsChecked="True" Margin="0,0,0,10" FontWeight="Bold" Foreground="#16834A"/>
 <TextBlock Text="مجلد ملفات المسلسل (اختياري)" FontWeight="Bold" Foreground="#142D4A"/><TextBlock Text="هذا المجلد يساعد البرنامج على اكتشاف ملفات الحلقات. لا ينقل البرنامج الملفات ولا يحذفها. يمكنك تركه فارغاً واختيار مجلد مستقل لكل موسم أو جزء." Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"/><DockPanel Margin="0,4,0,8"><Button DockPanel.Dock="Left" Content="اختيار مجلد" Click="ChooseSeriesFolder_Click" Padding="10,6" Margin="6,0,0,0"/><TextBox x:Name="SeriesFolderPathBox" IsReadOnly="True" Padding="8" FlowDirection="LeftToRight" ToolTip="المجلد الذي اخترته لاكتشاف ملفات المسلسل."/></DockPanel>
-<TextBlock Text="غلاف المسلسل (اختياري)" FontWeight="Bold" Foreground="#142D4A"/><TextBlock Text="اضغط «اختيار صورة الغلاف». إذا كان المسلسل جديداً، اختر الصورة ثم اضغط «حفظ بيانات المسلسل» ليتم رفعها تلقائياً. إذا كان المسلسل محفوظاً، تُرفع الصورة مباشرة. لا تحتاج إلى كتابة أو تعديل أي مسار." Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,8"/><TextBox x:Name="SeriesPosterPathBox" Visibility="Collapsed" IsReadOnly="True" Padding="8" Margin="0,4,0,4" ToolTip="مسار الغلاف الداخلي الذي يديره البرنامج تلقائياً."/> Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"/><Button Content="اختيار صورة الغلاف" Click="UploadSeriesPoster_Click" Padding="10,8" HorizontalAlignment="Right" Margin="0,0,0,10"/>
+<Border Background="#F8FAFC" BorderBrush="#DCE4ED" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,4,0,10">
+<DockPanel LastChildFill="True">
+<Image x:Name="SeriesPosterPreview" DockPanel.Dock="Right" Width="104" Height="142" Stretch="UniformToFill" Margin="0,0,12,0"/>
+<StackPanel>
+<TextBlock Text="غلاف بطاقة المسلسل" FontWeight="Bold" Foreground="#142D4A"/>
+<TextBlock Text="هذه الصورة التي تظهر للعميل على بطاقة المسلسل. اخترها قبل الحفظ أو غيّرها لاحقاً. لا تحتاج إلى كتابة مسار الصورة." Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,7"/>
+<TextBox x:Name="SeriesPosterPathBox" Visibility="Collapsed" IsReadOnly="True" Padding="8" Margin="0,4,0,4" ToolTip="مسار الغلاف الداخلي الذي يديره البرنامج تلقائياً."/>
+<Button Content="اختيار صورة الغلاف ورفعها" Click="UploadSeriesPoster_Click" Padding="10,8" HorizontalAlignment="Right"/>
+<TextBlock Text="الصيغ المدعومة JPG وPNG وWEBP، بحد أقصى 5 ميجابايت. إذا اخترت الصورة قبل حفظ مسلسل جديد فسيتم رفعها بعد الحفظ تلقائياً." Foreground="#64748B" FontSize="10" TextWrapping="Wrap" Margin="0,7,0,0"/>
+</StackPanel>
+</DockPanel>
+</Border>
 <WrapPanel Margin="0,3,0,14"><Button Content="حفظ بيانات المسلسل" Click="SaveSeries_Click" Background="#C93640" Foreground="White" FontWeight="Bold" Padding="12,9" BorderThickness="0" Margin="0,0,6,0"/><Button Content="حذف المسلسل وبياناته" Click="DeleteSeries_Click" Background="#FCE8E8" Foreground="#9F2630" Padding="12,9" BorderThickness="0"/></WrapPanel>
 
 </StackPanel></ScrollViewer></TabItem>
