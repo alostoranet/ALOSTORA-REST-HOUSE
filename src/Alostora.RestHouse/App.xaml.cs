@@ -40,11 +40,13 @@ public partial class App : Application
    var posters=settings.PostersPath;
    Directory.CreateDirectory(library);
    Directory.CreateDirectory(posters);
-   // If another instance already hosts this application's API, reuse it instead
-   // of trying to bind the same TCP port again.
+   // Do not open a second management window against a server owned by another
+   // process: closing the server-owning process would otherwise leave this window orphaned.
    if(await IsExistingRestHouseServerAsync())
    {
-    new MainWindow(root,library,posters,settings.FfmpegPath).Show();
+    MessageBox.Show("استراحة الأسطورة تعمل بالفعل. استخدم نافذة التطبيق المفتوحة بدلاً من تشغيل نسخة ثانية.",
+     "استراحة الأسطورة",MessageBoxButton.OK,MessageBoxImage.Information);
+    Shutdown();
     return;
    }
    var webRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
