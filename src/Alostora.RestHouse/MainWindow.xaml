@@ -106,7 +106,7 @@
 </DockPanel>
 </Border>
 <WrapPanel Margin="0,3,0,14"><Button Content="حفظ بيانات المسلسل" Click="SaveSeries_Click" Background="#C93640" Foreground="White" FontWeight="Bold" Padding="12,9" BorderThickness="0" Margin="0,0,6,0"/><Button Content="حذف المسلسل وبياناته" Click="DeleteSeries_Click" Background="#FCE8E8" Foreground="#9F2630" Padding="12,9" BorderThickness="0"/></WrapPanel>
-<TextBlock x:Name="SeriesStatusText" Text="احفظ المسلسل أولاً، ثم أضف المواسم والحلقات." Foreground="#526174" TextWrapping="Wrap" Margin="0,12,0,0"/>
+
 </StackPanel></ScrollViewer></TabItem>
 <TabItem Header="إدارة المواسم والحلقات">
 <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
@@ -197,5 +197,5 @@
 </StackPanel></Border>
 </StackPanel></ScrollViewer></TabItem>
 </TabControl>
-<StackPanel Grid.Row="2"><TextBlock x:Name="AddressBox" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#142D4A"/><TextBlock x:Name="LibraryBox" FontSize="12" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4"/><TextBlock x:Name="CountText" FontSize="13" Foreground="#16834A" HorizontalAlignment="Center" Margin="0,4"/><TextBlock Text="المشاهدة متاحة للأجهزة المتصلة بالشبكة المحلية فقط." Foreground="#64748B" HorizontalAlignment="Center" Margin="0,6"/></StackPanel>
+<StackPanel Grid.Row="2"><TextBlock x:Name="AddressBox" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#142D4A"/><TextBlock x:Name="LibraryBox" FontSize="12" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4"/><TextBlock x:Name="CountText" FontSize="13" Foreground="#16834A" HorizontalAlignment="Center" Margin="0,4"/><TextBlock x:Name="SeriesStatusText" Text="اختر مسلسلًا لإدارة مواسمه وحلقاته." FontSize="11" Foreground="#526174" TextWrapping="Wrap" TextAlignment="Center" MaxHeight="34" Margin="0,2,0,0"/><TextBlock Text="المشاهدة متاحة للأجهزة المتصلة بالشبكة المحلية فقط." Foreground="#64748B" HorizontalAlignment="Center" Margin="0,6"/></StackPanel>
 </Grid></Window>
