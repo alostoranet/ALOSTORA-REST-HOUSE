@@ -49,6 +49,11 @@ main{max-width:1320px;padding:26px 28px 18px}
 .contact-box{background:#14283e;border-color:#3a536e}
 .developer-credit{color:#91a6bb;border-top-color:#2c425b}
 @media(max-width:600px){main{padding:16px 12px}.welcome-panel{padding:19px 17px}.welcome-panel h2{font-size:20px}.welcome-mark{flex-basis:52px;width:52px;height:52px;font-size:20px}.catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.catalog-card{padding:8px}}
+/* Remote-control, keyboard and touch accessibility for Smart TVs and phones. */
+:where(button,a,input,select,video,audio,[tabindex]):focus-visible{outline:3px solid #f2c56b!important;outline-offset:3px!important;box-shadow:0 0 0 2px #0b1626!important}
+.catalog-card button,.catalog-card a,.nav-button,.catalog-back,.movie button,.continue-card button{min-height:44px}
+@media (hover:none),(pointer:coarse){.nav-button,.catalog-card button,.catalog-card a,.catalog-back{min-height:48px;padding-block:12px}.catalog-card{scroll-margin-inline:12px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 #welcomePanel[hidden],#catalogToolbar[hidden],#continueSection[hidden],#message[hidden]{display:none!important}
 
 /* Emby-inspired horizontal library rails: each card remains a separate page link. */
@@ -123,11 +128,13 @@ function renderMediaLibraries(){
    action.textContent='استمع الآن';action.addEventListener('click',()=>{
     let audio=document.querySelector('#sharedAudioPlayer');
     if(!audio){audio=document.createElement('audio');audio.id='sharedAudioPlayer';audio.controls=true;audio.style.cssText='width:100%;margin:12px 0';section.insertBefore(audio,grid);}
-    audio.src=item.url;audio.play().catch(()=>{hint.textContent='اضغط تشغيل لبدء الاستماع.';});hint.textContent='يتم تشغيل: '+item.title;
+    audio.pause();audio.src=item.url;audio.setAttribute('aria-label','مشغل الصوتيات: '+item.title);audio.load();audio.play().catch(()=>{hint.textContent='تعذر التشغيل التلقائي. اضغط زر التشغيل في المشغل.';});hint.textContent='يتم تشغيل: '+item.title;
    });
+  }else if(item.kind==='Books'){
+   action.textContent='افتح الكتاب';action.addEventListener('click',()=>{const link=document.createElement('a');link.href=item.url;link.target='_blank';link.rel='noopener';document.body.append(link);link.click();link.remove();});
+   const download=document.createElement('a');download.className='action';download.textContent='تنزيل الكتاب';download.href=item.url;download.download=item.fileName;download.rel='noopener';card.append(title,details,action,download);grid.append(card);continue;
   }else{
-   action.textContent=item.kind==='Books'?'افتح الكتاب':'تحميل التطبيق';
-   action.addEventListener('click',()=>{const link=document.createElement('a');link.href=item.url;link.target='_blank';link.rel='noopener';link.download=item.kind==='Apps'?item.fileName:'';document.body.append(link);link.click();link.remove();});
+   action.textContent='تحميل التطبيق';action.addEventListener('click',()=>{const link=document.createElement('a');link.href=item.url;link.download=item.fileName;link.rel='noopener';document.body.append(link);link.click();link.remove();});
   }
   card.append(title,details,action);grid.append(card);
  }
