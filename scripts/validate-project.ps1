@@ -31,6 +31,7 @@ Write-Host "PASS: management client and embedded server port configuration match
 # Check that key management routes used by the UI exist in the embedded API.
 $requiredRoutes = @(
     '/api/admin/catalog-categories',
+    '/api/admin/library/folders',
     '/api/admin/profile',
     '/api/admin/profile/logo',
     '/api/profile',
@@ -132,6 +133,25 @@ if (-not $deleteMethod.Success -or
     throw "Category deletion must detach and unpublish content without deleting its metadata."
 }
 Write-Host "PASS: category deletion safely detaches and unpublishes content while preserving its records."
+
+$libraryServicePath = Join-Path $root "src/Alostora.RestHouse/LibraryService.cs"
+$libraryService = Get-Content $libraryServicePath -Raw
+$libraryFolderTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/LibraryServiceFolderTests.cs"
+if ($libraryService -notmatch 'public IReadOnlyList<LibraryFolderInfo> ListFolders\(' -or
+    $libraryService -notmatch 'public string CreateFolder\(' -or
+    $code -notmatch 'RefreshVideoFoldersTreeAsync\(' -or
+    $code -notmatch 'CreateLibraryFolder_Click' -or
+    $code -notmatch 'CopyVideosToSelectedFolder_Click' -or
+    $xaml -notmatch 'Click="CreateLibraryFolder_Click"' -or
+    $xaml -notmatch 'Click="CopyVideosToSelectedFolder_Click"' -or
+    -not (Test-Path $libraryFolderTestsPath)) {
+    throw "Nested library folder management or safe copy controls are incomplete."
+}
+$libraryFolderTests = Get-Content $libraryFolderTestsPath -Raw
+foreach ($testName in @("CreatesAndListsNestedManagedFolders", "RejectsPathTraversalAndFolderCreationOutsideManagedLibrary")) {
+    if (-not $libraryFolderTests.Contains($testName)) { throw ("Missing library folder regression test: " + $testName) }
+}
+Write-Host "PASS: nested folder management, path traversal protection, and non-destructive copy controls are wired."
 
 # Public catalog and media routes must enforce publication on the server, not only in browser JavaScript.
 $publicAccessPath = Join-Path $root "src/Alostora.RestHouse/PublicCatalogAccessService.cs"
