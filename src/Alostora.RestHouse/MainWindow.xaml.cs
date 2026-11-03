@@ -1147,7 +1147,7 @@ private void OpenLibraryFolder_Click(object sender, RoutedEventArgs e)
 
     private void NewSeries_Click(object sender, RoutedEventArgs e)
     {
-        SeriesManagementTabs.SelectedIndex = 0;
+        SeriesManagementTabs.SelectedIndex = 1;
         SeriesPicker.SelectedIndex = -1;
         SeriesIdBox.Clear();
         SeriesTitleBox.Clear();
@@ -1220,7 +1220,7 @@ private void OpenLibraryFolder_Click(object sender, RoutedEventArgs e)
     private async void SeriesPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (SeriesPicker.SelectedItem is not SeriesAdmin s) return;
-        SeriesManagementTabs.SelectedIndex = 0;
+        SeriesManagementTabs.SelectedIndex = 1;
         SeriesIdBox.Text = s.SeriesId;
         SeriesTitleBox.Text = s.Title ?? "";
         SeriesDescriptionBox.Text = s.Description ?? "";
