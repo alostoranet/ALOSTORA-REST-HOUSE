@@ -42,7 +42,7 @@ public partial class App : Application
    Directory.CreateDirectory(posters);
    // Do not open a second management window against a server owned by another
    // process: closing the server-owning process would otherwise leave this window orphaned.
-   if(await IsExistingRestHouseServerAsync())
+   if(await IsExistingRestHouseServerAsync(settings.Port))
    {
     MessageBox.Show("استراحة الأسطورة تعمل بالفعل. استخدم نافذة التطبيق المفتوحة بدلاً من تشغيل نسخة ثانية.",
      "استراحة الأسطورة",MessageBoxButton.OK,MessageBoxImage.Information);
@@ -56,7 +56,7 @@ public partial class App : Application
    var adminHttpsEnabled=!string.IsNullOrWhiteSpace(adminCertificatePath)&&File.Exists(adminCertificatePath);
    builder.WebHost.ConfigureKestrel(options =>
    {
-    options.ListenAnyIP(8097);
+    options.ListenAnyIP(settings.Port);
     if(adminHttpsEnabled) options.ListenAnyIP(8443,listen=>listen.UseHttps(adminCertificatePath!,adminCertificatePassword));
    });
    var supabaseUrl=(Environment.GetEnvironmentVariable("ALOSTORA_SUPABASE_URL")??"https://erxbnboohjiylzbafqho.supabase.co").TrimEnd('/');
@@ -717,7 +717,7 @@ public partial class App : Application
     return content is null?Results.NotFound():Results.Text(content,"text/vtt; charset=utf-8");
    });
    _server.MapGet("/media/{id}",(string id,LibraryService svc,PublicCatalogAccessService publicCatalog)=>{var item=svc.Resolve(id);return item is null||!publicCatalog.IsVideoPublished(id)?Results.NotFound():Results.File(item.FullPath,item.ContentType,enableRangeProcessing:true);});
-   await _server.StartAsync(); new MainWindow(root,library,posters,settings.FfmpegPath).Show();
+   await _server.StartAsync(); new MainWindow(root,library,posters,settings.FfmpegPath,settings.Port).Show();
   } catch(Exception ex){
    var details=ex.ToString();
    var logPath=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"AlostoraRestHouse","startup-error.txt");
@@ -725,17 +725,17 @@ public partial class App : Application
    var inner=ex.GetBaseException();
    var message=inner.Message;
    if(inner is System.Net.Sockets.SocketException socket && socket.SocketErrorCode==System.Net.Sockets.SocketError.AddressAlreadyInUse)
-    message="المنفذ 8097 مستخدم حالياً من برنامج آخر. أغلق البرنامج الذي يستخدمه ثم أعد تشغيل استراحة الأسطورة. لم يتم تغيير المنفذ حتى لا تتعطل روابط المشاهدة داخل الشبكة.";
+    message=$"المنفذ {settings.Port} مستخدم حالياً من برنامج آخر. أغلق البرنامج الذي يستخدمه أو اختر منفذاً آخر من إعدادات الاستراحة.";
    MessageBox.Show("تعذر تشغيل السيرفر:\n"+message+"\n\nتم حفظ تفاصيل الخطأ في:\n"+logPath,"استراحة الأسطورة",MessageBoxButton.OK,MessageBoxImage.Error);
    Shutdown(1);
   }
  }
- private static async Task<bool> IsExistingRestHouseServerAsync()
+ private static async Task<bool> IsExistingRestHouseServerAsync(int port)
  {
   try
   {
    using var client=new HttpClient{Timeout=TimeSpan.FromSeconds(2)};
-   using var response=await client.GetAsync("http://127.0.0.1:8097/api/health");
+   using var response=await client.GetAsync($"http://127.0.0.1:{port}/api/health");
    if(!response.IsSuccessStatusCode)return false;
    await using var stream=await response.Content.ReadAsStreamAsync();
    using var document=await JsonDocument.ParseAsync(stream);
