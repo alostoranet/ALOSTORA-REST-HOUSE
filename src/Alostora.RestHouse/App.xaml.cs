@@ -305,6 +305,10 @@ public partial class App : Application
      metadataById.TryGetValue(v.Id,out var m);
      var resolvedVideo=svc.Resolve(v.Id);
      var addedUtc=resolvedVideo is null?null:File.GetCreationTimeUtc(resolvedVideo.FullPath).ToString("O");
+     var folderPath=resolvedVideo is null?string.Empty:(Path.GetDirectoryName(resolvedVideo.FullPath)??string.Empty);
+     var folderName=string.IsNullOrWhiteSpace(folderPath)?"مجلد غير معروف":Path.GetFileName(folderPath.TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar));
+     if(string.IsNullOrWhiteSpace(folderName))folderName=folderPath;
+     var folderId=string.IsNullOrWhiteSpace(folderPath)?"root":Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(folderPath)))[..16];
      var posterPath=m?.PosterPath;
      if(string.IsNullOrWhiteSpace(posterPath))
      {
@@ -316,7 +320,7 @@ public partial class App : Application
       }
      }
      var placement=catalog.GetVideoPlacement(v.Id);
-     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,addedUtc,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags,categoryId=m?.CategoryId,categoryTitle=m is not null&&m.CategoryId is not null&&categoryById.TryGetValue(m.CategoryId,out var categoryTitle)?categoryTitle:null,linkedSeriesId=placement?.SeriesId,linkedSeasonId=placement?.SeasonId,linkedEpisodeNumber=placement?.EpisodeNumber,linkedEpisodeTitle=placement?.Title,viewCount=viewCounts.TryGetValue(v.Id,out var viewCount)?viewCount:0,metadataSaved=m is not null,section=m?.Section??"عام",isPublished=m?.IsPublished??false};
+     return new{id=v.Id,title=m?.Title??v.Title,fileName=v.FileName,url=v.Url,sizeBytes=v.SizeBytes,addedUtc,folderId,folderName,description=m?.Description??"",year=m?.Year,genre=m?.Genre??"",kind=m?.Kind??"Movie",posterPath,director=m?.Director,cast=m?.Cast,rating=m?.Rating,runtimeMinutes=m?.RuntimeMinutes,releaseDate=m?.ReleaseDate,tags=m?.Tags,categoryId=m?.CategoryId,categoryTitle=m is not null&&m.CategoryId is not null&&categoryById.TryGetValue(m.CategoryId,out var categoryTitle)?categoryTitle:null,linkedSeriesId=placement?.SeriesId,linkedSeasonId=placement?.SeasonId,linkedEpisodeNumber=placement?.EpisodeNumber,linkedEpisodeTitle=placement?.Title,viewCount=viewCounts.TryGetValue(v.Id,out var viewCount)?viewCount:0,metadataSaved=m is not null,section=m?.Section??"عام",isPublished=m?.IsPublished??false};
     });
     return Results.Ok(result);
    });
