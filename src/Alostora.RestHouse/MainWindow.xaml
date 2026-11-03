@@ -50,7 +50,7 @@
 <TabItem Header="قائمة البرامج والمسلسلات"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="اختر مسلسلاً من القائمة لتعديله، أو اضغط «مسلسل جديد». اربط المسلسل بقسم رئيسي ثم قسم فرعي قبل نشره للعميل."/>
 <WrapPanel Margin="0,5,0,8"><Button Content="مسلسل جديد" Click="NewSeries_Click" Padding="10,7" Margin="0,0,6,0"/><Button Content="إنشاء مسلسل من الفيديو المحدد" Click="CreateSeriesFromVideo_Click" Padding="10,7" Margin="0,0,6,0"/></WrapPanel><TextBlock Text="سجل المسلسلات المضافة — اختر أي مسلسل لفتح بياناته وتعديلها" Foreground="#64748B" FontSize="12" Margin="0,0,0,6"/><DataGrid x:Name="SeriesPicker" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="SeriesPicker_SelectionChanged" CanUserAddRows="False" Height="145" Margin="0,0,0,10"><DataGrid.Columns><DataGridTextColumn Header="المسلسل" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="السنة" Binding="{Binding Year}" Width="60"/><DataGridTextColumn Header="القسم" Binding="{Binding CategoryTitle}" Width="105"/><DataGridTextColumn Header="التنظيم" Binding="{Binding OrganizationTypeLabel}" Width="95"/><DataGridTextColumn Header="النشر" Binding="{Binding PublishStatus}" Width="70"/></DataGrid.Columns></DataGrid></StackPanel></ScrollViewer></TabItem>
 <TabItem Header="بيانات البرنامج"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
-<TextBlock Text="معرّف المسلسل (اتركه فارغًا لإنشاء معرّف تلقائي)"/><TextBox x:Name="SeriesIdBox" Padding="8" Margin="0,4,0,8"/>
+<TextBlock Text="معرّف المسلسل (يُنشأ تلقائياً)"/><TextBox x:Name="SeriesIdBox" IsReadOnly="True" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="اسم المسلسل أو البرنامج"/><TextBox x:Name="SeriesTitleBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="الوصف"/><TextBox x:Name="SeriesDescriptionBox" Padding="8" Margin="0,4,0,8" Height="65" AcceptsReturn="True" TextWrapping="Wrap"/>
 <TextBlock Text="السنة"/><TextBox x:Name="SeriesYearBox" Padding="8" Margin="0,4,0,8"/>
@@ -103,7 +103,7 @@
 <StackPanel x:Name="CategoryContentKindPanel" Visibility="Collapsed"><TextBlock Text="نوع المحتوى داخل القسم الفرعي"/><ComboBox x:Name="CategoryKindPicker" Padding="8" Margin="0,4,0,8">
 <ComboBoxItem Content="أفلام" Tag="Movie" IsSelected="True"/><ComboBoxItem Content="مسلسلات وبرامج" Tag="Series"/><ComboBoxItem Content="محتوى آخر" Tag="Other"/>
 </ComboBox></StackPanel>
-<TextBlock Text="معرّف القسم (يُنشأ تلقائياً عند تركه فارغاً)"/><TextBox x:Name="CategoryIdBox" Padding="8" Margin="0,4,0,8"/>
+<TextBlock Text="معرّف القسم (يُنشأ تلقائياً عند تركه فارغاً)"/><TextBox x:Name="CategoryIdBox" IsReadOnly="True" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="صورة غلاف القسم المحفوظة"/><TextBox x:Name="CategoryPosterPathBox" IsReadOnly="True" Padding="8" Margin="0,4,0,8"/>
 <TextBlock x:Name="CategoryPosterStatusText" Text="الغلاف اختياري. يمكنك نشر القسم بدونه." Foreground="#64748B" Margin="0,0,0,8"/>
 <WrapPanel Margin="0,0,0,10"><Button Content="قسم جديد" Click="NewCategory_Click" Padding="12,8" Margin="0,0,6,0"/><Button Content="حفظ القسم" Click="SaveCategory_Click" Padding="12,8" Background="#C93640" Foreground="White" Margin="0,0,6,0"/><Button Content="نشر القسم المحدد" Click="PublishCategory_Click" Padding="12,8" Background="#E7F5EC" Foreground="#176B3A" Margin="0,0,6,0"/><Button Content="اختيار صورة الغلاف ورفعها" Click="UploadCategoryPoster_Click" Padding="12,8" Margin="0,0,6,0"/><Button Content="حذف القسم المحدد" Click="DeleteCategory_Click" Padding="12,8" Background="#FCE8E8" Foreground="#9F2630"/></WrapPanel>
