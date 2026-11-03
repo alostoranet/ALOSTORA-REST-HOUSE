@@ -845,7 +845,7 @@ private void CategoryLevelPicker_SelectionChanged(object sender, SelectionChange
             }
             else
             {
-                all.IsSelected = true;
+                _selectedFolderPath = null;
             }
             _videosView.Refresh();
         }
