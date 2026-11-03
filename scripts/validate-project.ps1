@@ -124,11 +124,22 @@ if ($categoryService -notmatch 'SET CategoryId=NULL, IsPublished=0' -or
 Write-Host "PASS: category deletion safely unpublishes linked content and preserves source media."
 if (-not $xaml.Contains('CategoryLevelPicker') -or
     -not $xaml.Contains('LibraryFoldersTree') -or
+    -not $xaml.Contains('SeriesManagementTabs') -or
+    -not $xaml.Contains('CategoryManagementTabs') -or
+    -not $xaml.Contains('EpisodeManagementPanel') -or
     -not $code.Contains('SaveSeriesAsync()') -or
     -not $code.Contains('if (!await SaveSeriesAsync()) return;')) {
-    throw "The new category workflow, nested library folders, or automatic series-cover save flow is incomplete."
+    throw "The nested administration pages, category workflow, library folders, or automatic cover save flow is incomplete."
 }
-Write-Host "PASS: category level selection, nested video folders, and automatic series-cover saving are wired."
+Write-Host "PASS: nested management pages, category levels, video folders, and automatic series-cover saving are wired."
+
+$libraryFolderTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/LibraryServiceFolderTests.cs"
+if (-not (Test-Path $libraryFolderTestsPath)) { throw "Library folder regression tests are missing." }
+$libraryFolderTests = Get-Content $libraryFolderTestsPath -Raw
+foreach ($testName in @("CreatesAndListsNestedManagedFolders", "RejectsPathTraversalAndFolderCreationOutsideManagedLibrary")) {
+    if (-not $libraryFolderTests.Contains($testName)) { throw ("Missing library folder regression test: " + $testName) }
+}
+Write-Host "PASS: nested folder creation and path traversal protections are regression-tested."
 
 # Public catalog and media routes must enforce publication on the server, not only in browser JavaScript.
 $publicAccessPath = Join-Path $root "src/Alostora.RestHouse/PublicCatalogAccessService.cs"
