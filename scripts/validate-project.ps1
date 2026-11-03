@@ -124,14 +124,18 @@ if ($categoryService -notmatch 'SET CategoryId=NULL, IsPublished=0' -or
 Write-Host "PASS: category deletion safely unpublishes linked content and preserves source media."
 if (-not $xaml.Contains('CategoryLevelPicker') -or
     -not $xaml.Contains('LibraryFoldersTree') -or
+    -not $xaml.Contains('VideoManagementTabs') -or
     -not $xaml.Contains('SeriesManagementTabs') -or
     -not $xaml.Contains('CategoryManagementTabs') -or
     -not $xaml.Contains('EpisodeManagementPanel') -or
     -not $code.Contains('SaveSeriesAsync()') -or
-    -not $code.Contains('if (!await SaveSeriesAsync()) return;')) {
+    -not $code.Contains('if (!await SaveSeriesAsync()) return;') -or
+    -not $code.Contains('SaveCategoryAsync()') -or
+    -not $code.Contains('if (!await SaveCategoryAsync()) return;') -or
+    -not $code.Contains('OpenVideoDetails_Click')) {
     throw "The nested administration pages, category workflow, library folders, or automatic cover save flow is incomplete."
 }
-Write-Host "PASS: nested management pages, category levels, video folders, and automatic series-cover saving are wired."
+Write-Host "PASS: video, series and category subpages, category levels, folder navigation, and automatic cover saving are wired."
 
 $libraryFolderTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/LibraryServiceFolderTests.cs"
 if (-not (Test-Path $libraryFolderTestsPath)) { throw "Library folder regression tests are missing." }
