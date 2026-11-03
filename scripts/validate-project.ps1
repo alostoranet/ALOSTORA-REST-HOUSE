@@ -257,6 +257,10 @@ if ($xaml -notmatch 'VideoFoldersTree' -or
     throw "The admin folder browser is not connected to the video register."
 }
 Write-Host "PASS: admin folder browser filters the video register by folder."
+if ($app -notmatch 'folderPath=isLocal\?folderPath:null') {
+    throw "Physical media folder paths must only be exposed to the local management client."
+}
+Write-Host "PASS: physical media folder paths are not exposed to remote customers."
 
 
 
