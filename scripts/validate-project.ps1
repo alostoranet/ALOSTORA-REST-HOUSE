@@ -78,8 +78,8 @@ Write-Host "PASS: customer home and contact form have separate navigation states
 if ($html -notmatch 'id="catalogView"' -or
     $html -notmatch 'id="catalogBack"' -or
     $html -notmatch 'function renderCatalogPage\(' -or
-    $html -notmatch "type==='season'" -or
-    $html -notmatch "type==='player'" -or
+    $html -notmatch "pageType==='season'" -or
+    $html -notmatch "pageType==='player'" -or
     $html -match 'id="seriesDetails"' -or
     $html -match 'id="movieDetails"') {
     throw "Customer catalog must use separate category, program, season, and player pages."
