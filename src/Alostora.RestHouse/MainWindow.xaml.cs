@@ -74,30 +74,50 @@ public partial class MainWindow : Window
     {
         if (VideoFoldersTree is null) return;
         VideoFoldersTree.Items.Clear();
-        var all = new TreeViewItem { Header = $"كل المجلدات ({_videos.Count})", Tag = null, IsSelected = true };
-        VideoFoldersTree.Items.Add(all);
-        var groups = _videos
-            .GroupBy(x => new { x.FolderId, x.FolderName })
-            .OrderBy(x => x.Key.FolderName, StringComparer.CurrentCultureIgnoreCase);
-        foreach (var group in groups)
+        VideoFoldersTree.Items.Add(new TreeViewItem { Header = $"كل المجلدات ({_videos.Count})", Tag = null, IsSelected = true });
+
+        var nodes = new Dictionary<string, TreeViewItem>(StringComparer.OrdinalIgnoreCase);
+        var folders = _videos.Select(v => v.FolderPath)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.CurrentCultureIgnoreCase);
+
+        foreach (var folder in folders)
         {
-            var folder = new TreeViewItem
+            var root = Path.GetPathRoot(folder!);
+            if (string.IsNullOrWhiteSpace(root)) continue;
+            if (!nodes.TryGetValue(root, out var parent))
             {
-                Header = $"{group.Key.FolderName} ({group.Count()})",
-                Tag = group.Key.FolderId
-            };
-            VideoFoldersTree.Items.Add(folder);
+                parent = new TreeViewItem { Header = root, Tag = root };
+                nodes[root] = parent;
+                VideoFoldersTree.Items.Add(parent);
+            }
+
+            var current = root;
+            var parts = folder![root.Length..].Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var part in parts)
+            {
+                current = Path.Combine(current, part);
+                if (!nodes.TryGetValue(current, out var child))
+                {
+                    child = new TreeViewItem { Header = part, Tag = current };
+                    nodes[current] = child;
+                    parent.Items.Add(child);
+                }
+                parent = child;
+            }
         }
-        _selectedVideoFolderId = null;
+
+        _selectedVideoFolderPath = null;
         _videosView?.Refresh();
     }
 
     private void VideoFoldersTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
         if (VideoFoldersTree.SelectedItem is TreeViewItem selected)
-            _selectedVideoFolderId = selected.Tag as string;
+            _selectedVideoFolderPath = selected.Tag as string;
         else
-            _selectedVideoFolderId = null;
+            _selectedVideoFolderPath = null;
         _videosView?.Refresh();
     }
 
