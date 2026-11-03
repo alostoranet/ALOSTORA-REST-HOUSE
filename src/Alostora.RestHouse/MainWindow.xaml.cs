@@ -819,6 +819,7 @@ private void CategoryLevelPicker_SelectionChanged(object sender, SelectionChange
         {
             var rows = await _http.GetFromJsonAsync<LibraryFolderAdmin[]>("/api/admin/library/folders")
                 ?? Array.Empty<LibraryFolderAdmin>();
+            var previousFolderPath = _selectedFolderPath;
             LibraryFoldersTree.Items.Clear();
             var all = new TreeViewItem { Header = "كل ملفات المكتبة", IsExpanded = true, Tag = null };
             var nodes = new Dictionary<string, TreeViewItem>(StringComparer.OrdinalIgnoreCase);
@@ -837,6 +838,15 @@ private void CategoryLevelPicker_SelectionChanged(object sender, SelectionChange
             }
             LibraryFoldersTree.Items.Add(all);
             all.IsExpanded = true;
+            if (!string.IsNullOrWhiteSpace(previousFolderPath) && nodes.TryGetValue(previousFolderPath, out var previousNode))
+            {
+                previousNode.IsSelected = true;
+                previousNode.BringIntoView();
+            }
+            else
+            {
+                all.IsSelected = true;
+            }
             _videosView.Refresh();
         }
         catch (Exception ex)
