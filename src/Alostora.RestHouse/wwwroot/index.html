@@ -85,12 +85,13 @@ function addFavoriteButton(card,item){const button=document.createElement('butto
 function isNew(dateValue){if(!dateValue)return false;const date=new Date(dateValue);return !Number.isNaN(date.getTime())&&(Date.now()-date.getTime())<14*24*60*60*1000;}
 function makeNewBadge(){const badge=document.createElement('span');badge.className='new-badge';badge.textContent='جديد';return badge;}
 function render(){renderCatalogPage();}
-function catalogCard(title,subtitle,posterPath,action,badge){
+function catalogCard(title,subtitle,posterPath,action,badge,favoriteItem){
  const card=document.createElement('article');card.className='catalog-card';card.tabIndex=0;card.setAttribute('role','button');card.addEventListener('click',action);card.addEventListener('keydown',event=>{if(event.target===card&&(event.key==='Enter'||event.key===' ')){event.preventDefault();action();}});
  const poster=makePoster(posterPath,title);if(poster){poster.className=poster.tagName==='IMG'?'':'poster-empty';card.append(poster);}
  const heading=document.createElement('h3');heading.textContent=title;card.append(heading);
  if(subtitle){const detail=document.createElement('small');detail.textContent=subtitle;card.append(detail);}
  if(badge){const tag=document.createElement('small');tag.textContent=badge;tag.style.color='#f0b7bb';card.append(tag);}
+ if(favoriteItem)addFavoriteButton(card,favoriteItem);
  return card;
 }
 function catalogHero(title,posterPath,metaText,description){
