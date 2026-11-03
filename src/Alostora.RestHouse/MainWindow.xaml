@@ -134,7 +134,7 @@
 <TextBox x:Name="EpisodeTitleBox" Grid.Column="0" Padding="8" Margin="0,0,6,8" ToolTip="اسم الحلقة (اختياري)"/>
 <TextBox x:Name="EpisodeNumberBox" Grid.Column="1" Padding="8" Margin="0,0,0,8" Text="1" ToolTip="رقم الحلقة"/>
 </Grid>
-<Button Content="حفظ الحلقة" Click="AddEpisode_Click" HorizontalAlignment="Right" Padding="12,8"/></StackPanel></Expander></StackPanel>
+<WrapPanel HorizontalAlignment="Right"><Button Content="حفظ الحلقة الجديدة" Click="AddEpisode_Click" Padding="12,8" Margin="0,0,6,0"/><Button x:Name="UpdateEpisodeInEditorButton" Content="حفظ تعديل الحلقة" Click="UpdateEpisode_Click" Padding="12,8" Visibility="Collapsed"/></WrapPanel></StackPanel></Expander></StackPanel>
 
 </StackPanel></ScrollViewer></TabItem>
 <TabItem Header="الحلقات المفقودة"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
