@@ -149,6 +149,17 @@ foreach ($testName in @("CreatesAndListsNestedManagedFolders", "RejectsPathTrave
     if (-not $libraryFolderTests.Contains($testName)) { throw ("Missing library folder regression test: " + $testName) }
 }
 Write-Host "PASS: nested folder creation and path traversal protections are regression-tested."
+$publicCatalogTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/PublicCatalogAccessTests.cs"
+$publicCatalogTests = Get-Content $publicCatalogTestsPath -Raw
+if (-not $publicCatalogTests.Contains("DeletingCategoryUnpublishesAndDetachesReferencedVideoMetadata")) {
+    throw "The public-catalog category deletion behavior must be regression-tested."
+}
+Write-Host "PASS: deleting a category immediately removes its videos from public catalog access."
+
+if ($xaml -match 'x:Name="(?:SectionBox|SeriesSectionBox)"') {
+    throw "Unused free-text section fields should not appear in the administration forms."
+}
+
 
 # Public catalog and media routes must enforce publication on the server, not only in browser JavaScript.
 $publicAccessPath = Join-Path $root "src/Alostora.RestHouse/PublicCatalogAccessService.cs"
