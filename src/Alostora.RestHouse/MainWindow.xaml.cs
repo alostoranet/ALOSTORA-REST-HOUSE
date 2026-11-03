@@ -33,7 +33,11 @@ public partial class MainWindow : Window
     private string? _ffmpegPath;
     private string? _pendingSeriesPosterPath;
     private string? _pendingCategoryPosterPath;
-    private readonly HttpClient _http = new() { BaseAddress = new Uri("http://127.0.0.1:8097") };
+    private readonly HttpClient _http = new();
+    private readonly int _port;
+    private Window? _activeEditorWindow;
+    private Expander? _activeEditorExpander;
+    private object? _activeEditorContent;
     private readonly ObservableCollection<AdminVideo> _videos = new();
     private ICollectionView? _videosView;
     private string? _selectedVideoFolderPath;
@@ -45,10 +49,13 @@ public partial class MainWindow : Window
     private bool _suppressVideoSeriesPickerEvent;
     private readonly DispatcherTimer _messageRefreshTimer = new() { Interval = TimeSpan.FromSeconds(30) };
 
-    public MainWindow(string root, string library, string posters, string? ffmpegPath)
+    public MainWindow(string root, string library, string posters, string? ffmpegPath, int port)
     {
         InitializeComponent();
         _root = root;
+        _port = port;
+        _http.BaseAddress = new Uri($"http://127.0.0.1:{_port}");
+        PortBox.Text = _port.ToString();
         _library = library;
         _posters = posters;
         _ffmpegPath = ffmpegPath;
@@ -56,7 +63,8 @@ public partial class MainWindow : Window
         LibraryBox.Text = library;
         MediaFolderBox.Text = library;
         PostersFolderBox.Text = posters;
-        AddressBox.Text = $"رابط المشاهدة: http://{GetLanAddress()}:8097";
+        AddressBox.Text = $"رابط المشاهدة: http://{GetLanAddress()}:{_port}";
+        ViewingUrlText.Text = $"http://{GetLanAddress()}:{_port}";
         _videosView = CollectionViewSource.GetDefaultView(_videos);
         _videosView.Filter = FilterVideosByFolder;
         VideosGrid.ItemsSource = _videosView;
@@ -475,13 +483,98 @@ public partial class MainWindow : Window
         }
     }
 
+
+    private void OpenDedicatedEditor(Expander editor, string title)
+    {
+        if (_activeEditorWindow is not null || editor.Content is null) return;
+        _activeEditorExpander = editor;
+        _activeEditorContent = editor.Content;
+        editor.Content = null;
+        var window = new Window
+        {
+            Title = title,
+            Owner = this,
+            Width = 720,
+            Height = 700,
+            MinWidth = 560,
+            MinHeight = 480,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            FlowDirection = FlowDirection.RightToLeft,
+            Background = System.Windows.Media.Brushes.White,
+            Content = _activeEditorContent
+        };
+        _activeEditorWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (_activeEditorExpander is not null)
+            {
+                _activeEditorExpander.Content = _activeEditorContent;
+                _activeEditorExpander.IsExpanded = false;
+            }
+            _activeEditorWindow = null;
+            _activeEditorExpander = null;
+            _activeEditorContent = null;
+        };
+        window.ShowDialog();
+    }
+
+    private void CloseDedicatedEditor() => _activeEditorWindow?.Close();
+
+    private void SavePort_Click(object sender, RoutedEventArgs e)
+    {
+        if (!int.TryParse(PortBox.Text.Trim(), out var port) || port is < 1024 or > 65535)
+        {
+            MessageBox.Show("أدخل منفذاً صحيحاً بين 1024 و65535.", "إعداد المنفذ", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        try
+        {
+            AppSettings.SavePort(_root, port);
+            ViewingUrlText.Text = $"http://{GetLanAddress()}:{port}";
+            AddressBox.Text = $"رابط المشاهدة (بعد إعادة التشغيل): http://{GetLanAddress()}:{port}";
+            MessageBox.Show($"تم حفظ المنفذ {port}. أغلق البرنامج وافتحه مجدداً لتطبيقه على السيرفر.", "إعداد المنفذ", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("تعذر حفظ المنفذ: " + ex.Message, "إعداد المنفذ", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void CopyAddress_Click(object sender, RoutedEventArgs e)
+    {
+        var port = int.TryParse(PortBox.Text.Trim(), out var selectedPort) && selectedPort is >= 1024 and <= 65535 ? selectedPort : _port;
+        var url = $"http://{GetLanAddress()}:{port}";
+        Clipboard.SetText(url);
+        MessageBox.Show("تم نسخ رابط المشاهدة: " + url, "نسخ الرابط", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void OpenSeasonEditor_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(SeriesIdBox.Text))
+        {
+            SeriesStatusText.Text = "احفظ المسلسل أولاً قبل إضافة موسم أو جزء.";
+            return;
+        }
+        OpenDedicatedEditor(SeasonEditorExpander, "إضافة موسم أو جزء");
+    }
+
+    private void OpenEpisodeEditor_Click(object sender, RoutedEventArgs e)
+    {
+        if (SeasonsGrid.SelectedItem is not SeasonAdmin)
+        {
+            SeriesStatusText.Text = "اختر الموسم أولاً قبل إضافة حلقة.";
+            return;
+        }
+        OpenDedicatedEditor(EpisodeEditorExpander, "إضافة حلقة للموسم المحدد");
+    }
+
     private async void EnableFirewall_Click(object sender, RoutedEventArgs e)
     {
-        const string ruleName = "ALOSTORA REST HOUSE TCP 8097";
+        var ruleName = $"ALOSTORA REST HOUSE TCP {_port}";
         var startInfo = new ProcessStartInfo
         {
             FileName = "powershell.exe",
-            Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='Stop'; try { Get-NetFirewallRule -DisplayName '" + ruleName + "' -ErrorAction SilentlyContinue | Remove-NetFirewallRule; New-NetFirewallRule -DisplayName '" + ruleName + "' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8097 -Profile Private | Out-Null; exit 0 } catch { Write-Error $_; exit 1 }\"",
+            Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='Stop'; try { Get-NetFirewallRule -DisplayName '" + ruleName + "' -ErrorAction SilentlyContinue | Remove-NetFirewallRule; New-NetFirewallRule -DisplayName '" + ruleName + "' -Direction Inbound -Action Allow -Protocol TCP -LocalPort " + _port + " -Profile Private | Out-Null; exit 0 } catch { Write-Error $_; exit 1 }\"",
             UseShellExecute = true,
             Verb = "runas",
             WindowStyle = ProcessWindowStyle.Hidden
@@ -497,7 +590,7 @@ public partial class MainWindow : Window
             }
             await process.WaitForExitAsync();
             if (process.ExitCode == 0)
-                MessageBox.Show("تم السماح باتصالات TCP على المنفذ 8097 ضمن ملف تعريف الشبكة الخاصة. تأكد أن شبكة Windows مضبوطة على «خاصة».", "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("تم السماح باتصالات TCP على المنفذ {_port} ضمن ملف تعريف الشبكة الخاصة. تأكد أن شبكة Windows مضبوطة على «خاصة».", "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Information);
             else
                 MessageBox.Show("لم يتمكن Windows من إضافة قاعدة جدار الحماية. شغّل البرنامج بصلاحية مسؤول وحاول مجدداً.", "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
@@ -890,8 +983,8 @@ public partial class MainWindow : Window
         CategoryPublishBox.IsChecked = true;
         CategoryPosterStatusText.Text = "الغلاف اختياري. القسم الرئيسي سيظهر في الصفحة الأولى بعد النشر.";
         CategoryStatusText.Text = "قسم رئيسي جديد: اكتب الاسم ثم احفظ. لإضافة قسم تحته استخدم «قسم فرعي جديد».";
-        CategoryEditorExpander.IsExpanded = true;
         UpdateCategoryParentState();
+        OpenDedicatedEditor(CategoryEditorExpander, "إضافة قسم رئيسي");
     }
 
     private void NewSubCategory_Click(object sender, RoutedEventArgs e)
@@ -910,8 +1003,8 @@ public partial class MainWindow : Window
         CategoryPublishBox.IsChecked = true;
         CategoryPosterStatusText.Text = "غلاف القسم الفرعي اختياري ويمكن رفعه بعد حفظ القسم.";
         CategoryStatusText.Text = "قسم فرعي جديد: اختر القسم الرئيسي الذي يتبعه، ثم حدد هل يحتوي أفلاماً أم مسلسلات أم محتوى آخر.";
-        CategoryEditorExpander.IsExpanded = true;
         UpdateCategoryParentState();
+        OpenDedicatedEditor(CategoryEditorExpander, "إضافة قسم فرعي");
         CategoryParentPicker.Focus();
     }
 
@@ -929,7 +1022,6 @@ public partial class MainWindow : Window
     private void CategoriesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (CategoriesGrid.SelectedItem is not CategoryAdmin row) return;
-        CategoryEditorExpander.IsExpanded = true;
         CategoryIdBox.Text = row.CategoryId;
         CategoryTitleBox.Text = row.Title;
         CategoryParentPicker.SelectedValue = row.ParentId;
@@ -938,6 +1030,7 @@ public partial class MainWindow : Window
         CategoryPosterPathBox.Text = row.PosterPath ?? "";
         CategoryPublishBox.IsChecked = row.IsPublished;
         CategoryPosterStatusText.Text = string.IsNullOrWhiteSpace(row.PosterPath) ? "لا يوجد غلاف. يمكنك نشر القسم بدونه أو رفع غلاف اختياري." : "تم حفظ غلاف هذا القسم.";
+        OpenDedicatedEditor(CategoryEditorExpander, "تعديل بيانات القسم");
     }
 
     private async void SaveCategory_Click(object sender, RoutedEventArgs e)
@@ -967,7 +1060,7 @@ public partial class MainWindow : Window
             var location = parentTitle is null ? "" : $" داخل القسم الرئيسي «{parentTitle}»";
             var action = isNew ? "تمت إضافة" : "تم تحديث";
             CategoryStatusText.Text = $"{action} {typeName} «{title}»{location}. الحالة: {(CategoryPublishBox.IsChecked == true ? "منشور" : "مسودة")}.";
-        CategoryEditorExpander.IsExpanded = false;
+        CloseDedicatedEditor();
         }
         catch (Exception ex) { CategoryStatusText.Text = "تعذر حفظ القسم: " + ex.Message; }
     }
@@ -1350,7 +1443,7 @@ public partial class MainWindow : Window
         _episodeCandidates.Clear();
         MissingEpisodesGrid.SelectedIndex = -1;
         SeriesStatusText.Text = "نموذج مسلسل جديد. أدخل بياناته واحفظه أولاً.";
-        SeriesEditorExpander.IsExpanded = true;
+        OpenDedicatedEditor(SeriesEditorExpander, "إضافة مسلسل جديد");
     }
 
     private async void CreateSeriesFromVideo_Click(object sender, RoutedEventArgs e)
@@ -1396,7 +1489,6 @@ public partial class MainWindow : Window
     private async void SeriesPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (SeriesPicker.SelectedItem is not SeriesAdmin s) return;
-        SeriesEditorExpander.IsExpanded = true;
         _pendingSeriesPosterPath = null;
         SeriesIdBox.Text = s.SeriesId;
         SeriesTitleBox.Text = s.Title ?? "";
@@ -1413,6 +1505,7 @@ public partial class MainWindow : Window
         SeriesStructureBox.SelectedItem = SeriesStructureBox.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == s.OrganizationType);
         UpdateSeriesStructureLabels();
         await LoadSeasonsAsync(s.SeriesId);
+        OpenDedicatedEditor(SeriesEditorExpander, "تعديل بيانات المسلسل");
     }
 
     private async System.Threading.Tasks.Task LoadSeasonsAsync(string seriesId)
@@ -1554,7 +1647,7 @@ public partial class MainWindow : Window
             if (SeriesPicker.SelectedItem is null) await LoadSeasonsAsync(id);
             await LoadVideosAsync();
             SeriesStatusText.Text = saveMessage;
-        SeriesEditorExpander.IsExpanded = false;
+        CloseDedicatedEditor();
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر حفظ المسلسل: " + ex.Message; }
     }
@@ -1642,8 +1735,7 @@ public partial class MainWindow : Window
             if (addedSeason is not null) SeasonsGrid.SelectedItem = addedSeason;
             await LoadVideosAsync();
             SeriesStatusText.Text = $"تمت إضافة {( (SeriesStructureBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Parts" ? "الجزء" : "الموسم")} رقم {number} بنجاح. أصبح محدداً الآن ويمكنك إضافة الحلقات إليه.";
-            SeasonEditorExpander.IsExpanded = false;
-            EpisodeEditorExpander.IsExpanded = true;
+            CloseDedicatedEditor();
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر إضافة الموسم: " + ex.Message; }
     }
@@ -1652,7 +1744,6 @@ public partial class MainWindow : Window
     {
         if (SeasonsGrid.SelectedItem is SeasonAdmin season)
         {
-            EpisodeEditorExpander.IsExpanded = true;
             SeasonFolderPathBox.Text = season.FolderPath ?? "";
             EpisodesGrid.ItemsSource = null;
             await LoadEpisodesAsync(season.SeasonId);
@@ -1685,6 +1776,7 @@ public partial class MainWindow : Window
         EpisodeNumberBox.Text = episode.EpisodeNumber.ToString();
         EpisodeTitleBox.Text = episode.Title;
         SeriesStatusText.Text = $"تم تحديد الحلقة رقم {episode.EpisodeNumber}. عدّل الرقم أو الاسم ثم اضغط حفظ التعديل.";
+        OpenDedicatedEditor(EpisodeEditorExpander, "تعديل بيانات الحلقة");
     }
 
     private async void UpdateEpisode_Click(object sender, RoutedEventArgs e)
@@ -1714,6 +1806,7 @@ public partial class MainWindow : Window
             }
             await LoadEpisodesAsync(episode.SeasonId);
             SeriesStatusText.Text = $"تم تحديث بيانات الحلقة رقم {number} دون تغيير ملف الفيديو.";
+            CloseDedicatedEditor();
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر تعديل الحلقة: " + ex.Message; }
     }
@@ -1922,7 +2015,7 @@ public partial class MainWindow : Window
             await LoadEpisodesAsync(season.SeasonId);
             await LoadMissingEpisodesAsync();
             SeriesStatusText.Text = $"تم ربط «{video.Title}» كالحلقة رقم {number} وتحديث قائمة ملفات الموسم.";
-            EpisodeEditorExpander.IsExpanded = false;
+            CloseDedicatedEditor();
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر إضافة الحلقة: " + ex.Message; }
     }
