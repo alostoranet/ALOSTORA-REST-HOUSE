@@ -20,6 +20,11 @@ namespace Alostora.RestHouse;
 
 public partial class MainWindow : Window
 {
+    private sealed record MultiMediaAdminItem(string Id, string Kind, string Title, string FileName, string RelativePath, long SizeBytes, string ModifiedUtc, string Url)
+    {
+        public string KindLabel => Kind switch { "Audio" => "الصوتيات", "Books" => "الكتب", "Apps" => "التطبيقات", _ => Kind };
+        public string SizeLabel => SizeBytes < 1024 * 1024 ? $"{SizeBytes / 1024.0:0.#} KB" : $"{SizeBytes / (1024.0 * 1024.0):0.##} MB";
+    }
     private readonly string _root;
     private string _library;
     private string _posters;
@@ -52,10 +57,56 @@ public partial class MainWindow : Window
         _videosView.Filter = FilterVideosByFolder;
         VideosGrid.ItemsSource = _videosView;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); };
+        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); };
         _messageRefreshTimer.Tick += async (_, _) => await LoadCustomerMessagesAsync();
         _messageRefreshTimer.Start();
         Closed += (_, _) => _messageRefreshTimer.Stop();
+    }
+
+    private async void RefreshMultiMediaLibrary_Click(object sender, RoutedEventArgs e)
+    {
+        await RefreshMultiMediaLibraryAsync();
+    }
+
+    private async System.Threading.Tasks.Task RefreshMultiMediaLibraryAsync()
+    {
+        try
+        {
+            var items = await _http.GetFromJsonAsync<MultiMediaAdminItem[]>("/api/media-libraries")
+                ?? Array.Empty<MultiMediaAdminItem>();
+            MultiMediaGrid.ItemsSource = items;
+            MultiMediaLibraryStatusText.Text = $"عدد الملفات المسجلة: {items.Length}. الملفات تبقى في مجلداتها الأصلية.";
+        }
+        catch (Exception ex)
+        {
+            if (MultiMediaLibraryStatusText is not null)
+                MultiMediaLibraryStatusText.Text = "تعذر تحميل المكتبات الإضافية: " + ex.Message;
+        }
+    }
+
+    private async void ScanAudioLibrary_Click(object sender, RoutedEventArgs e) => await ScanMultiMediaLibraryAsync("Audio");
+    private async void ScanBooksLibrary_Click(object sender, RoutedEventArgs e) => await ScanMultiMediaLibraryAsync("Books");
+    private async void ScanAppsLibrary_Click(object sender, RoutedEventArgs e) => await ScanMultiMediaLibraryAsync("Apps");
+
+    private async System.Threading.Tasks.Task ScanMultiMediaLibraryAsync(string kind)
+    {
+        try
+        {
+            MultiMediaLibraryStatusText.Text = "جارٍ فحص الملفات وتحديث الفهرس...";
+            var response = await _http.PostAsJsonAsync("/api/admin/media-libraries/scan", new { kind });
+            if (!response.IsSuccessStatusCode)
+            {
+                MultiMediaLibraryStatusText.Text = "تعذر فحص المكتبة: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            var items = await response.Content.ReadFromJsonAsync<MultiMediaAdminItem[]>();
+            await RefreshMultiMediaLibraryAsync();
+            MultiMediaLibraryStatusText.Text = $"اكتمل الفحص. الملفات الموجودة في هذه المكتبة: {items?.Length ?? 0}.";
+        }
+        catch (Exception ex)
+        {
+            MultiMediaLibraryStatusText.Text = "تعذر فحص المكتبة: " + ex.Message;
+        }
     }
 
     private bool FilterVideosByFolder(object item)
