@@ -309,7 +309,7 @@ function renderCatalogPage(){
    const movies=sorted(items.filter(x=>x.isPublished===true&&x.kind!=='Series'&&x.categoryId===category.categoryId));
    const grid=document.createElement('div');grid.className='catalog-grid';
    for(const movie of movies){
-    const summary=[movie.year,movie.genre,movie.runtimeMinutes?movie.runtimeMinutes+' دقيقة':''].filter(Boolean).join(' • ');
+    const summary=[movie.year,movie.genre,movie.runtimeMinutes?movie.runtimeMinutes+' دقيقة':'','المشاهدات: '+(movie.viewCount||0)].filter(Boolean).join(' • ');
     grid.append(catalogCard(movie.title,summary,movie.posterPath,()=>play({id:movie.id,url:movie.url,title:movie.title}),null,movie));
    }
    content.append(grid);
