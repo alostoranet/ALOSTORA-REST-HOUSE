@@ -74,6 +74,19 @@ if ($html -notmatch 'id="homeNav"' -or
 }
 Write-Host "PASS: customer home and contact form have separate navigation states."
 
+# The catalog must navigate through distinct customer pages, not stacked detail panels.
+if ($html -notmatch 'id="catalogView"' -or
+    $html -notmatch 'id="catalogBack"' -or
+    $html -notmatch 'function renderCatalogPage\(' -or
+    $html -notmatch "pageType==='season'" -or
+    $html -notmatch "pageType==='player'" -or
+    $html -match 'id="seriesDetails"' -or
+    $html -match 'id="movieDetails"') {
+    throw "Customer catalog must use separate category, program, season, and player pages."
+}
+Write-Host "PASS: customer catalog uses separate navigation pages and a dedicated player view."
+
+
 # A category may be published without a poster; new category forms default to published.
 if ($app -match 'request\.IsPublished\s*&&\s*!PosterExists\(request\.PosterPath,posters\)' -or
     $app -match 'if\(!PosterExists\(poster,posters\)\)' -or
@@ -88,7 +101,7 @@ if ($app -match 'request\.IsPublished\s*&&\s*!PosterExists\(request\.PosterPath,
 $categoryTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/CatalogCategoryServiceTests.cs"
 if (-not (Test-Path $categoryTestsPath)) { throw "Catalog category regression tests are missing." }
 $categoryTests = Get-Content $categoryTestsPath -Raw
-foreach ($testName in @("PublishedMainAndChildCategoriesAppearWithoutPosterImages", "UnpublishedCategoriesDoNotAppearInCustomerCatalog", "PublishedChildOfUnpublishedParentIsNotExposed")) {
+foreach ($testName in @("PublishedMainAndChildCategoriesAppearWithoutPosterImages", "UnpublishedCategoriesDoNotAppearInCustomerCatalog", "PublishedChildOfUnpublishedParentIsNotExposed", "DeletingMainCategoryRemovesChildCatalogRecordsButKeepsOriginalVideoFile")) {
     if (-not $categoryTests.Contains($testName)) { throw ("Missing category regression test: " + $testName) }
 }
 Write-Host "PASS: customer category publication and optional-poster behavior are regression-tested."
@@ -232,6 +245,16 @@ if ($app -notmatch 'viewCount=viewCounts' -or $html -notmatch 'المشاهدا�
 }
 if ($html -notmatch 'تصميم وبرمجة: محمد النظاري') { throw "Developer attribution footer is missing." }
 Write-Host "PASS: hierarchical categories, logo reports, reopenable messages, view counts, and developer attribution are wired."
+
+# The admin media register must support selecting a folder and filtering its videos.
+if ($xaml -notmatch 'VideoFoldersTree' -or
+    $code -notmatch 'RefreshVideoFoldersTree\(' -or
+    $code -notmatch 'FilterVideosByFolder' -or
+    $app -notmatch 'folderId,folderName') {
+    throw "The admin folder browser is not connected to the video register."
+}
+Write-Host "PASS: admin folder browser filters the video register by folder."
+
 
 
 # Series organization must support direct videos, seasons, and parts with inherited category placement.
