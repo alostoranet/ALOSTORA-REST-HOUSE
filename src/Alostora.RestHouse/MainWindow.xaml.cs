@@ -528,6 +528,15 @@ public partial class MainWindow : Window
 
     private void CloseDedicatedEditor() => _activeEditorWindow?.Close();
 
+    private void PortBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (ViewingUrlText is null || PortBox is null) return;
+        if (int.TryParse(PortBox.Text.Trim(), out var port) && port is >= 1024 and <= 65535)
+            ViewingUrlText.Text = $"http://{GetLanAddress()}:{port} (يُطبّق بعد الحفظ وإعادة التشغيل)";
+        else
+            ViewingUrlText.Text = "أدخل منفذاً صحيحاً بين 1024 و65535.";
+    }
+
     private void SavePort_Click(object sender, RoutedEventArgs e)
     {
         if (!int.TryParse(PortBox.Text.Trim(), out var port) || port is < 1024 or > 65535)
