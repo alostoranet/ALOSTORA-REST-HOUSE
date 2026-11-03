@@ -1642,6 +1642,8 @@ public partial class MainWindow : Window
             if (addedSeason is not null) SeasonsGrid.SelectedItem = addedSeason;
             await LoadVideosAsync();
             SeriesStatusText.Text = $"تمت إضافة {( (SeriesStructureBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Parts" ? "الجزء" : "الموسم")} رقم {number} بنجاح. أصبح محدداً الآن ويمكنك إضافة الحلقات إليه.";
+            SeasonEditorExpander.IsExpanded = false;
+            EpisodeEditorExpander.IsExpanded = true;
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر إضافة الموسم: " + ex.Message; }
     }
@@ -1650,6 +1652,7 @@ public partial class MainWindow : Window
     {
         if (SeasonsGrid.SelectedItem is SeasonAdmin season)
         {
+            EpisodeEditorExpander.IsExpanded = true;
             SeasonFolderPathBox.Text = season.FolderPath ?? "";
             EpisodesGrid.ItemsSource = null;
             await LoadEpisodesAsync(season.SeasonId);
@@ -1919,6 +1922,7 @@ public partial class MainWindow : Window
             await LoadEpisodesAsync(season.SeasonId);
             await LoadMissingEpisodesAsync();
             SeriesStatusText.Text = $"تم ربط «{video.Title}» كالحلقة رقم {number} وتحديث قائمة ملفات الموسم.";
+            EpisodeEditorExpander.IsExpanded = false;
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر إضافة الحلقة: " + ex.Message; }
     }
