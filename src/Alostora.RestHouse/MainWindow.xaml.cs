@@ -674,15 +674,24 @@ public partial class MainWindow : Window
 
     private void NewSubCategory_Click(object sender, RoutedEventArgs e)
     {
+        var selected = CategoriesGrid.SelectedItem as CategoryAdmin;
+        var parentId = selected is null
+            ? CategoryParentPicker.SelectedValue as string
+            : selected.ParentId is null && selected.ContentKind == "Group"
+                ? selected.CategoryId
+                : selected.ParentId;
+
         CategoriesGrid.UnselectAll();
         CategoryIdBox.Clear();
         CategoryTitleBox.Clear();
-        CategoryParentPicker.SelectedIndex = -1;
+        CategoryParentPicker.SelectedValue = parentId;
         CategoryKindPicker.SelectedItem = CategoryKindPicker.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == "Movie");
         CategoryPosterPathBox.Clear();
         CategoryPublishBox.IsChecked = true;
-        CategoryPosterStatusText.Text = "غلاف القسم الفرعي اختياري ويمكن رفعه بعد حفظ القسم.";
-        CategoryStatusText.Text = "قسم فرعي جديد: اختر القسم الرئيسي الذي يتبعه، ثم حدد هل يحتوي أفلاماً أم مسلسلات أم محتوى آخر.";
+        CategoryPosterStatusText.Text = "يمكن رفع صورة لهذا القسم بعد حفظه. الغلاف ليس شرطاً للنشر.";
+        CategoryStatusText.Text = string.IsNullOrWhiteSpace(parentId)
+            ? "اختر القسم الرئيسي من القائمة أولاً، ثم أضف القسم الفرعي."
+            : "تم تحديد القسم الرئيسي تلقائياً. اكتب اسم القسم الفرعي واختر نوع محتواه ثم احفظ.";
         UpdateCategoryParentState();
         CategoryParentPicker.Focus();
     }
@@ -1064,6 +1073,7 @@ public partial class MainWindow : Window
         SeriesCategoryPicker.SelectedIndex = -1;
         SeriesPublishBox.IsChecked = true;
         SeriesPosterPathBox.Clear();
+        UpdateSeriesPosterPreview(null);
         SeriesFolderPathBox.Clear();
         SeasonsGrid.ItemsSource = null;
         EpisodesGrid.ItemsSource = null;
@@ -1133,6 +1143,7 @@ public partial class MainWindow : Window
         RefreshSeriesCategoryPicker(s.CategoryId);
         SeriesPublishBox.IsChecked = s.IsPublished;
         SeriesPosterPathBox.Text = s.PosterPath ?? "";
+        UpdateSeriesPosterPreview(s.PosterPath);
         SeriesFolderPathBox.Text = s.FolderPath ?? "";
         SeriesStructureBox.SelectedItem = SeriesStructureBox.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == s.OrganizationType);
         UpdateSeriesStructureLabels();
@@ -1162,6 +1173,35 @@ public partial class MainWindow : Window
         catch (Exception ex) { SeriesStatusText.Text = "تعذر تحميل المواسم: " + ex.Message; }
     }
 
+    private void UpdateSeriesPosterPreview(string? path, bool isLocalFile = false)
+    {
+        if (SeriesPosterPreview is null) return;
+        SeriesPosterPreview.Source = null;
+        if (string.IsNullOrWhiteSpace(path)) return;
+        try
+        {
+            Uri uri;
+            if (isLocalFile)
+                uri = new Uri(Path.GetFullPath(path), UriKind.Absolute);
+            else if (Uri.TryCreate(path, UriKind.Absolute, out var absolute))
+                uri = absolute;
+            else
+                uri = new Uri(_http.BaseAddress!, path.TrimStart('/'));
+
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.UriSource = uri;
+            image.EndInit();
+            image.Freeze();
+            SeriesPosterPreview.Source = image;
+        }
+        catch
+        {
+            // A missing preview must not block saving or uploading the series poster.
+        }
+    }
+
     private async void UploadSeriesPoster_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
@@ -1178,6 +1218,7 @@ public partial class MainWindow : Window
             SeriesStatusText.Text = error;
             return;
         }
+        UpdateSeriesPosterPreview(path, isLocalFile: true);
 
         if (string.IsNullOrWhiteSpace(SeriesIdBox.Text))
         {
@@ -1227,6 +1268,7 @@ public partial class MainWindow : Window
 
             var result = await response.Content.ReadFromJsonAsync<PosterUploadResult>();
             SeriesPosterPathBox.Text = result?.PosterPath ?? "";
+            UpdateSeriesPosterPreview(result?.PosterPath);
             _pendingSeriesPosterPath = null;
             SeriesStatusText.Text = "تم رفع غلاف المسلسل وحفظه بنجاح.";
             await LoadSeriesAsync();
