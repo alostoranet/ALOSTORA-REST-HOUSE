@@ -78,12 +78,8 @@ main{max-width:1320px;padding:26px 28px 18px}
 .catalog-compact-meta{margin:0 0 12px;line-height:1.6}
 .catalog-section-title{font-size:17px;margin:13px 0 10px}
 </style></head><body>
-<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
+<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button></nav></header>
 <main><section id="homeView">
-<section class="welcome-panel" id="welcomePanel">
-<div><span class="welcome-kicker">ALOSTORA MEDIA LIBRARY</span><h2>كل مكتبتك الترفيهية في مكان واحد</h2><p>تصفح الأقسام، اكتشف البرامج والمسلسلات والأفلام، وتابع المشاهدة من حيث توقفت.</p></div>
-<div class="welcome-mark" aria-hidden="true">▶</div>
-</section>
 <div class="toolbar" id="catalogToolbar">
 <input id="search" type="search" placeholder="ابحث عن قسم أو برنامج أو فيلم...">
 <select id="categoryFilter" aria-label="القسم" hidden><option value="">كل الأقسام</option></select>
@@ -91,9 +87,8 @@ main{max-width:1320px;padding:26px 28px 18px}
 <select id="sort" aria-label="ترتيب المكتبة"><option value="title">ترتيب حسب الاسم</option><option value="year">الأحدث إنتاجاً</option><option value="rating">الأعلى تقييماً</option></select>
 </div>
 <p id="message">يتم تحميل المكتبة...</p>
-<section id="mediaLibrary" hidden><h2 id="mediaLibraryTitle">المكتبات الإضافية</h2><div id="mediaGrid" class="catalog-grid"></div><p id="mediaPlayerHint" class="empty"></p></section>
 <section id="catalogView" aria-live="polite">
-<div class="catalog-page-head"><button id="catalogHome" class="catalog-home" type="button">الرئيسية</button><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div></div>
+<div class="catalog-page-head"><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div></div>
 <div id="catalogContent"></div>
 <section id="playerSection" aria-live="polite" hidden>
 <h2 id="nowPlayingTitle">المشغل</h2><video id="player" controls playsinline preload="metadata"></video>
@@ -122,36 +117,8 @@ main{max-width:1320px;padding:26px 28px 18px}
 function createViewerId(){try{if(window.crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();if(window.crypto&&crypto.getRandomValues){const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}}catch{}return 'viewer-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);}
 let viewerId='';try{viewerId=localStorage.getItem('alostora-viewer')||'';if(!viewerId){viewerId=createViewerId();localStorage.setItem('alostora-viewer',viewerId);}}catch{viewerId=createViewerId();}
 let favorites=new Set();try{favorites=new Set(JSON.parse(localStorage.getItem('alostora-favorites')||'[]'));}catch{}
-let activeVideo=null,loadedVideoId=null,items=[],seriesItems=[],categories=[],mediaItems=[],activeMediaKind="all",progressRows=[],saveTimer=null,playbackGeneration=0,catalogStack=[],catalogPage={type:'home'};const player=document.querySelector('#player');
+let activeVideo=null,loadedVideoId=null,items=[],seriesItems=[],categories=[],progressRows=[],saveTimer=null,playbackGeneration=0,catalogStack=[],catalogPage={type:'home'};const player=document.querySelector('#player');
  
-function renderMediaLibraries(){
- const section=document.querySelector('#mediaLibrary'),grid=document.querySelector('#mediaGrid'),hint=document.querySelector('#mediaPlayerHint');
- const rows=mediaItems.filter(x=>activeMediaKind==='all'||x.kind===activeMediaKind);
- const titles={all:'الصوتيات والكتب والتطبيقات',Audio:'مكتبة الصوتيات',Books:'مكتبة الكتب',Apps:'مكتبة التطبيقات'};
- document.querySelector('#mediaLibraryTitle').textContent=titles[activeMediaKind]||titles.all;
- section.hidden=activeMediaKind==='all'&&rows.length===0;
- grid.replaceChildren();hint.textContent='';
- if(!rows.length){grid.innerHTML='<div class="catalog-empty">لا توجد ملفات في هذا القسم حالياً. ستظهر الملفات بعد إضافتها إلى مجلد المكتبة وفحصها من الإدارة.</div>';return;}
- for(const item of rows){
-  const card=document.createElement('article');card.className='catalog-card';
-  const title=document.createElement('h3');title.textContent=item.title;
-  const details=document.createElement('small');details.textContent=(item.kind==='Audio'?'ملف صوتي':item.kind==='Books'?'كتاب / مستند':'تطبيق أندرويد')+' · '+(item.sizeBytes/1048576).toFixed(1)+' MB';
-  const action=document.createElement('button');action.className='action';
-  if(item.kind==='Audio'){
-   action.textContent='استمع الآن';action.addEventListener('click',()=>{
-    let audio=document.querySelector('#sharedAudioPlayer');
-    if(!audio){audio=document.createElement('audio');audio.id='sharedAudioPlayer';audio.controls=true;audio.style.cssText='width:100%;margin:12px 0';section.insertBefore(audio,grid);}
-    audio.pause();audio.src=item.url;audio.setAttribute('aria-label','مشغل الصوتيات: '+item.title);audio.load();audio.play().catch(()=>{hint.textContent='تعذر التشغيل التلقائي. اضغط زر التشغيل في المشغل.';});hint.textContent='يتم تشغيل: '+item.title;
-   });
-  }else if(item.kind==='Books'){
-   action.textContent='افتح الكتاب';action.addEventListener('click',()=>{const link=document.createElement('a');link.href=item.url;link.target='_blank';link.rel='noopener';document.body.append(link);link.click();link.remove();});
-   const download=document.createElement('a');download.className='action';download.textContent='تنزيل الكتاب';download.href=item.url;download.download=item.fileName;download.rel='noopener';card.append(title,details,action,download);grid.append(card);continue;
-  }else{
-   action.textContent='تحميل التطبيق';action.addEventListener('click',()=>{const link=document.createElement('a');link.href=item.url;link.download=item.fileName;link.rel='noopener';document.body.append(link);link.click();link.remove();});
-  }
-  card.append(title,details,action);grid.append(card);
- }
-}
 async function saveProgress(snapshot=activeVideo,refresh=false){if(!snapshot||!loadedVideoId||snapshot.id!==loadedVideoId||player.readyState<1||!Number.isFinite(player.currentTime)||!Number.isFinite(player.duration)||player.duration<=0)return;const duration=player.duration,position=Math.min(player.currentTime,duration);try{const response=await fetch('/api/progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({viewerId,videoId:snapshot.id,positionSeconds:position,durationSeconds:duration})});if(response.ok&&refresh)await loadProgress();}catch{}}
 function flushProgress(){if(!activeVideo||!loadedVideoId||activeVideo.id!==loadedVideoId||player.readyState<1||!Number.isFinite(player.currentTime)||!Number.isFinite(player.duration)||player.duration<=0)return;const payload=JSON.stringify({viewerId,videoId:activeVideo.id,positionSeconds:Math.min(player.currentTime,player.duration),durationSeconds:player.duration});try{fetch('/api/progress',{method:'POST',headers:{'Content-Type':'application/json'},body:payload,keepalive:true}).catch(()=>{});}catch{}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushProgress();});
@@ -177,7 +144,7 @@ function makeNewBadge(){const badge=document.createElement('span');badge.classNa
 function render(){renderCatalogPage();}
 function catalogCard(title,subtitle,posterPath,action,badge,favoriteItem){
  const card=document.createElement('article');card.className='catalog-card';card.tabIndex=0;card.setAttribute('role','button');card.addEventListener('click',action);card.addEventListener('keydown',event=>{if(event.target===card&&(event.key==='Enter'||event.key===' ')){event.preventDefault();action();}});
- const poster=makePoster(posterPath,title);if(poster){poster.className=poster.tagName==='IMG'?'':'poster-empty';card.append(poster);}
+ const poster=makePoster(posterPath,title);if(poster){poster.className=poster.tagName==='IMG'?'':'poster-empty';poster.classList.add('catalog-poster');card.append(poster);}
  const heading=document.createElement('h3');heading.textContent=title;card.append(heading);
  if(subtitle){const detail=document.createElement('small');detail.textContent=subtitle;card.append(detail);}
  if(badge){const tag=document.createElement('small');tag.textContent=badge;tag.style.color='#f0b7bb';card.append(tag);}
@@ -218,13 +185,12 @@ function goCatalogBack(){
 function renderCatalogPage(){
  const content=document.querySelector('#catalogContent'),back=document.querySelector('#catalogBack'),crumb=document.querySelector('#catalogBreadcrumb');
  const toolbar=document.querySelector('#catalogToolbar'),continueSection=document.querySelector('#continueSection'),message=document.querySelector('#message');
- const welcomePanel=document.querySelector('#welcomePanel');
+ 
  const playerSection=document.querySelector('#playerSection');
  if(!content||!catalogPage||!playerSection)return;
  const pageType=catalogPage.type||'home';
  toolbar.hidden=pageType==='player';
- if(welcomePanel)welcomePanel.hidden=pageType!=='home';
- continueSection.hidden=pageType!=='home';
+  continueSection.hidden=pageType!=='home';
  message.hidden=pageType!=='home';
  back.hidden=pageType==='home'||catalogStack.length===0;
  back.textContent='رجوع';
@@ -284,11 +250,11 @@ function renderCatalogPage(){
     for(const show of shows){
      const seasons=show.seasons||[];
      const detail=[seasons.length+(show.organizationType==='Parts'?' جزء':' موسم'),(show.directVideos||[]).length+' فيديو مباشر'].filter(Boolean).join(' • ');
-     content.append(catalogRow(show.title,detail,()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title})));shown++;
+     content.append(catalogCard(show.title,detail,show.posterPath,()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title})));shown++;
     }
    }else{
     const count=items.filter(v=>v.isPublished===true&&v.categoryId===sub.categoryId).length;
-    content.append(catalogRow(sub.title,count+' عنصر',()=>navigateCatalog({type:'category',categoryId:sub.categoryId,title:sub.title})));shown++;
+    content.append(catalogCard(sub.title,count+' عنصر',sub.posterPath,()=>navigateCatalog({type:'category',categoryId:sub.categoryId,title:sub.title})));shown++;
    }
   }
   if(!shown)content.append(catalogEmpty('لا توجد مسلسلات أو عناصر منشورة في هذا القسم بعد.'));
@@ -302,7 +268,7 @@ function renderCatalogPage(){
    const shows=sorted(seriesItems.filter(x=>x.isPublished===true&&x.categoryId===category.categoryId));
    for(const show of shows){
     const seasons=show.seasons||[];
-    content.append(catalogRow(show.title,seasons.length+(show.organizationType==='Parts'?' جزء':' موسم'),()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title})));
+    content.append(catalogCard(show.title,seasons.length+(show.organizationType==='Parts'?' جزء':' موسم'),show.posterPath,()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title})));
    }
    if(!shows.length)content.append(catalogEmpty('لا توجد مسلسلات منشورة في هذا القسم بعد.'));
   }else{
@@ -327,7 +293,7 @@ function renderCatalogPage(){
    content.append(catalogSectionTitle('حلقات أو فيديوهات مباشرة'));
    for(const video of direct){
     const title=video.title||'فيديو';
-    content.append(catalogRow(title,video.isMissing?'الملف غير موجود':'تشغيل الفيديو',()=>{if(!video.isMissing&&video.url)play({id:video.videoId,url:video.url,title});}));
+    content.append(catalogCard(title,video.isMissing?'الملف غير موجود':'تشغيل الفيديو',video.posterPath||show.posterPath,()=>{if(!video.isMissing&&video.url)play({id:video.videoId,url:video.url,title});}));
    }
   }
   if(seasons.length){
@@ -335,7 +301,7 @@ function renderCatalogPage(){
    for(const season of seasons){
     const episodes=season.episodes||[];
     const name=season.title||((show.organizationType==='Parts'?'الجزء ':'الموسم ')+season.seasonNumber);
-    content.append(catalogRow(name,episodes.length+' حلقة',()=>navigateCatalog({type:'season',seriesId:show.seriesId,seasonId:season.seasonId,title:name})));
+    content.append(catalogCard(name,episodes.length+' حلقة',season.posterPath||show.posterPath,()=>navigateCatalog({type:'season',seriesId:show.seriesId,seasonId:season.seasonId,title:name})));
    }
   }
   if(!seasons.length&&!direct.length)content.append(catalogEmpty('لم تتم إضافة مواسم أو فيديوهات لهذا البرنامج بعد.'));
@@ -350,16 +316,18 @@ function renderCatalogPage(){
   const parent=document.createElement('p');parent.className='catalog-compact-meta';parent.textContent=show.title;content.append(parent);
   const episodes=season.episodes||[];
   if(!episodes.length){content.append(catalogEmpty('لا توجد حلقات في هذا الموسم بعد.'));return;}
+  const episodeGrid=document.createElement('div');episodeGrid.className='catalog-grid';
   for(const ep of episodes){
    const episodeTitle='الحلقة '+ep.episodeNumber+(ep.title?' — '+ep.title:'');
    const detail=ep.isMissing?'ملف الحلقة غير موجود حالياً.':(ep.runtimeMinutes?ep.runtimeMinutes+' دقيقة':'جاهزة للمشاهدة');
-   const row=catalogRow(episodeTitle,detail,()=>{
+   const card=catalogCard(episodeTitle,detail,ep.posterPath||season.posterPath||show.posterPath,()=>{
     if(ep.isMissing||!ep.url)return;
     play({id:ep.videoId,url:ep.url,title:episodeTitle});
    });
-   if(ep.isMissing||!ep.url){row.disabled=true;row.classList.add('is-disabled');}
-   content.append(row);
+   if(ep.isMissing||!ep.url){card.style.opacity='.5';card.style.cursor='not-allowed';}
+   episodeGrid.append(card);
   }
+  content.append(episodeGrid);
   return;
  }
 }
@@ -526,7 +494,7 @@ async function load(){try{
   throw Error('تعذر تحميل '+failed.join('، '));
  }
  items=await libraryResponse.json();seriesItems=await seriesResponse.json();categories=await categoryResponse.json();
- try{const mr=await fetch('/api/media-libraries');if(mr.ok)mediaItems=await mr.json();}catch{}renderMediaLibraries();
+ 
  const select=document.querySelector('#categoryFilter');select.replaceChildren();
  const all=document.createElement('option');all.value='';all.textContent='كل الأقسام';select.append(all);
  for(const main of categories.filter(x=>x.parentId==null&&x.isPublished)){const option=document.createElement('option');option.value=main.categoryId;option.textContent=main.title;select.append(option);}
@@ -549,7 +517,7 @@ async function loadBrandProfile(){
  }catch{}
 }
 document.querySelector('#catalogBack').addEventListener('click',goCatalogBack);
-document.querySelector('#catalogHome').addEventListener('click',()=>{if(catalogPage.type==='player'){flushProgress();player.pause();player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;}catalogStack=[];catalogPage={type:'home',title:'الرئيسية'};renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});});
+function goCatalogHome(){if(catalogPage.type==='player'){flushProgress();player.pause();player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;}catalogStack=[];catalogPage={type:'home',title:'الرئيسية'};renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});}
 function showCustomerView(view){
  const home=view==='home',homeView=document.querySelector('#homeView'),contactView=document.querySelector('#contactView');
  homeView.hidden=!home;contactView.hidden=home;
@@ -559,16 +527,7 @@ function showCustomerView(view){
  document.querySelector('#contactNav').setAttribute('aria-pressed',String(!home));
  window.scrollTo({top:0,behavior:'smooth'});
 }
-document.querySelector('#homeNav').addEventListener('click',()=>showCustomerView('home'));
+document.querySelector('#homeNav').addEventListener('click',()=>{showCustomerView('home');goCatalogHome();});
 document.querySelector('#contactNav').addEventListener('click',()=>showCustomerView('contact'));
-document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener('click',()=>{
- activeMediaKind=button.dataset.kind||'all';
- document.querySelectorAll('.media-tab').forEach(x=>x.classList.toggle('active',x===button));
- const videoCatalog=document.querySelector('#catalogView'),toolbar=document.querySelector('#catalogToolbar'),welcome=document.querySelector('#welcomePanel');
- const mediaOnly=activeMediaKind!=='all';
- videoCatalog.hidden=mediaOnly;toolbar.hidden=mediaOnly;welcome.hidden=mediaOnly;
- if(mediaOnly){document.querySelector('#mediaLibrary').hidden=false;renderMediaLibraries();}
- else{document.querySelector('#mediaLibrary').hidden=mediaItems.length===0;renderMediaLibraries();}
-}));
 for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();load();
 </script></body></html>
