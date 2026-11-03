@@ -623,6 +623,7 @@ public partial class MainWindow : Window
 
     private void NewCategory_Click(object sender, RoutedEventArgs e)
     {
+        CategoryManagementTabs.SelectedIndex = 0;
         CategoriesGrid.UnselectAll();
         CategoryIdBox.Clear();
         CategoryTitleBox.Clear();
@@ -638,6 +639,7 @@ public partial class MainWindow : Window
     private void CategoriesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (CategoriesGrid.SelectedItem is not CategoryAdmin row) return;
+        CategoryManagementTabs.SelectedIndex = 0;
         CategoryIdBox.Text = row.CategoryId;
         CategoryTitleBox.Text = row.Title;
         CategoryLevelPicker.SelectedIndex = row.ParentId is null ? 0 : 1;
@@ -738,6 +740,7 @@ private void CategoryLevelPicker_SelectionChanged(object sender, SelectionChange
             if (!response.IsSuccessStatusCode) { CategoryStatusText.Text = "تعذر حذف القسم: " + await response.Content.ReadAsStringAsync(); return; }
             CategoryIdBox.Clear(); CategoryTitleBox.Clear(); CategoryPosterPathBox.Clear();
             CategoriesGrid.SelectedItem = null;
+            CategoryManagementTabs.SelectedIndex = 1;
             await LoadCategoriesAsync();
             await LoadVideosAsync();
             await LoadSeriesAsync();
@@ -1117,6 +1120,14 @@ private void OpenLibraryFolder_Click(object sender, RoutedEventArgs e)
         var isParts = type == "Parts";
         var isNone = type == "None";
         SeasonManagementPanel.Visibility = isNone ? Visibility.Collapsed : Visibility.Visible;
+        if (EpisodeManagementPanel is not null)
+            EpisodeManagementPanel.Visibility = isNone ? Visibility.Collapsed : Visibility.Visible;
+        if (SeriesSeasonsTab is not null)
+            SeriesSeasonsTab.Visibility = isNone ? Visibility.Collapsed : Visibility.Visible;
+        if (SeriesEpisodesTab is not null)
+            SeriesEpisodesTab.Visibility = isNone ? Visibility.Collapsed : Visibility.Visible;
+        if (SeriesMissingEpisodesTab is not null)
+            SeriesMissingEpisodesTab.Visibility = isNone ? Visibility.Collapsed : Visibility.Visible;
         SeasonSectionTitle.Text = isParts ? "الأجزاء" : "المواسم";
         AddSeasonButton.Content = isParts ? "إضافة الجزء" : "إضافة الموسم";
         if (SeasonNumberBox is not null) SeasonNumberBox.ToolTip = isParts ? "رقم الجزء" : "رقم الموسم";
@@ -1136,6 +1147,7 @@ private void OpenLibraryFolder_Click(object sender, RoutedEventArgs e)
 
     private void NewSeries_Click(object sender, RoutedEventArgs e)
     {
+        SeriesManagementTabs.SelectedIndex = 0;
         SeriesPicker.SelectedIndex = -1;
         SeriesIdBox.Clear();
         SeriesTitleBox.Clear();
@@ -1208,6 +1220,7 @@ private void OpenLibraryFolder_Click(object sender, RoutedEventArgs e)
     private async void SeriesPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (SeriesPicker.SelectedItem is not SeriesAdmin s) return;
+        SeriesManagementTabs.SelectedIndex = 0;
         SeriesIdBox.Text = s.SeriesId;
         SeriesTitleBox.Text = s.Title ?? "";
         SeriesDescriptionBox.Text = s.Description ?? "";
