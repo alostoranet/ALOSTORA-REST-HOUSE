@@ -1266,11 +1266,12 @@ public partial class MainWindow : Window
                     posterUploadError = SeriesStatusText.Text;
             }
             var seriesCategoryName = (SeriesCategoryPicker.SelectedItem as CategoryAdmin)?.Title ?? "غير مصنف";
-            SeriesStatusText.Text = posterUploadError ?? $"{(wasNewSeries ? "تمت إضافة المسلسل" : "تم تحديث المسلسل")} «{SeriesTitleBox.Text.Trim()}» إلى سجل المسلسلات. القسم: {seriesCategoryName}. الحالة: {(SeriesPublishBox.IsChecked == true ? "منشور" : "مسودة")}.";
+            var saveMessage = posterUploadError ?? $"{(wasNewSeries ? "تمت إضافة المسلسل" : "تم تحديث المسلسل")} «{SeriesTitleBox.Text.Trim()}» إلى سجل المسلسلات. القسم: {seriesCategoryName}. الحالة: {(SeriesPublishBox.IsChecked == true ? "منشور" : "مسودة")}.";
             await LoadSeriesAsync();
             SeriesPicker.SelectedItem = (SeriesPicker.ItemsSource as SeriesAdmin[])?.FirstOrDefault(x => x.SeriesId == id);
             if (SeriesPicker.SelectedItem is null) await LoadSeasonsAsync(id);
             await LoadVideosAsync();
+            SeriesStatusText.Text = saveMessage;
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر حفظ المسلسل: " + ex.Message; }
     }
