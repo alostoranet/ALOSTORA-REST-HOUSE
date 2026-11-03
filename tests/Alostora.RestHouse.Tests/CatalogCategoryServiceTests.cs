@@ -60,7 +60,7 @@ public sealed class CatalogCategoryServiceTests : IDisposable
         var videoPath = Path.Combine(_root, "original-video.mp4");
         File.WriteAllBytes(videoPath, new byte[] { 1, 2, 3, 4 });
 
-        using var series = new SeriesCatalogService(Path.Combine(_root, "categories.db"));
+        var series = new SeriesCatalogService(Path.Combine(_root, "categories.db"));
         var metadata = new VideoMetadataService(Path.Combine(_root, "categories.db"));
         _categories.Save(new SaveCatalogCategoryRequest(mainId, null, "الرئيسية", "Group", null, true));
         _categories.Save(new SaveCatalogCategoryRequest(childId, mainId, "المسلسلات", "Series", null, true));
