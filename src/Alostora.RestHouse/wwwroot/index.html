@@ -244,14 +244,9 @@ function renderCatalogPage(){
   let shown=0;
   for(const sub of subs){
    if(sub.contentKind==='Series'){
-    const shows=sorted(seriesItems.filter(x=>x.isPublished===true&&x.categoryId===sub.categoryId));
-    if(!shows.length)continue;
-    const heading=document.createElement('h3');heading.className='catalog-subheading';heading.textContent=sub.title;content.append(heading);
-    for(const show of shows){
-     const seasons=show.seasons||[];
-     const detail=[seasons.length+(show.organizationType==='Parts'?' جزء':' موسم'),(show.directVideos||[]).length+' فيديو مباشر'].filter(Boolean).join(' • ');
-     content.append(catalogCard(show.title,detail,show.posterPath,()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title})));shown++;
-    }
+    const shows=seriesItems.filter(x=>x.isPublished===true&&x.categoryId===sub.categoryId&&matches(x)&&matchesQuery(x));
+    if(!shows.length&&!matchesQuery(sub))continue;
+    content.append(catalogCard(sub.title,shows.length+' مسلسل',sub.posterPath,()=>navigateCatalog({type:'category',categoryId:sub.categoryId,title:sub.title})));shown++;
    }else{
     const count=items.filter(v=>v.isPublished===true&&v.categoryId===sub.categoryId).length;
     content.append(catalogCard(sub.title,count+' عنصر',sub.posterPath,()=>navigateCatalog({type:'category',categoryId:sub.categoryId,title:sub.title})));shown++;
