@@ -915,7 +915,17 @@ private void OpenLibraryFolder_Click(object sender, RoutedEventArgs e)
         }
     }
 
-    private async void VideosGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+private void OpenVideoDetails_Click(object sender, RoutedEventArgs e)
+    {
+        if (VideosGrid.SelectedItem is not AdminVideo)
+        {
+            StatusText.Text = "حدد ملف فيديو واحداً أولاً لفتح بياناته.";
+            return;
+        }
+        VideoManagementTabs.SelectedIndex = 1;
+    }
+
+        private async void VideosGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (VideosGrid.SelectedItem is not AdminVideo v) return;
         IdBox.Text = v.Id;
