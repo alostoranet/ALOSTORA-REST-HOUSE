@@ -20,6 +20,8 @@ namespace Alostora.RestHouse;
 
 public partial class MainWindow : Window
 {
+    private sealed record MultiMediaScanResult(bool Scanned, string Kind, int Count, MultiMediaAdminItem[] Items);
+
     private sealed record MultiMediaAdminItem(string Id, string Kind, string Title, string FileName, string RelativePath, long SizeBytes, string ModifiedUtc, string Url)
     {
         public string KindLabel => Kind switch { "Audio" => "الصوتيات", "Books" => "الكتب", "Apps" => "التطبيقات", _ => Kind };
@@ -99,9 +101,9 @@ public partial class MainWindow : Window
                 MultiMediaLibraryStatusText.Text = "تعذر فحص المكتبة: " + await response.Content.ReadAsStringAsync();
                 return;
             }
-            var items = await response.Content.ReadFromJsonAsync<MultiMediaAdminItem[]>();
+            var result = await response.Content.ReadFromJsonAsync<MultiMediaScanResult>();
             await RefreshMultiMediaLibraryAsync();
-            MultiMediaLibraryStatusText.Text = $"اكتمل الفحص. الملفات الموجودة في هذه المكتبة: {items?.Length ?? 0}.";
+            MultiMediaLibraryStatusText.Text = $"اكتمل الفحص. الملفات المفهرسة في هذه المكتبة: {result?.Count ?? 0}.";
         }
         catch (Exception ex)
         {
