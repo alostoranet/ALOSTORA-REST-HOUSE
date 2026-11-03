@@ -70,7 +70,10 @@ if ($html -notmatch 'id="homeNav"' -or
     $html -notmatch 'id="homeView"' -or
     $html -notmatch 'id="contactView"[^>]*hidden' -or
     $html -notmatch "showCustomerView\('contact'\)" -or
-    $html -notmatch "showCustomerView\('home'\)") {
+    $html -notmatch "showCustomerView\('home'\)" -or
+    $html -notmatch 'id="catalogPageNav"' -or
+    $html -notmatch "goCatalog\('subcategories'" -or
+    $html -notmatch "goCatalog\('programs'") {
     throw "Customer navigation must separate the home catalog from the contact form."
 }
 Write-Host "PASS: customer catalog uses separate category and program navigation pages."
@@ -110,15 +113,22 @@ Write-Host "PASS: metadata List query includes CategoryId and matches the reader
 $categoryServicePath = Join-Path $root "src/Alostora.RestHouse/CatalogCategoryService.cs"
 $categoryService = Get-Content $categoryServicePath -Raw
 if ($categoryService -notmatch 'ParentId=\$id AND IsPublished=1' -or
-    $categoryService -notmatch 'FROM VideoMetadata\s+WHERE CategoryId IN' -or
-    $categoryService -notmatch 'FROM SeriesCatalog\s+WHERE CategoryId IN') {
-    throw "Catalog category integrity checks are missing."
+    $categoryService -notmatch 'UPDATE VideoMetadata\s+SET CategoryId=NULL, IsPublished=0' -or
+    $categoryService -notmatch 'UPDATE SeriesCatalog\s+SET CategoryId=NULL, IsPublished=0') {
+    throw "Catalog category integrity and non-destructive deletion checks are missing."
 }
 if ($categoryService -notmatch 'SET CategoryId=NULL, IsPublished=0' -or
     $categoryTests -notmatch 'DeletingMainCategoryRemovesItsTreeAndUnpublishesLinkedContentWithoutDeletingVideoFiles') {
     throw "Category deletion must safely unpublish and detach linked content while preserving media."
 }
 Write-Host "PASS: category deletion safely unpublishes linked content and preserves source media."
+if ($xaml -notmatch 'CategoryLevelPicker' -or
+    $xaml -notmatch 'LibraryFoldersTree' -or
+    $code -notmatch 'private async System\.Threading\.Tasks\.Task<bool> SaveSeriesAsync' -or
+    $code -notmatch 'if \(!await SaveSeriesAsync\(\)\) return;') {
+    throw "The new category workflow, nested library folders, or automatic series-cover save flow is incomplete."
+}
+Write-Host "PASS: category level selection, nested video folders, and automatic series-cover saving are wired."
 
 # Public catalog and media routes must enforce publication on the server, not only in browser JavaScript.
 $publicAccessPath = Join-Path $root "src/Alostora.RestHouse/PublicCatalogAccessService.cs"
