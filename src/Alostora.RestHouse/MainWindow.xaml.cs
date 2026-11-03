@@ -875,6 +875,7 @@ public partial class MainWindow : Window
                 _videos.Add(item);
             }
             EpisodeVideoPicker.ItemsSource = _videos;
+            MissingEpisodeVideoPicker.ItemsSource = _videos;
             RefreshVideoFoldersTree();
             CountText.Text = $"عدد ملفات الفيديو: {_videos.Count}";
             var incomplete = _videos.Count(x => !x.MetadataSaved);
@@ -1742,7 +1743,7 @@ public partial class MainWindow : Window
             SeriesStatusText.Text = "حدد الحلقة المفقودة أولاً.";
             return;
         }
-        if (EpisodeVideoPicker.SelectedItem is not AdminVideo video)
+        if (MissingEpisodeVideoPicker.SelectedItem is not AdminVideo video)
         {
             SeriesStatusText.Text = "أضف مجلد الملف الجديد إلى المكتبة ثم اختر الفيديو البديل من قائمة الملفات.";
             return;
