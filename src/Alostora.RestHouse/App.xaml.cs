@@ -101,13 +101,13 @@ public partial class App : Application
      await next();
      return;
     }
-    if(IsLocal(context))
+    if(IsLocal(context) && !context.Request.Headers.ContainsKey("Authorization"))
     {
      context.Items["alostora.admin"]=true;
      await next();
      return;
     }
-    if(!context.Request.IsHttps)
+    if(!context.Request.IsHttps && !IsLocal(context))
     {
      context.Response.StatusCode=StatusCodes.Status426UpgradeRequired;
      await context.Response.WriteAsJsonAsync(new{error="تسجيل دخول الإدارة يتطلب HTTPS. فعّل شهادة TLS على المنفذ 8443."});
