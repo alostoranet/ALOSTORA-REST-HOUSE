@@ -582,6 +582,7 @@ public partial class MainWindow : Window
             SeriesStatusText.Text = "اختر الموسم أولاً قبل إضافة حلقة.";
             return;
         }
+        UpdateEpisodeInEditorButton.Visibility = Visibility.Collapsed;
         OpenDedicatedEditor(EpisodeEditorExpander, "إضافة حلقة للموسم المحدد");
     }
 
@@ -1793,6 +1794,7 @@ public partial class MainWindow : Window
         EpisodeNumberBox.Text = episode.EpisodeNumber.ToString();
         EpisodeTitleBox.Text = episode.Title;
         SeriesStatusText.Text = $"تم تحديد الحلقة رقم {episode.EpisodeNumber}. عدّل الرقم أو الاسم ثم اضغط حفظ التعديل.";
+        UpdateEpisodeInEditorButton.Visibility = Visibility.Visible;
         OpenDedicatedEditor(EpisodeEditorExpander, "تعديل بيانات الحلقة");
     }
 
