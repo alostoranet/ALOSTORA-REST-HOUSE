@@ -59,7 +59,7 @@ main{max-width:1320px;padding:26px 28px 18px}
 .catalog-page-head{position:sticky;top:0;z-index:5;background:rgba(12,23,39,.94);backdrop-filter:blur(12px);padding:12px 0;border-radius:0 0 10px 10px}
 @media(max-width:600px){.catalog-rail{gap:10px}.catalog-rail .catalog-card{flex-basis:155px}.catalog-section-title{font-size:18px}}
 </style></head><body>
-<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button></nav></header>
+<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
 <main><section id="homeView">
 <section class="welcome-panel" id="welcomePanel">
 <div><span class="welcome-kicker">ALOSTORA MEDIA LIBRARY</span><h2>كل مكتبتك الترفيهية في مكان واحد</h2><p>تصفح الأقسام، اكتشف البرامج والمسلسلات والأفلام، وتابع المشاهدة من حيث توقفت.</p></div>
@@ -72,6 +72,7 @@ main{max-width:1320px;padding:26px 28px 18px}
 <select id="sort" aria-label="ترتيب المكتبة"><option value="title">ترتيب حسب الاسم</option><option value="year">الأحدث إنتاجاً</option><option value="rating">الأعلى تقييماً</option></select>
 </div>
 <p id="message">يتم تحميل المكتبة...</p>
+<section id="mediaLibrary" hidden><h2 id="mediaLibraryTitle">المكتبات الإضافية</h2><div id="mediaGrid" class="catalog-grid"></div><p id="mediaPlayerHint" class="empty"></p></section>
 <section id="catalogView" aria-live="polite">
 <div class="catalog-page-head"><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div></div>
 <div id="catalogContent">
@@ -103,7 +104,34 @@ main{max-width:1320px;padding:26px 28px 18px}
 function createViewerId(){try{if(window.crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();if(window.crypto&&crypto.getRandomValues){const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}}catch{}return 'viewer-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);}
 let viewerId='';try{viewerId=localStorage.getItem('alostora-viewer')||'';if(!viewerId){viewerId=createViewerId();localStorage.setItem('alostora-viewer',viewerId);}}catch{viewerId=createViewerId();}
 let favorites=new Set();try{favorites=new Set(JSON.parse(localStorage.getItem('alostora-favorites')||'[]'));}catch{}
-let activeVideo=null,loadedVideoId=null,items=[],seriesItems=[],categories=[],progressRows=[],saveTimer=null,playbackGeneration=0,catalogStack=[],catalogPage={type:'home'};const player=document.querySelector('#player');
+let activeVideo=null,loadedVideoId=null,items=[],seriesItems=[],categories=[],mediaItems=[],activeMediaKind="all",progressRows=[],saveTimer=null,playbackGeneration=0,catalogStack=[],catalogPage={type:'home'};const player=document.querySelector('#player');
+ 
+function renderMediaLibraries(){
+ const section=document.querySelector('#mediaLibrary'),grid=document.querySelector('#mediaGrid'),hint=document.querySelector('#mediaPlayerHint');
+ const rows=mediaItems.filter(x=>activeMediaKind==='all'||x.kind===activeMediaKind);
+ const titles={all:'الصوتيات والكتب والتطبيقات',Audio:'مكتبة الصوتيات',Books:'مكتبة الكتب',Apps:'مكتبة التطبيقات'};
+ document.querySelector('#mediaLibraryTitle').textContent=titles[activeMediaKind]||titles.all;
+ section.hidden=activeMediaKind==='all'&&rows.length===0;
+ grid.replaceChildren();hint.textContent='';
+ if(!rows.length){grid.innerHTML='<div class="catalog-empty">لا توجد ملفات في هذا القسم حالياً. ستظهر الملفات بعد إضافتها إلى مجلد المكتبة وفحصها من الإدارة.</div>';return;}
+ for(const item of rows){
+  const card=document.createElement('article');card.className='catalog-card';
+  const title=document.createElement('h3');title.textContent=item.title;
+  const details=document.createElement('small');details.textContent=(item.kind==='Audio'?'ملف صوتي':item.kind==='Books'?'كتاب / مستند':'تطبيق أندرويد')+' · '+(item.sizeBytes/1048576).toFixed(1)+' MB';
+  const action=document.createElement('button');action.className='action';
+  if(item.kind==='Audio'){
+   action.textContent='استمع الآن';action.addEventListener('click',()=>{
+    let audio=document.querySelector('#sharedAudioPlayer');
+    if(!audio){audio=document.createElement('audio');audio.id='sharedAudioPlayer';audio.controls=true;audio.style.cssText='width:100%;margin:12px 0';section.insertBefore(audio,grid);}
+    audio.src=item.url;audio.play().catch(()=>{hint.textContent='اضغط تشغيل لبدء الاستماع.';});hint.textContent='يتم تشغيل: '+item.title;
+   });
+  }else{
+   action.textContent=item.kind==='Books'?'افتح الكتاب':'تحميل التطبيق';
+   action.addEventListener('click',()=>{const link=document.createElement('a');link.href=item.url;link.target='_blank';link.rel='noopener';link.download=item.kind==='Apps'?item.fileName:'';document.body.append(link);link.click();link.remove();});
+  }
+  card.append(title,details,action);grid.append(card);
+ }
+}
 async function saveProgress(snapshot=activeVideo,refresh=false){if(!snapshot||!loadedVideoId||snapshot.id!==loadedVideoId||player.readyState<1||!Number.isFinite(player.currentTime)||!Number.isFinite(player.duration)||player.duration<=0)return;const duration=player.duration,position=Math.min(player.currentTime,duration);try{const response=await fetch('/api/progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({viewerId,videoId:snapshot.id,positionSeconds:position,durationSeconds:duration})});if(response.ok&&refresh)await loadProgress();}catch{}}
 function flushProgress(){if(!activeVideo||!loadedVideoId||activeVideo.id!==loadedVideoId||player.readyState<1||!Number.isFinite(player.currentTime)||!Number.isFinite(player.duration)||player.duration<=0)return;const payload=JSON.stringify({viewerId,videoId:activeVideo.id,positionSeconds:Math.min(player.currentTime,player.duration),durationSeconds:player.duration});try{fetch('/api/progress',{method:'POST',headers:{'Content-Type':'application/json'},body:payload,keepalive:true}).catch(()=>{});}catch{}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushProgress();});
@@ -435,6 +463,7 @@ async function load(){try{
   throw Error('تعذر تحميل '+failed.join('، '));
  }
  items=await libraryResponse.json();seriesItems=await seriesResponse.json();categories=await categoryResponse.json();
+ try{const mr=await fetch('/api/media-libraries');if(mr.ok)mediaItems=await mr.json();}catch{}renderMediaLibraries();
  const select=document.querySelector('#categoryFilter');select.replaceChildren();
  const all=document.createElement('option');all.value='';all.textContent='كل الأقسام';select.append(all);
  for(const main of categories.filter(x=>x.parentId==null&&x.isPublished)){const option=document.createElement('option');option.value=main.categoryId;option.textContent=main.title;select.append(option);}
@@ -468,5 +497,14 @@ function showCustomerView(view){
 }
 document.querySelector('#homeNav').addEventListener('click',()=>showCustomerView('home'));
 document.querySelector('#contactNav').addEventListener('click',()=>showCustomerView('contact'));
+document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener('click',()=>{
+ activeMediaKind=button.dataset.kind||'all';
+ document.querySelectorAll('.media-tab').forEach(x=>x.classList.toggle('active',x===button));
+ const videoCatalog=document.querySelector('#catalogView'),toolbar=document.querySelector('#catalogToolbar'),welcome=document.querySelector('#welcomePanel');
+ const mediaOnly=activeMediaKind!=='all';
+ videoCatalog.hidden=mediaOnly;toolbar.hidden=mediaOnly;welcome.hidden=mediaOnly;
+ if(mediaOnly){document.querySelector('#mediaLibrary').hidden=false;renderMediaLibraries();}
+ else{document.querySelector('#mediaLibrary').hidden=mediaItems.length===0;renderMediaLibraries();}
+}));
 for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();load();
 </script></body></html>
