@@ -515,10 +515,14 @@ public partial class MainWindow : Window
         {
             if (window.Content is ScrollViewer editorScrollViewer) editorScrollViewer.Content = null;
             window.Content = null;
-            if (_activeEditorExpander is not null)
+            var closedEditor = _activeEditorExpander;
+            if (closedEditor is not null)
             {
-                _activeEditorExpander.Content = _activeEditorContent;
-                _activeEditorExpander.IsExpanded = false;
+                closedEditor.Content = _activeEditorContent;
+                closedEditor.IsExpanded = false;
+                if (closedEditor == CategoryEditorExpander) CategoriesGrid.SelectedIndex = -1;
+                else if (closedEditor == SeriesEditorExpander) SeriesPicker.SelectedIndex = -1;
+                else if (closedEditor == EpisodeEditorExpander) EpisodesGrid.SelectedIndex = -1;
             }
             _activeEditorWindow = null;
             _activeEditorExpander = null;
