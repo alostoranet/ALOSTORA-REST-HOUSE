@@ -20,9 +20,43 @@ main{max-width:1200px;margin:auto;padding:24px}h2{font-size:22px}
 .developer-credit{margin:26px auto 14px;text-align:center;color:#64748b;font-size:13px;font-weight:700;padding:12px;border-top:1px solid #e2e8f0;max-width:1100px}
 
 .catalog-page-head{display:flex;align-items:center;gap:14px;padding:12px 0 18px;border-bottom:1px solid #38516d;margin-bottom:20px}.catalog-back{border:1px solid #526b85;background:#1b3550;color:#fff;border-radius:9px;padding:10px 18px;font:inherit;font-weight:bold;cursor:pointer}.catalog-back:hover{background:#c93640}.catalog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:18px}.catalog-card{display:flex;flex-direction:column;text-align:right;gap:9px;background:#172b42;border:1px solid #38516d;border-radius:14px;padding:12px;color:#f5f7fb;cursor:pointer;min-width:0;transition:transform .16s,border-color .16s}.catalog-card:hover{transform:translateY(-3px);border-color:#c93640}.catalog-card img,.catalog-card .poster-empty{width:100%;height:230px;object-fit:cover;border-radius:9px;margin:0}.catalog-card h3{font-size:16px;margin:2px 0 0;overflow-wrap:anywhere}.catalog-card small{color:#bdcadd;line-height:1.7}.catalog-card button.secondary{background:#315577;color:#fff;border:0;border-radius:8px;padding:8px 10px;font:inherit;font-weight:bold;cursor:pointer}.catalog-hero{display:flex;gap:20px;align-items:flex-start;background:#14283e;border:1px solid #38516d;border-radius:15px;padding:18px;margin-bottom:22px}.catalog-hero img,.catalog-hero .poster-empty{width:170px;height:225px;object-fit:cover;border-radius:10px;flex:0 0 170px;margin:0}.catalog-hero-copy{min-width:0}.catalog-hero-copy h2{margin:0 0 10px}.catalog-hero-copy p{color:#c4d2e1;line-height:1.9}.catalog-section-title{margin:24px 0 12px;font-size:19px}.catalog-empty{padding:22px;border:1px dashed #526b85;border-radius:12px;color:#bdcadd;text-align:center}.catalog-episode{display:flex;align-items:center;justify-content:space-between;gap:14px;background:#1c344d;border:1px solid #38516d;border-radius:11px;padding:13px;margin:9px 0}.catalog-episode button{flex:0 0 auto}.catalog-episode strong{display:block;margin-bottom:5px}.catalog-episode small{color:#c4d2e1;line-height:1.7}.catalog-player-page{max-width:1050px;margin:0 auto}.catalog-player-page video{max-height:72vh}.catalog-hidden{display:none!important}@media(max-width:600px){.catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.catalog-card{padding:8px}.catalog-card img,.catalog-card .poster-empty{height:170px}.catalog-hero{display:block}.catalog-hero img,.catalog-hero .poster-empty{width:118px;height:155px;float:right;margin:0 0 10px 14px}.catalog-episode{align-items:flex-start}.catalog-episode button{white-space:nowrap;padding:9px 11px}}
+ 
+:root{color-scheme:dark;--surface:#14263b;--surface2:#1b314b;--line:#304a66;--accent:#d3444d;--muted:#b8c8d9}
+body{background:radial-gradient(ellipse at 15% 0%,#1a3653 0,#0b1626 52%,#091321 100%);color:#f7f9fc}
+header{position:relative;background:linear-gradient(120deg,#10243a 0%,#193958 58%,#142d4a 100%);padding:24px max(5%,calc((100% - 1320px)/2));border-bottom:3px solid var(--accent);box-shadow:0 12px 32px #0004}
+.brand-bar{min-height:68px}.brand-logo{width:72px;height:72px;box-shadow:0 4px 18px #0004}
+.customer-nav{margin-top:16px}.nav-button{background:#203a56;border-color:#49627c;transition:background .15s,transform .15s}.nav-button:hover{transform:translateY(-1px)}.nav-button.active{background:var(--accent);border-color:var(--accent)}
+main{max-width:1320px;padding:26px 28px 18px}
+.welcome-panel{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:25px 30px;margin:4px 0 20px;border:1px solid #48627d;border-radius:18px;background:linear-gradient(115deg,#1c3854 0%,#14283e 58%,#352b3d 100%);box-shadow:0 18px 40px #0003}
+.welcome-kicker{font-size:10px;letter-spacing:2px;color:#f0a6aa;font-weight:800}.welcome-panel h2{font-size:25px;margin:8px 0}.welcome-panel p{margin:0;color:#d0dceb;line-height:1.8;font-size:14px}.welcome-mark{display:flex;align-items:center;justify-content:center;flex:0 0 76px;width:76px;height:76px;border-radius:50%;background:#d3444d;color:white;font-size:27px;box-shadow:0 0 0 10px #d3444d22}
+.toolbar{padding:12px;border:1px solid #2b425b;background:#101f32;border-radius:13px;margin:18px 0}.toolbar input,.toolbar select{background:#1a3049;border-color:#415a75;min-width:170px}
+.catalog-page-head{border-bottom-color:#304a66}.catalog-back{background:#1e3854;border-color:#4c6681}.catalog-back:hover{background:var(--accent)}
+.catalog-grid{grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:17px}
+.catalog-card{position:relative;overflow:hidden;background:linear-gradient(160deg,#1b314a,#12243a);border-color:#304a66;border-radius:16px;padding:11px;box-shadow:0 8px 22px #0002;transition:transform .18s,border-color .18s,box-shadow .18s}
+.catalog-card:hover{transform:translateY(-4px);border-color:#d3444d;box-shadow:0 15px 30px #0004}
+.catalog-card img,.catalog-card .poster-empty{height:auto;aspect-ratio:3/4;object-fit:cover;border-radius:11px;background:#223b55}
+.catalog-card h3{font-size:16px;line-height:1.5}.catalog-card small{color:#bdcddd}
+.catalog-hero{background:linear-gradient(120deg,#1a3450,#14283e);border-color:#3a536e;box-shadow:0 10px 26px #0002}
+.catalog-hero img,.catalog-hero .poster-empty{aspect-ratio:3/4;height:auto;max-height:245px}
+.catalog-episode{background:#1a3048;border-color:#36516d}
+.catalog-episode button,.action{background:var(--accent)}
+.catalog-empty{background:#13263b;border-color:#49627d;color:#d0dceb}
+#continueSection{margin:25px 0 20px;padding:18px;border:1px solid #304a66;border-radius:16px;background:#101f32}
+#continueSection h2{margin-top:0}#continueEmpty{color:#bdcddd}
+.continue-card{background:#1a3048;border-color:#36516d}
+.continue-card button{background:var(--accent)}
+#playerSection{background:#101f32;border-color:#3b5671}
+.contact-box{background:#14283e;border-color:#3a536e}
+.developer-credit{color:#91a6bb;border-top-color:#2c425b}
+@media(max-width:600px){main{padding:16px 12px}.welcome-panel{padding:19px 17px}.welcome-panel h2{font-size:20px}.welcome-mark{flex-basis:52px;width:52px;height:52px;font-size:20px}.catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.catalog-card{padding:8px}}
+#welcomePanel[hidden],#catalogToolbar[hidden],#continueSection[hidden],#message[hidden]{display:none!important}
 </style></head><body>
 <header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button></nav></header>
 <main><section id="homeView">
+<section class="welcome-panel" id="welcomePanel">
+<div><span class="welcome-kicker">ALOSTORA MEDIA LIBRARY</span><h2>كل مكتبتك الترفيهية في مكان واحد</h2><p>تصفح الأقسام، اكتشف البرامج والمسلسلات والأفلام، وتابع المشاهدة من حيث توقفت.</p></div>
+<div class="welcome-mark" aria-hidden="true">▶</div>
+</section>
 <div class="toolbar" id="catalogToolbar">
 <input id="search" type="search" placeholder="ابحث عن قسم أو برنامج أو فيلم...">
 <select id="categoryFilter" aria-label="القسم" hidden><option value="">كل الأقسام</option></select>
@@ -30,7 +64,6 @@ main{max-width:1200px;margin:auto;padding:24px}h2{font-size:22px}
 <select id="sort" aria-label="ترتيب المكتبة"><option value="title">ترتيب حسب الاسم</option><option value="year">الأحدث إنتاجاً</option><option value="rating">الأعلى تقييماً</option></select>
 </div>
 <p id="message">يتم تحميل المكتبة...</p>
-<section id="continueSection"><h2>متابعة المشاهدة</h2><p id="continueEmpty">جارٍ تحميل سجل المشاهدة...</p><div id="continueGrid"></div></section>
 <section id="catalogView" aria-live="polite">
 <div class="catalog-page-head"><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div></div>
 <div id="catalogContent">
@@ -41,6 +74,7 @@ main{max-width:1200px;margin:auto;padding:24px}h2{font-size:22px}
 </section>
 </div>
 </section>
+<section id="continueSection"><h2>متابعة المشاهدة</h2><p id="continueEmpty">جارٍ تحميل سجل المشاهدة...</p><div id="continueGrid"></div></section>
 </section>
 <section id="contactView" class="contact-box" aria-labelledby="contactTitle" hidden>
 <h2 id="contactTitle">تواصل مع إدارة الاستراحة</h2>
@@ -119,11 +153,13 @@ function goCatalogBack(){
 function renderCatalogPage(){
  const content=document.querySelector('#catalogContent'),back=document.querySelector('#catalogBack'),crumb=document.querySelector('#catalogBreadcrumb');
  const toolbar=document.querySelector('#catalogToolbar'),continueSection=document.querySelector('#continueSection'),message=document.querySelector('#message');
+ const welcomePanel=document.querySelector('#welcomePanel');
  const playerSection=document.querySelector('#playerSection');
  if(!content||!catalogPage)return;
  content.replaceChildren();
  const pageType=catalogPage.type||'home';
  toolbar.hidden=pageType==='player';
+ if(welcomePanel)welcomePanel.hidden=pageType!=='home';
  continueSection.hidden=pageType!=='home';
  message.hidden=pageType!=='home';
  back.hidden=pageType==='home'||catalogStack.length===0;
