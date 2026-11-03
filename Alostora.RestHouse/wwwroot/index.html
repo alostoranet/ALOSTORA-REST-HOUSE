@@ -170,7 +170,7 @@ function renderCatalogPage(){
   content.append(catalogHero(main.title,main.posterPath,'الأقسام الداخلية','اختر القسم الفرعي لعرض البرامج أو الأفلام الموجودة بداخله.'));
   const subs=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true&&(matchesQuery(x)||(x.contentKind==='Series'
    ?seriesItems.some(show=>show.categoryId===x.categoryId&&show.isPublished===true&&matches(show)&&matchesQuery(show))
-   :items.some(video=>video.categoryId===x.categoryId&&video.isPublished===true&&matches(video)&&matchesQuery(video))));
+   :items.some(video=>video.categoryId===x.categoryId&&video.isPublished===true&&matches(video)&&matchesQuery(video)))));
   const grid=document.createElement('div');grid.className='catalog-grid';
   for(const sub of subs){
    const label=sub.contentKind==='Series'?'مسلسلات وبرامج':sub.contentKind==='Movie'?'أفلام':'محتوى';
