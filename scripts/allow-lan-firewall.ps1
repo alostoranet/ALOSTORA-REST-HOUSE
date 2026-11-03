@@ -1,7 +1,7 @@
 # Run this script once in an elevated PowerShell window on the Windows server.
 # Both ports are restricted to devices on the local subnet and Private network profile.
 $rules = @(
-    @{ Name = "ALOSTORA REST HOUSE - LAN TCP 8096"; Port = 8096 },
+    @{ Name = "ALOSTORA REST HOUSE - LAN TCP 8097"; Port = 8097 },
     @{ Name = "ALOSTORA REST HOUSE - Admin HTTPS TCP 8443"; Port = 8443 }
 )
 foreach ($item in $rules) {
