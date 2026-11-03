@@ -1257,7 +1257,8 @@ public partial class MainWindow : Window
             Uri uri;
             if (isLocalFile)
                 uri = new Uri(Path.GetFullPath(path), UriKind.Absolute);
-            else if (Uri.TryCreate(path, UriKind.Absolute, out var absolute))
+            else if (Uri.TryCreate(path, UriKind.Absolute, out var absolute) &&
+                     (absolute.Scheme == Uri.UriSchemeHttp || absolute.Scheme == Uri.UriSchemeHttps))
                 uri = absolute;
             else
                 uri = new Uri(_http.BaseAddress!, path.TrimStart('/'));
