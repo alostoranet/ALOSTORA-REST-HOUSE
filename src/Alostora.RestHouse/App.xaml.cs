@@ -40,6 +40,13 @@ public partial class App : Application
    var posters=settings.PostersPath;
    Directory.CreateDirectory(library);
    Directory.CreateDirectory(posters);
+   // If another instance already hosts this application's API, reuse it instead
+   // of trying to bind the same TCP port again.
+   if(await IsExistingRestHouseServerAsync())
+   {
+    new MainWindow(root,library,posters,settings.FfmpegPath).Show();
+    return;
+   }
    var webRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
    var builder=WebApplication.CreateBuilder(new WebApplicationOptions { ContentRootPath = AppContext.BaseDirectory, WebRootPath = Directory.Exists(webRoot) ? webRoot : null });
    var adminCertificatePath=Environment.GetEnvironmentVariable("ALOSTORA_HTTPS_CERT_PATH");
@@ -683,10 +690,29 @@ public partial class App : Application
    var logPath=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"AlostoraRestHouse","startup-error.txt");
    try { Directory.CreateDirectory(Path.GetDirectoryName(logPath)!); File.WriteAllText(logPath,details); } catch { }
    var inner=ex.GetBaseException();
-   MessageBox.Show("تعذر تشغيل السيرفر:\n"+inner.Message+"\n\nتم حفظ تفاصيل الخطأ في:\n"+logPath,"استراحة الأسطورة",MessageBoxButton.OK,MessageBoxImage.Error);
+   var message=inner.Message;
+   if(inner is System.Net.Sockets.SocketException socket && socket.SocketErrorCode==System.Net.Sockets.SocketError.AddressAlreadyInUse)
+    message="المنفذ 8096 مستخدم حالياً من برنامج آخر. أغلق البرنامج الذي يستخدمه ثم أعد تشغيل استراحة الأسطورة. لم يتم تغيير المنفذ حتى لا تتعطل روابط المشاهدة داخل الشبكة.";
+   MessageBox.Show("تعذر تشغيل السيرفر:\n"+message+"\n\nتم حفظ تفاصيل الخطأ في:\n"+logPath,"استراحة الأسطورة",MessageBoxButton.OK,MessageBoxImage.Error);
    Shutdown(1);
   }
  }
+ private static async Task<bool> IsExistingRestHouseServerAsync()
+ {
+  try
+  {
+   using var client=new HttpClient{Timeout=TimeSpan.FromSeconds(2)};
+   using var response=await client.GetAsync("http://127.0.0.1:8096/api/health");
+   if(!response.IsSuccessStatusCode)return false;
+   await using var stream=await response.Content.ReadAsStreamAsync();
+   using var document=await JsonDocument.ParseAsync(stream);
+   var json=document.RootElement;
+   return json.TryGetProperty("name",out var name)&&name.GetString()=="ALOSTORA REST HOUSE"
+    &&json.TryGetProperty("status",out var status)&&status.GetString()=="running";
+  }
+  catch{return false;}
+ }
+
  private static int? ParseEpisodeNumber(string fileName)
  {
   var name=Path.GetFileNameWithoutExtension(fileName);
