@@ -66,6 +66,7 @@ public partial class App : Application
    builder.Services.AddSingleton(new MediaConversionService(libraryService,settings.FfmpegPath,Path.Combine(root,"TranscodeCache")));
    builder.Services.AddSingleton(new WatchProgressService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new VideoMetadataService(Path.Combine(root,"resthouse.db")));
+   builder.Services.AddSingleton(new MultiMediaLibraryService(library,Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new SeriesCatalogService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new CatalogCategoryService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new CustomerMessageService(Path.Combine(root,"resthouse.db")));
@@ -307,6 +308,36 @@ public partial class App : Application
     return path is null?Results.NotFound():Results.File(path,"video/mp4",enableRangeProcessing:true);
    });
 
+   _server.MapGet("/api/media-libraries",(string? kind,MultiMediaLibraryService media)=>
+   {
+    if(kind is not null && kind is not ("Audio" or "Books" or "Apps")) return Results.BadRequest(new{error="نوع المكتبة غير صالح"});
+    return Results.Ok(media.List(kind));
+   });
+   _server.MapPost("/api/admin/media-libraries/scan",(HttpContext c,ScanMediaLibraryRequest request,MultiMediaLibraryService media)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(request is null || request.Kind is not ("Audio" or "Books" or "Apps"))return Results.BadRequest(new{error="اختر مكتبة الصوتيات أو الكتب أو التطبيقات"});
+    try{return Results.Ok(new{scanned=true,kind=request.Kind,count=media.Scan(request.Kind),items=media.List(request.Kind)});}
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+    catch(IOException){return Results.Problem("تعذر فحص مجلد المكتبة. تحقق من صلاحيات الوصول إلى الملفات.",statusCode:500);}
+   });
+   _server.MapGet("/api/media-library/{id}",(string id,MultiMediaLibraryService media)=>
+   {
+    if(string.IsNullOrWhiteSpace(id)||id.Length>64)return Results.NotFound();
+    var path=media.ResolveById(id);
+    if(path is null)return Results.NotFound();
+    var extension=Path.GetExtension(path).ToLowerInvariant();
+    var contentType=extension switch
+    {
+     ".mp3"=>"audio/mpeg",".m4a"=>"audio/mp4",".aac"=>"audio/aac",".ogg"=>"audio/ogg",
+     ".opus"=>"audio/opus",".wav"=>"audio/wav",".flac"=>"audio/flac",
+     ".pdf"=>"application/pdf",".epub"=>"application/epub+zip",".txt"=>"text/plain",
+     ".cbz"=>"application/vnd.comicbook+zip",".cbr"=>"application/vnd.comicbook-rar",
+     ".apk" or ".xapk" or ".apks"=>"application/vnd.android.package-archive",
+     _=>"application/octet-stream"
+    };
+    return Results.File(path,contentType,enableRangeProcessing:contentType.StartsWith("audio/",StringComparison.Ordinal));
+   });
    _server.MapGet("/api/library",(HttpContext c,LibraryService svc,VideoMetadataService meta,SeriesCatalogService catalog,CatalogCategoryService categories,PublicCatalogAccessService publicCatalog,WatchProgressService watchProgress)=>
    {
     var isLocal=IsLocal(c);
