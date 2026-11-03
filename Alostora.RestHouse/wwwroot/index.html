@@ -155,7 +155,7 @@ function renderCatalogPage(){
     :items.some(video=>video.categoryId===sub.categoryId&&video.isPublished===true&&matches(video)&&matchesQuery(video))));
   });
   const grid=document.createElement('div');grid.className='catalog-grid';
-  for(const main of mains.filter(matchesQuery)){
+  for(const main of mains){
    const subs=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true);
    const count=subs.length;
    grid.append(catalogCard(main.title,count+' أقسام داخلية',main.posterPath,()=>navigateCatalog({type:'main',categoryId:main.categoryId,title:main.title})));
