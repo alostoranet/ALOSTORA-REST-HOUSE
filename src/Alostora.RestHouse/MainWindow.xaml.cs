@@ -142,7 +142,8 @@ public partial class MainWindow : Window
                 var node = new TreeViewItem
                 {
                     Header = folder.Name + (folder.IsManaged ? "" : " (خارجي)"),
-                    Tag = folder.FullPath
+                    Tag = folder.FullPath,
+                    ToolTip = folder.FullPath
                 };
                 if (!string.IsNullOrWhiteSpace(folder.ParentPath) && nodes.TryGetValue(folder.ParentPath, out var parent))
                     parent.Items.Add(node);
@@ -176,6 +177,8 @@ public partial class MainWindow : Window
             _selectedVideoFolderPath = selected.Tag as string;
         else
             _selectedVideoFolderPath = null;
+        if (!string.IsNullOrWhiteSpace(_selectedVideoFolderPath))
+            StatusText.Text = "المجلد المحدد: " + _selectedVideoFolderPath;
         _videosView?.Refresh();
     }
 
