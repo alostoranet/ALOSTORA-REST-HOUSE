@@ -1,6 +1,12 @@
 # Run this script once in an elevated PowerShell window on the Windows server.
-$ruleName = "ALOSTORA REST HOUSE - LAN TCP 8096"
-$existing = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
-if ($existing) { Remove-NetFirewallRule -DisplayName $ruleName }
-New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8096 -Profile Private -RemoteAddress LocalSubnet
-Write-Host "Allowed TCP 8096 from the local subnet on Private network profiles."
+# Both ports are restricted to devices on the local subnet and Private network profile.
+$rules = @(
+    @{ Name = "ALOSTORA REST HOUSE - LAN TCP 8096"; Port = 8096 },
+    @{ Name = "ALOSTORA REST HOUSE - Admin HTTPS TCP 8443"; Port = 8443 }
+)
+foreach ($item in $rules) {
+    $existing = Get-NetFirewallRule -DisplayName $item.Name -ErrorAction SilentlyContinue
+    if ($existing) { Remove-NetFirewallRule -DisplayName $item.Name }
+    New-NetFirewallRule -DisplayName $item.Name -Direction Inbound -Action Allow -Protocol TCP -LocalPort $item.Port -Profile Private -RemoteAddress LocalSubnet | Out-Null
+    Write-Host "Allowed TCP $($item.Port) from the local subnet on Private network profiles."
+}
