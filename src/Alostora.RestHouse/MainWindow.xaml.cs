@@ -590,7 +590,7 @@ public partial class MainWindow : Window
             }
             await process.WaitForExitAsync();
             if (process.ExitCode == 0)
-                MessageBox.Show("تم السماح باتصالات TCP على المنفذ {_port} ضمن ملف تعريف الشبكة الخاصة. تأكد أن شبكة Windows مضبوطة على «خاصة».", "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"تم السماح باتصالات TCP على المنفذ {_port} ضمن ملف تعريف الشبكة الخاصة. تأكد أن شبكة Windows مضبوطة على «خاصة».", "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Information);
             else
                 MessageBox.Show("لم يتمكن Windows من إضافة قاعدة جدار الحماية. شغّل البرنامج بصلاحية مسؤول وحاول مجدداً.", "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
