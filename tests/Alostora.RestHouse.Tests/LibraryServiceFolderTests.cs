@@ -24,8 +24,8 @@ public sealed class LibraryServiceFolderTests : IDisposable
         var seasonFolder = library.CreateFolder(seriesFolder, "المسلسل الأول");
         var folders = library.ListFolders();
 
-        var series = Assert.Single(folders.Where(x => x.FullPath == seriesFolder));
-        var season = Assert.Single(folders.Where(x => x.FullPath == seasonFolder));
+        var series = Assert.Single(folders, x => x.FullPath == seriesFolder);
+        var season = Assert.Single(folders, x => x.FullPath == seasonFolder);
         Assert.True(series.IsManaged);
         Assert.True(season.IsManaged);
         Assert.Equal(seriesFolder, season.ParentPath);
