@@ -8,15 +8,18 @@ on:
   workflow_dispatch:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: windows-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up .NET 8
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 8.0.x
 
@@ -40,7 +43,7 @@ jobs:
         run: dotnet publish src/Alostora.RestHouse/Alostora.RestHouse.csproj --configuration Release --runtime win-x64 --self-contained true --no-restore
 
       - name: Upload Windows x64 package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ALOSTORA-REST-HOUSE-Windows-x64
           path: src/Alostora.RestHouse/bin/Release/net8.0-windows/win-x64/publish/
