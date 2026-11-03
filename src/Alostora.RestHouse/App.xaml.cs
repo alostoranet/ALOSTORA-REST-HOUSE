@@ -446,7 +446,7 @@ public partial class App : Application
    });
    _server.MapGet("/api/admin/library/folders",(HttpContext c,LibraryService files)=>
    {
-    if(!IsAdmin(c)) return Results.NotFound();
+    if(!IsLocal(c)) return Results.NotFound();
     return Results.Ok(files.ListFolders());
    });
    _server.MapPost("/api/admin/library/folders",(HttpContext c,CreateLibraryFolderRequest request,LibraryService files)=>
