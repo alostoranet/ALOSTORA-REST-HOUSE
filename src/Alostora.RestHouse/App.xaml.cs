@@ -182,6 +182,7 @@ public partial class App : Application
     }
     catch{return false;}
    }
+   _server.MapGet("/api/auth-config",()=>Results.Ok(new{supabaseUrl,publishableKey=supabasePublishableKey}));
    _server.MapGet("/admin",(HttpContext c) =>
    {
     if(IsLocal(c)) return Results.Redirect("/admin.html");
