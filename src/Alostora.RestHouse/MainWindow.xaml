@@ -114,11 +114,12 @@
 </StackPanel></ScrollViewer></TabItem>
 <TabItem Header="المواسم والحلقات"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
 <StackPanel x:Name="SeasonManagementPanel"><TextBlock x:Name="SeasonSectionTitle" Text="المواسم" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,12,0,8"/>
-<Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="90"/></Grid.ColumnDefinitions>
+<Expander x:Name="SeasonEditorExpander" Header="إضافة موسم أو جزء" IsExpanded="False" Background="#F7FAFD" Padding="10" Margin="0,0,0,10"><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="90"/></Grid.ColumnDefinitions>
 <StackPanel Grid.Column="0" Margin="0,0,6,8"><TextBox x:Name="SeasonTitleBox" Padding="8" Margin="0,0,0,5" ToolTip="اسم الموسم (اختياري)"/><DockPanel><Button x:Name="SeasonFolderButton" DockPanel.Dock="Left" Content="مجلد الموسم" Click="ChooseSeasonFolder_Click" Padding="8,5" Margin="0,0,5,0"/><TextBox x:Name="SeasonFolderPathBox" Padding="7" FlowDirection="LeftToRight" ToolTip="مسار مجلد ملفات هذا الموسم"/></DockPanel></StackPanel>
 <TextBox x:Name="SeasonNumberBox" Grid.Column="1" Padding="8" Margin="0,0,0,8" Text="1" ToolTip="رقم الموسم أو الجزء"/>
 </Grid>
-<WrapPanel HorizontalAlignment="Right" Margin="0,0,0,6"><Button x:Name="AddSeasonButton" Content="إضافة الموسم" Click="AddSeason_Click" Padding="12,8" Margin="0,0,6,0"/><Button x:Name="SaveSeasonFolderButton" Content="حفظ مسار الموسم المحدد وفحص ملفاته" Click="SaveSeasonFolder_Click" Padding="12,8" Margin="0,0,6,0"/><Button x:Name="DeleteSeasonButton" Content="حذف الموسم المحدد" Click="DeleteSeason_Click" Padding="12,8" Background="#FCE8E8" Foreground="#9F2630"/></WrapPanel>
+<WrapPanel HorizontalAlignment="Right" Margin="0,0,0,6"><Button x:Name="AddSeasonButton" Content="حفظ الموسم" Click="AddSeason_Click" Padding="12,8" Margin="0,0,6,0"/></WrapPanel></Expander>
+<WrapPanel HorizontalAlignment="Right" Margin="0,0,0,6"><Button x:Name="SaveSeasonFolderButton" Content="حفظ مسار الموسم المحدد وفحص ملفاته" Click="SaveSeasonFolder_Click" Padding="12,8" Margin="0,0,6,0"/><Button x:Name="DeleteSeasonButton" Content="حذف الموسم المحدد" Click="DeleteSeason_Click" Padding="12,8" Background="#FCE8E8" Foreground="#9F2630"/></WrapPanel>
 <DataGrid x:Name="SeasonsGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="SeasonsGrid_SelectionChanged" CanUserAddRows="False" Height="135" Margin="0,8,0,12">
 <DataGrid.Columns><DataGridTextColumn Header="رقم الموسم" Binding="{Binding SeasonNumber}" Width="95"/><DataGridTextColumn Header="اسم الموسم" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="المعرّف" Binding="{Binding SeasonId}" Width="75"/></DataGrid.Columns></DataGrid>
 <TextBlock x:Name="EpisodesSectionTitle" Text="حلقات الموسم المحدد" FontSize="16" FontWeight="Bold" Foreground="#142D4A" Margin="0,8,0,6"/>
@@ -127,13 +128,13 @@
 <WrapPanel Margin="0,8"><Button x:Name="PreviewSeasonFolderButton" Content="اكتشاف حلقات الموسم" Click="PreviewSeasonFolder_Click" Padding="10,7" Margin="0,0,6,0"/><Button Content="اعتماد ربط الحلقات المحددة" Click="LinkDetectedEpisodes_Click" Padding="10,7"/></WrapPanel>
 <DataGrid x:Name="EpisodeCandidatesGrid" AutoGenerateColumns="False" IsReadOnly="False" CanUserAddRows="False" Height="150" Margin="0,0,0,12"><DataGrid.Columns><DataGridCheckBoxColumn Header="ربط" Binding="{Binding Selected, UpdateSourceTrigger=PropertyChanged}" Width="48"/><DataGridTextColumn Header="رقم الحلقة" Binding="{Binding EpisodeNumber, UpdateSourceTrigger=PropertyChanged}" Width="85"/><DataGridTextColumn Header="اسم الملف" Binding="{Binding FileName}" IsReadOnly="True" Width="*"/><DataGridTextColumn Header="الحالة" Binding="{Binding Status}" IsReadOnly="True" Width="105"/></DataGrid.Columns></DataGrid>
 <Separator/>
-<TextBlock x:Name="AddEpisodeSectionTitle" Text="إضافة حلقة إلى الموسم المحدد" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,12,0,8"/>
+<Expander x:Name="EpisodeEditorExpander" Header="إضافة حلقة للموسم المحدد" IsExpanded="False" Background="#F7FAFD" Padding="10" Margin="0,0,0,10"><StackPanel><TextBlock x:Name="AddEpisodeSectionTitle" Text="إضافة حلقة إلى الموسم المحدد" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,12,0,8"/>
 <TextBlock Text="ملف الفيديو من المكتبة"/><ComboBox x:Name="EpisodeVideoPicker" DisplayMemberPath="Title" Padding="8" Margin="0,4,0,8"/>
 <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="90"/></Grid.ColumnDefinitions>
 <TextBox x:Name="EpisodeTitleBox" Grid.Column="0" Padding="8" Margin="0,0,6,8" ToolTip="اسم الحلقة (اختياري)"/>
 <TextBox x:Name="EpisodeNumberBox" Grid.Column="1" Padding="8" Margin="0,0,0,8" Text="1" ToolTip="رقم الحلقة"/>
 </Grid>
-<Button Content="ربط الفيديو كحلقة" Click="AddEpisode_Click" HorizontalAlignment="Right" Padding="12,8"/></StackPanel>
+<Button Content="حفظ الحلقة" Click="AddEpisode_Click" HorizontalAlignment="Right" Padding="12,8"/></StackPanel></Expander></StackPanel>
 
 </StackPanel></ScrollViewer></TabItem>
 <TabItem Header="الحلقات المفقودة"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
