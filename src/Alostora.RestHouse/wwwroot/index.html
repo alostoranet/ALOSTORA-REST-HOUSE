@@ -86,7 +86,7 @@ function isNew(dateValue){if(!dateValue)return false;const date=new Date(dateVal
 function makeNewBadge(){const badge=document.createElement('span');badge.className='new-badge';badge.textContent='جديد';return badge;}
 function render(){renderCatalogPage();}
 function catalogCard(title,subtitle,posterPath,action,badge){
- const card=document.createElement('article');card.className='catalog-card';card.tabIndex=0;card.setAttribute('role','button');card.addEventListener('click',action);card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();action();}});
+ const card=document.createElement('article');card.className='catalog-card';card.tabIndex=0;card.setAttribute('role','button');card.addEventListener('click',action);card.addEventListener('keydown',event=>{if(event.target===card&&(event.key==='Enter'||event.key===' ')){event.preventDefault();action();}});
  const poster=makePoster(posterPath,title);if(poster){poster.className=poster.tagName==='IMG'?'':'poster-empty';card.append(poster);}
  const heading=document.createElement('h3');heading.textContent=title;card.append(heading);
  if(subtitle){const detail=document.createElement('small');detail.textContent=subtitle;card.append(detail);}
@@ -146,7 +146,13 @@ function renderCatalogPage(){
  }
  content.className='';
  if(pageType==='home'){
-  const mains=categories.filter(x=>x.parentId==null&&x.isPublished===true);
+  const mains=categories.filter(x=>x.parentId==null&&x.isPublished===true).filter(main=>{
+   if(matchesQuery(main))return true;
+   const children=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true);
+   return children.some(sub=>matchesQuery(sub)||(sub.contentKind==='Series'
+    ?seriesItems.some(show=>show.categoryId===sub.categoryId&&show.isPublished===true&&matches(show)&&matchesQuery(show))
+    :items.some(video=>video.categoryId===sub.categoryId&&video.isPublished===true&&matches(video)&&matchesQuery(video))));
+  });
   const grid=document.createElement('div');grid.className='catalog-grid';
   for(const main of mains.filter(matchesQuery)){
    const subs=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true);
@@ -162,7 +168,9 @@ function renderCatalogPage(){
   const main=categories.find(x=>x.categoryId===catalogPage.categoryId);
   if(!main){content.append(catalogEmpty('القسم غير موجود أو لم يعد منشوراً.'));return;}
   content.append(catalogHero(main.title,main.posterPath,'الأقسام الداخلية','اختر القسم الفرعي لعرض البرامج أو الأفلام الموجودة بداخله.'));
-  const subs=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true&&matchesQuery(x));
+  const subs=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true&&(matchesQuery(x)||(x.contentKind==='Series'
+   ?seriesItems.some(show=>show.categoryId===x.categoryId&&show.isPublished===true&&matches(show)&&matchesQuery(show))
+   :items.some(video=>video.categoryId===x.categoryId&&video.isPublished===true&&matches(video)&&matchesQuery(video))));
   const grid=document.createElement('div');grid.className='catalog-grid';
   for(const sub of subs){
    const label=sub.contentKind==='Series'?'مسلسلات وبرامج':sub.contentKind==='Movie'?'أفلام':'محتوى';
