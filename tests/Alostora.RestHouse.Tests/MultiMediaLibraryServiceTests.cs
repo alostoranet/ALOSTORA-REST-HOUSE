@@ -52,6 +52,48 @@ public sealed class MultiMediaLibraryServiceTests : IDisposable
         Assert.Empty(library.List("Books"));
     }
 
+
+    [Fact]
+    public void ScanIsIdempotentAndUpdatesExistingCatalogEntry()
+    {
+        var library = new MultiMediaLibraryService(Path.Combine(_root, "media"), _databasePath);
+        var audio = Path.Combine(_root, "media", "Audio");
+        var file = Path.Combine(audio, "first-name.mp3");
+        File.WriteAllBytes(file, [1, 2, 3]);
+
+        Assert.Equal(1, library.Scan("Audio"));
+        var first = Assert.Single(library.List("Audio"));
+        File.WriteAllBytes(file, [1, 2, 3, 4, 5]);
+        File.Move(file, Path.Combine(audio, "renamed.mp3"));
+
+        Assert.Equal(1, library.Scan("Audio"));
+        var second = Assert.Single(library.List("Audio"));
+        Assert.NotEqual(first.Id, second.Id);
+        Assert.Equal("renamed", second.Title);
+        Assert.Equal(5, second.SizeBytes);
+    }
+
+    [Fact]
+    public void RejectsCatalogPathsThatEscapeLibraryRoot()
+    {
+        var libraryRoot = Path.Combine(_root, "media");
+        var library = new MultiMediaLibraryService(libraryRoot, _databasePath);
+        var book = Path.Combine(libraryRoot, "Books", "safe.pdf");
+        File.WriteAllText(book, "safe");
+        library.Scan("Books");
+        var item = Assert.Single(library.List("Books"));
+
+        using var connection = new Microsoft.Data.Sqlite.SqliteConnection(
+            new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder { DataSource = _databasePath }.ToString());
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE MediaLibraryItems SET RelativePath='../outside.pdf' WHERE Id=$id";
+        command.Parameters.AddWithValue("$id", item.Id);
+        command.ExecuteNonQuery();
+
+        Assert.Null(library.ResolveById(item.Id));
+    }
+
     public void Dispose()
     {
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
