@@ -188,7 +188,7 @@ function renderCatalogPage(){
   }else{
    const movies=sorted(items.filter(x=>x.isPublished===true&&x.kind!=='Series'&&x.categoryId===category.categoryId));
    for(const movie of movies){
-    const summary=[movie.year,movie.genre,movie.runtimeMinutes?movie.runtimeMinutes+' دقيقة':''].filter(Boolean).join(' • ');
+    const summary=[movie.year,movie.genre,movie.runtimeMinutes?movie.runtimeMinutes+' دقيقة':'','المشاهدات: '+(movie.viewCount||0)].filter(Boolean).join(' • ');
     grid.append(catalogCard(movie.title,summary,movie.posterPath,()=>play({id:movie.id,url:movie.url,title:movie.title})));
    }
    if(!movies.length)content.append(catalogEmpty('لا توجد أفلام أو فيديوهات منشورة في هذا القسم بعد.'));
@@ -230,7 +230,7 @@ function renderCatalogPage(){
   for(const ep of episodes){
    const row=document.createElement('article');row.className='catalog-episode';
    const copy=document.createElement('div');const title=document.createElement('strong');title.textContent='الحلقة '+ep.episodeNumber+' — '+(ep.title||'بدون عنوان');
-   const detail=document.createElement('small');detail.textContent=ep.isMissing?'ملف الحلقة غير موجود حالياً.':(ep.runtimeMinutes?ep.runtimeMinutes+' دقيقة':'تشغيل الحلقة واستكمال المشاهدة من آخر موضع');
+   const detail=document.createElement('small');const episodeVideo=items.find(video=>video.id===ep.videoId);detail.textContent=(ep.isMissing?'ملف الحلقة غير موجود حالياً.':(ep.runtimeMinutes?ep.runtimeMinutes+' دقيقة':'تشغيل الحلقة واستكمال المشاهدة من آخر موضع'))+(episodeVideo?' • المشاهدات: '+(episodeVideo.viewCount||0):'');
    copy.append(title,detail);const button=document.createElement('button');button.className='action';button.type='button';button.textContent=ep.isMissing?'الملف مفقود':'تشغيل الحلقة';button.disabled=!!ep.isMissing||!ep.url;
    if(!button.disabled)button.addEventListener('click',()=>play({id:ep.videoId,url:ep.url,title:ep.title||('الحلقة '+ep.episodeNumber)}));
    row.append(copy,button);content.append(row);
