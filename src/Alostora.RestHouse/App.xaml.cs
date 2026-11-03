@@ -19,6 +19,7 @@ public sealed record UpdateSeasonFolderRequest(string? FolderPath);
 public sealed record ScanFolderRequest(string FolderPath);
 public sealed record RegisterSelectedFilesRequest(string FolderPath, List<string> FilePaths);
 public sealed record RegisterFilesRequest(List<string> FilePaths);
+public sealed record CreateLibraryFolderRequest(string? ParentPath, string Name);
 public sealed record DetectedEpisodeLink(string VideoId, int EpisodeNumber, string? Title, bool Selected);
 public sealed record LinkDetectedEpisodesRequest(List<DetectedEpisodeLink> Episodes);
 public sealed record RelinkEpisodeRequest(string VideoId);
@@ -442,6 +443,26 @@ public partial class App : Application
     if(string.IsNullOrWhiteSpace(folderPath)||folderPath.Length>1000||!Directory.Exists(folderPath)) return Results.BadRequest(new{error="حدد مجلداً موجوداً ويمكن الوصول إليه"});
     try { return Results.Ok(files.PreviewFolder(folderPath)); }
     catch(Exception ex) { return Results.BadRequest(new{error=ex.Message}); }
+   });
+   _server.MapGet("/api/admin/library/folders",(HttpContext c,LibraryService files)=>
+   {
+    if(!IsAdmin(c)) return Results.NotFound();
+    return Results.Ok(files.ListFolders());
+   });
+   _server.MapPost("/api/admin/library/folders",(HttpContext c,CreateLibraryFolderRequest request,LibraryService files)=>
+   {
+    if(!IsAdmin(c)) return Results.NotFound();
+    if((request.ParentPath?.Length??0)>2000||string.IsNullOrWhiteSpace(request.Name)||request.Name.Length>80)
+     return Results.BadRequest(new{error="بيانات المجلد غير صحيحة"});
+    try
+    {
+     var path=files.CreateFolder(request.ParentPath,request.Name);
+     return Results.Ok(new{created=true,fullPath=path,message="تم إنشاء المجلد داخل مكتبة الفيديو."});
+    }
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+    catch(InvalidOperationException ex){return Results.BadRequest(new{error=ex.Message});}
+    catch(DirectoryNotFoundException ex){return Results.BadRequest(new{error=ex.Message});}
+    catch(IOException ex){return Results.BadRequest(new{error=ex.Message});}
    });
    _server.MapPost("/api/admin/register-files",(HttpContext c,RegisterFilesRequest request,LibraryService files)=>
    {
