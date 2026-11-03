@@ -2,7 +2,45 @@
 <Grid Margin="20"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
 <Border Background="#142D4A" CornerRadius="12" Padding="18"><DockPanel LastChildFill="True"><Button DockPanel.Dock="Left" Content="السماح بالوصول من الشبكة" Click="EnableFirewall_Click" Padding="14,9" Margin="0,0,10,0" Background="#DCEBFA" Foreground="#142D4A" FontWeight="Bold" BorderThickness="0" VerticalAlignment="Center"/><Button DockPanel.Dock="Left" Content="إنشاء نسخة احتياطية" Click="CreateBackup_Click" Padding="14,9" Margin="16,0,0,0" Background="#FFFFFF" Foreground="#142D4A" FontWeight="Bold" BorderThickness="0" VerticalAlignment="Center"/><Button DockPanel.Dock="Left" Content="استعادة نسخة احتياطية" Click="RestoreBackup_Click" Padding="14,9" Margin="8,0,0,0" Background="#FCE8E8" Foreground="#9F2630" FontWeight="Bold" BorderThickness="0" VerticalAlignment="Center"/><StackPanel><TextBlock Text="ALOSTORA REST HOUSE" Foreground="White" FontSize="25" FontWeight="Bold"/><TextBlock Text="استراحة الأسطورة نت | إدارة مكتبة الأفلام" Foreground="#D7E5F3" FontSize="15" Margin="0,6,0,0"/></StackPanel></DockPanel></Border>
 
-<TabControl Grid.Row="1" Margin="0,14" Background="#F3F6FA">
+<TabControl Grid.Row="1" Margin="0,14" Background="Transparent" BorderThickness="0" Padding="0" TabStripPlacement="Left">
+<TabControl.Resources>
+<Style TargetType="{x:Type TabItem}">
+<Setter Property="Width" Value="205"/>
+<Setter Property="MinHeight" Value="48"/>
+<Setter Property="Margin" Value="0,0,12,8"/>
+<Setter Property="Padding" Value="13,11"/>
+<Setter Property="FontSize" Value="14"/>
+<Setter Property="FontWeight" Value="SemiBold"/>
+<Setter Property="Foreground" Value="#334155"/>
+<Setter Property="Background" Value="#FFFFFF"/>
+<Setter Property="BorderBrush" Value="#DCE4ED"/>
+<Setter Property="BorderThickness" Value="1"/>
+<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+<Setter Property="VerticalContentAlignment" Value="Center"/>
+<Setter Property="Template">
+<Setter.Value>
+<ControlTemplate TargetType="{x:Type TabItem}">
+<Border x:Name="TabBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+<ContentPresenter ContentSource="Header" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+</Border>
+<ControlTemplate.Triggers>
+<Trigger Property="IsSelected" Value="True">
+<Setter TargetName="TabBorder" Property="Background" Value="#142D4A"/>
+<Setter TargetName="TabBorder" Property="BorderBrush" Value="#C93640"/>
+<Setter Property="Foreground" Value="#FFFFFF"/>
+</Trigger>
+<Trigger Property="IsMouseOver" Value="True">
+<Setter TargetName="TabBorder" Property="BorderBrush" Value="#C93640"/>
+</Trigger>
+<Trigger Property="IsEnabled" Value="False">
+<Setter Property="Opacity" Value="0.55"/>
+</Trigger>
+</ControlTemplate.Triggers>
+</ControlTemplate>
+</Setter.Value>
+</Setter>
+</Style>
+</TabControl.Resources>
 <TabItem Header="هوية الاستراحة"><Border Background="White" CornerRadius="10" Padding="14">
 <StackPanel>
 <TextBlock Text="هوية الاستراحة والشبكة" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,10"/>
@@ -21,7 +59,7 @@
 <TextBlock x:Name="BrandProfileStatusText" Text="يمكنك تخصيص اسم الاستراحة واسم الشبكة ورفع شعار يظهر للعملاء." Foreground="#64748B" TextWrapping="Wrap"/>
 </StackPanel></Border></TabItem>
 
-<TabItem Header="مكتبة الفيديوهات"><Border Background="White" CornerRadius="10" Padding="14"><DockPanel><StackPanel DockPanel.Dock="Top"><TextBlock Text="سجل الفيديوهات وبياناتها" FontSize="18" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,10"/><WrapPanel HorizontalAlignment="Right" Margin="0,0,0,10"><Button Content="تحديث القائمة" Click="RefreshLibrary_Click" Padding="14,7" Margin="0,0,6,0"/><Button Content="تحديد الكل" Click="SelectAllVideos_Click" Padding="12,7" Margin="0,0,6,0"/><Button Content="إلغاء التحديد" Click="ClearVideoSelection_Click" Padding="12,7" Margin="0,0,6,0"/><Button Content="إزالة المحدد من المكتبة" Click="RemoveVideoFromLibrary_Click" Padding="14,7" Margin="0,0,6,0" Background="#E6F1FA" Foreground="#245B87"/><Button Content="حذف المحدد نهائياً من الجهاز" Click="DeleteVideo_Click" Padding="14,7" Margin="0,0,6,0" Background="#FCE8E8" Foreground="#9F2630"/><Button Content="إضافة ملفات فيديو من الجهاز" Click="AddVideoFiles_Click" Padding="14,7" Margin="0,0,6,0" Background="#E7F5EC" Foreground="#176B3A"/><Button Content="إضافة مجلد فيديو خارجي" Click="AddExternalMediaFolder_Click" Padding="14,7"/></WrapPanel></StackPanel><TextBlock Text="مجلدات المكتبة — اختر مجلداً لعرض الفيديوهات الموجودة بداخله" Foreground="#526174" FontSize="12" Margin="0,0,0,5"/><TreeView x:Name="VideoFoldersTree" Height="125" SelectedItemChanged="VideoFoldersTree_SelectedItemChanged" Margin="0,0,0,10"/><DataGrid x:Name="VideosGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended" SelectionUnit="FullRow" SelectionChanged="VideosGrid_SelectionChanged" CanUserAddRows="False" HeadersVisibility="Column"><DataGrid.Columns><DataGridTextColumn Header="اسم الفيديو" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="النوع" Binding="{Binding KindLabel}" Width="70"/><DataGridTextColumn Header="القسم" Binding="{Binding CategoryTitle}" Width="135"/><DataGridTextColumn Header="المشاهدات" Binding="{Binding ViewCount}" Width="85"/><DataGridTextColumn Header="البيانات" Binding="{Binding MetadataStatus}" Width="100"/><DataGridTextColumn Header="النشر" Binding="{Binding PublishStatus}" Width="70"/></DataGrid.Columns></DataGrid></DockPanel></Border></TabItem>
+<TabItem Header="مكتبة الفيديوهات"><Border Background="White" CornerRadius="10" Padding="14"><DockPanel><StackPanel DockPanel.Dock="Top"><TextBlock Text="مكتبة الفيديوهات والمجلدات" FontSize="18" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,4"/><TextBlock Text="اختر مجلداً من القائمة لعرض ملفاته فقط. افتح بيانات الفيديو من تبويب مستقل بعد تحديد الملف." FontSize="12" Foreground="#64748B" Margin="0,0,0,10"/><WrapPanel HorizontalAlignment="Right" Margin="0,0,0,10"><Button Content="تحديث القائمة" Click="RefreshLibrary_Click" Padding="14,7" Margin="0,0,6,0"/><Button Content="تحديد الكل" Click="SelectAllVideos_Click" Padding="12,7" Margin="0,0,6,0"/><Button Content="إلغاء التحديد" Click="ClearVideoSelection_Click" Padding="12,7" Margin="0,0,6,0"/><Button Content="إزالة المحدد من المكتبة" Click="RemoveVideoFromLibrary_Click" Padding="14,7" Margin="0,0,6,0" Background="#E6F1FA" Foreground="#245B87"/><Button Content="حذف المحدد نهائياً من الجهاز" Click="DeleteVideo_Click" Padding="14,7" Margin="0,0,6,0" Background="#FCE8E8" Foreground="#9F2630"/><Button Content="إضافة ملفات فيديو من الجهاز" Click="AddVideoFiles_Click" Padding="14,7" Margin="0,0,6,0" Background="#E7F5EC" Foreground="#176B3A"/><Button Content="إضافة مجلد فيديو خارجي" Click="AddExternalMediaFolder_Click" Padding="14,7"/></WrapPanel></StackPanel><TextBlock Text="مجلدات المكتبة — اختر مجلداً لعرض الفيديوهات الموجودة بداخله" Foreground="#526174" FontSize="12" Margin="0,0,0,5"/><TreeView x:Name="VideoFoldersTree" Height="125" SelectedItemChanged="VideoFoldersTree_SelectedItemChanged" Margin="0,0,0,10"/><DataGrid x:Name="VideosGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended" SelectionUnit="FullRow" SelectionChanged="VideosGrid_SelectionChanged" CanUserAddRows="False" HeadersVisibility="Column"><DataGrid.Columns><DataGridTextColumn Header="اسم الفيديو" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="النوع" Binding="{Binding KindLabel}" Width="70"/><DataGridTextColumn Header="القسم" Binding="{Binding CategoryTitle}" Width="135"/><DataGridTextColumn Header="المشاهدات" Binding="{Binding ViewCount}" Width="85"/><DataGridTextColumn Header="البيانات" Binding="{Binding MetadataStatus}" Width="100"/><DataGridTextColumn Header="النشر" Binding="{Binding PublishStatus}" Width="70"/></DataGrid.Columns></DataGrid></DockPanel></Border></TabItem>
 <TabItem Header="بيانات الفيديو المختار"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="بيانات الفيلم أو المسلسل" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,14"/>
 <TextBlock Text="العنوان"/><TextBox x:Name="TitleBox" Padding="8" Margin="0,4,0,10"/>
 <TextBlock Text="الوصف"/><TextBox x:Name="DescriptionBox" Padding="8" Margin="0,4,0,10" Height="100" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
@@ -42,7 +80,8 @@
 <TextBlock x:Name="StatusText" Text="اختر فيديو من القائمة لتعديل بياناته." Foreground="#526174" TextWrapping="Wrap" Margin="0,12,0,0"/>
 </StackPanel></ScrollViewer></TabItem>
 <TabItem Header="المسلسلات والمواسم والحلقات"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
-<TextBlock Text="إدارة المسلسلات والمواسم والحلقات" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,14"/>
+<TextBlock Text="إدارة المسلسلات والمواسم والحلقات" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,5"/>
+<TextBlock Text="الترتيب الصحيح: اختر القسم الرئيسي ثم القسم الفرعي، أنشئ المسلسل، وبعدها أضف المواسم أو الأجزاء والحلقات. كل خطوة مرتبطة بما قبلها." TextWrapping="Wrap" Foreground="#64748B" FontSize="12" Margin="0,0,0,12"/>
 <TextBlock Text="اختر مسلسلًا موجودًا أو اكتب بيانات مسلسل جديد."/>
 <WrapPanel Margin="0,5,0,8"><Button Content="مسلسل جديد" Click="NewSeries_Click" Padding="10,7" Margin="0,0,6,0"/><Button Content="إنشاء مسلسل من الفيديو المحدد" Click="CreateSeriesFromVideo_Click" Padding="10,7" Margin="0,0,6,0"/></WrapPanel><TextBlock Text="سجل المسلسلات المضافة — اختر أي مسلسل لفتح بياناته وتعديلها" Foreground="#64748B" FontSize="12" Margin="0,0,0,6"/><DataGrid x:Name="SeriesPicker" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="SeriesPicker_SelectionChanged" CanUserAddRows="False" Height="145" Margin="0,0,0,10"><DataGrid.Columns><DataGridTextColumn Header="المسلسل" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="السنة" Binding="{Binding Year}" Width="60"/><DataGridTextColumn Header="القسم" Binding="{Binding CategoryTitle}" Width="105"/><DataGridTextColumn Header="التنظيم" Binding="{Binding OrganizationTypeLabel}" Width="95"/><DataGridTextColumn Header="النشر" Binding="{Binding PublishStatus}" Width="70"/></DataGrid.Columns></DataGrid>
 <TextBlock Text="معرّف المسلسل (اتركه فارغًا لإنشاء معرّف تلقائي)"/><TextBox x:Name="SeriesIdBox" Padding="8" Margin="0,4,0,8"/>
@@ -51,10 +90,21 @@
 <TextBlock Text="السنة"/><TextBox x:Name="SeriesYearBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="التصنيف"/><TextBox x:Name="SeriesGenreBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock Text="قسم العرض النصي (اختياري)"/><TextBox x:Name="SeriesSectionBox" Padding="8" Margin="0,4,0,8" Text="عام"/><TextBlock Text="طريقة تنظيم محتوى المسلسل"/><ComboBox x:Name="SeriesStructureBox" Padding="8" Margin="0,4,0,8" SelectionChanged="SeriesStructureBox_SelectionChanged"><ComboBoxItem Content="بدون مواسم أو أجزاء — فيديوهات مباشرة" Tag="None"/><ComboBoxItem Content="تنظيم بالمواسم" Tag="Seasons" IsSelected="True"/><ComboBoxItem Content="تنظيم بالأجزاء" Tag="Parts"/></ComboBox><TextBlock Text="اختر طريقة العرض التي تناسب هذا العمل. يمكنك تغييرها لاحقاً دون حذف ملفات الفيديو." Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"/>
-<TextBlock Text="القسم الرئيسي للمسلسل"/><ComboBox x:Name="SeriesMainCategoryPicker" DisplayMemberPath="Title" SelectedValuePath="CategoryId" SelectionChanged="SeriesMainCategoryPicker_SelectionChanged" Padding="8" Margin="0,4,0,3"/><TextBlock Text="القسم الفرعي للمسلسل"/><ComboBox x:Name="SeriesCategoryPicker" DisplayMemberPath="DisplayTitle" SelectedValuePath="CategoryId" Padding="8" Margin="0,4,0,3"/><TextBlock x:Name="SeriesCategoryStatusText" Text="يتم تحميل الأقسام الفرعية للمسلسلات..." Foreground="#64748B" FontSize="11" Margin="0,0,0,8"/>
+<TextBlock Text="1) القسم الرئيسي الذي سيظهر تحته المسلسل"/><ComboBox x:Name="SeriesMainCategoryPicker" DisplayMemberPath="Title" SelectedValuePath="CategoryId" SelectionChanged="SeriesMainCategoryPicker_SelectionChanged" Padding="8" Margin="0,4,0,3"/><TextBlock Text="2) قسم المسلسلات الفرعي (مكان ظهور المسلسل للعميل)"/><ComboBox x:Name="SeriesCategoryPicker" DisplayMemberPath="DisplayTitle" SelectedValuePath="CategoryId" Padding="8" Margin="0,4,0,3"/><TextBlock x:Name="SeriesCategoryStatusText" Text="يتم تحميل الأقسام الفرعية للمسلسلات..." Foreground="#64748B" FontSize="11" Margin="0,0,0,8"/>
 <CheckBox x:Name="SeriesPublishBox" Content="نشر المسلسل في واجهة العميل (بعد اختيار القسم)" IsChecked="True" Margin="0,0,0,10" FontWeight="Bold" Foreground="#16834A"/>
 <TextBlock Text="مجلد ملفات المسلسل (اختياري — لا ينقل الملفات الأصلية)"/><TextBlock Text="اختر مجلد المسلسل إذا كانت حلقاته مجمعة في مجلد مستقل. يمكنك أيضاً اختيار مجلد مختلف لكل موسم أو جزء." Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"/><DockPanel Margin="0,4,0,8"><Button DockPanel.Dock="Left" Content="اختيار مجلد" Click="ChooseSeriesFolder_Click" Padding="10,6" Margin="6,0,0,0"/><TextBox x:Name="SeriesFolderPathBox" Padding="8" FlowDirection="LeftToRight"/></DockPanel>
-<TextBlock Text="غلاف المسلسل (اختياري)"/><TextBox x:Name="SeriesPosterPathBox" IsReadOnly="True" Padding="8" Margin="0,4,0,4" ToolTip="يُملأ تلقائياً بعد اختيار صورة الغلاف ورفعها."/><TextBlock Text="يمكنك اختيار الغلاف قبل حفظ المسلسل؛ سيتم رفعه تلقائياً بعد الحفظ. الصيغ JPG وPNG وWEBP حتى 5 ميجابايت." Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"/><Button Content="اختيار ورفع غلاف المسلسل" Click="UploadSeriesPoster_Click" Padding="10,8" HorizontalAlignment="Right" Margin="0,0,0,10"/>
+<Border Background="#F8FAFC" BorderBrush="#DCE4ED" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,4,0,10">
+<DockPanel LastChildFill="True">
+<Image x:Name="SeriesPosterPreview" DockPanel.Dock="Right" Width="104" Height="142" Stretch="UniformToFill" Margin="0,0,12,0"/>
+<StackPanel>
+<TextBlock Text="غلاف المسلسل" FontWeight="Bold" Foreground="#142D4A"/>
+<TextBlock Text="هذه صورة بطاقة المسلسل التي يراها العميل. اضغط زر اختيار الصورة؛ يمكنك اختيارها قبل حفظ المسلسل أو تغييرها لاحقاً." Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,7"/>
+<TextBox x:Name="SeriesPosterPathBox" IsReadOnly="True" Padding="8" Margin="0,0,0,7" ToolTip="يعرض اسم أو مسار الغلاف الذي تم رفعه."/>
+<Button Content="اختيار صورة الغلاف ورفعها" Click="UploadSeriesPoster_Click" Padding="10,8" HorizontalAlignment="Right"/>
+<TextBlock Text="الصيغ المدعومة: JPG وPNG وWEBP، حتى 5 ميجابايت. إذا اخترت الصورة قبل حفظ المسلسل فسيتم رفعها بعد الحفظ." Foreground="#64748B" FontSize="10" TextWrapping="Wrap" Margin="0,7,0,0"/>
+</StackPanel>
+</DockPanel>
+</Border>
 <WrapPanel Margin="0,3,0,14"><Button Content="حفظ بيانات المسلسل" Click="SaveSeries_Click" Background="#C93640" Foreground="White" FontWeight="Bold" Padding="12,9" BorderThickness="0" Margin="0,0,6,0"/><Button Content="حذف المسلسل وبياناته" Click="DeleteSeries_Click" Background="#FCE8E8" Foreground="#9F2630" Padding="12,9" BorderThickness="0"/></WrapPanel>
 <Separator/>
 <StackPanel x:Name="SeasonManagementPanel"><TextBlock x:Name="SeasonSectionTitle" Text="المواسم" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,12,0,8"/>
@@ -86,17 +136,18 @@
 </StackPanel></ScrollViewer></TabItem>
 <TabItem Header="الأقسام الرئيسية والفرعية">
 <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
-<TextBlock Text="بناء أقسام المكتبة للعميل" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,8"/>
+<TextBlock Text="إدارة الأقسام الرئيسية والفرعية" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,5"/>
+<TextBlock Text="ابدأ بقسم رئيسي مثل «المسلسلات» أو «الأفلام». حدده من القائمة ثم اضغط «قسم فرعي جديد» لإضافة قسم تحته. بعد ذلك اربط البرنامج أو المسلسل بالقسم الفرعي نفسه." TextWrapping="Wrap" Foreground="#64748B" Margin="0,0,0,12"/>
 <TextBlock Text="أنشئ قسماً رئيسياً أولاً، ثم أضف تحته أقسام الأفلام أو المسلسلات. القسم المنشور يظهر للعميل مباشرة، والغلاف اختياري ويمكن رفعه لاحقاً." TextWrapping="Wrap" Foreground="#526174" Margin="0,0,0,12"/>
-<TextBlock Text="اسم القسم"/><TextBox x:Name="CategoryTitleBox" Padding="8" Margin="0,4,0,8"/>
-<TextBlock Text="يتبع القسم الرئيسي (لإنشاء قسم رئيسي اتركه بدون اختيار)"/><ComboBox x:Name="CategoryParentPicker" DisplayMemberPath="Title" SelectedValuePath="CategoryId" Padding="8" Margin="0,4,0,8"/>
-<TextBlock Text="نوع القسم — رئيسي أم فرعي"/><ComboBox x:Name="CategoryKindPicker" Padding="8" Margin="0,4,0,8" SelectionChanged="CategoryKindPicker_SelectionChanged">
+<TextBlock Text="اسم القسم أو التصنيف"/><TextBox x:Name="CategoryTitleBox" Padding="8" Margin="0,4,0,8"/>
+<TextBlock Text="القسم الرئيسي الأب (يُترك فارغاً للقسم الرئيسي الجديد)"/><ComboBox x:Name="CategoryParentPicker" DisplayMemberPath="Title" SelectedValuePath="CategoryId" Padding="8" Margin="0,4,0,8"/>
+<TextBlock Text="نوع المحتوى داخل القسم"/><ComboBox x:Name="CategoryKindPicker" Padding="8" Margin="0,4,0,8" SelectionChanged="CategoryKindPicker_SelectionChanged">
 <ComboBoxItem Content="قسم رئيسي" Tag="Group" IsSelected="True"/><ComboBoxItem Content="أفلام" Tag="Movie"/><ComboBoxItem Content="مسلسلات" Tag="Series"/><ComboBoxItem Content="محتوى آخر" Tag="Other"/>
 </ComboBox>
 <TextBlock Text="معرّف القسم (يُنشأ تلقائياً عند تركه فارغاً)"/><TextBox x:Name="CategoryIdBox" Padding="8" Margin="0,4,0,8"/>
-<TextBlock Text="مسار الغلاف"/><TextBox x:Name="CategoryPosterPathBox" Padding="8" Margin="0,4,0,8"/>
+<TextBlock Text="غلاف القسم (اختياري — اضغط زر رفع الغلاف لاختيار صورة)"/><TextBox x:Name="CategoryPosterPathBox" Padding="8" Margin="0,4,0,8"/>
 <TextBlock x:Name="CategoryPosterStatusText" Text="الغلاف اختياري. يمكنك نشر القسم بدونه." Foreground="#64748B" Margin="0,0,0,8"/>
-<WrapPanel Margin="0,0,0,10"><Button Content="قسم رئيسي جديد" Click="NewCategory_Click" Padding="12,8" Margin="0,0,6,0"/><Button Content="قسم فرعي جديد" Click="NewSubCategory_Click" Padding="12,8" Margin="0,0,6,0"/><Button Content="حفظ القسم" Click="SaveCategory_Click" Padding="12,8" Background="#C93640" Foreground="White" Margin="0,0,6,0"/><Button Content="نشر القسم المحدد" Click="PublishCategory_Click" Padding="12,8" Background="#E7F5EC" Foreground="#176B3A" Margin="0,0,6,0"/><Button Content="رفع غلاف القسم" Click="UploadCategoryPoster_Click" Padding="12,8" Margin="0,0,6,0"/><Button Content="حذف القسم المحدد" Click="DeleteCategory_Click" Padding="12,8" Background="#FCE8E8" Foreground="#9F2630"/></WrapPanel>
+<WrapPanel Margin="0,0,0,10"><Button Content="＋ قسم رئيسي جديد" Click="NewCategory_Click" Padding="12,8" Margin="0,0,6,0"/><Button Content="＋ قسم فرعي للقسم المحدد" Click="NewSubCategory_Click" Padding="12,8" Margin="0,0,6,0"/><Button Content="حفظ القسم" Click="SaveCategory_Click" Padding="12,8" Background="#C93640" Foreground="White" Margin="0,0,6,0"/><Button Content="نشر القسم المحدد" Click="PublishCategory_Click" Padding="12,8" Background="#E7F5EC" Foreground="#176B3A" Margin="0,0,6,0"/><Button Content="رفع غلاف القسم" Click="UploadCategoryPoster_Click" Padding="12,8" Margin="0,0,6,0"/><Button Content="حذف القسم المحدد" Click="DeleteCategory_Click" Padding="12,8" Background="#FCE8E8" Foreground="#9F2630"/></WrapPanel>
 <CheckBox x:Name="CategoryPublishBox" Content="نشر القسم للعميل وإظهاره في الواجهة الرئيسية" IsChecked="True" Margin="0,0,0,12"/>
 <DataGrid x:Name="CategoriesGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="CategoriesGrid_SelectionChanged" CanUserAddRows="False" Height="260">
 <DataGrid.Columns><DataGridTextColumn Header="القسم" Binding="{Binding DisplayTitle}" Width="*"/><DataGridTextColumn Header="النوع" Binding="{Binding ContentKindLabel}" Width="100"/><DataGridCheckBoxColumn Header="منشور" Binding="{Binding IsPublished}" Width="65"/><DataGridTextColumn Header="الغلاف" Binding="{Binding PosterPath}" Width="*"/></DataGrid.Columns>
