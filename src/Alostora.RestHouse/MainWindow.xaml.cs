@@ -2065,15 +2065,15 @@ private void CategoryLevelPicker_SelectionChanged(object sender, SelectionChange
         public string DisplayTitle { get; set; } = "";
         public string ContentKindLabel { get; set; } = "";
     }
-    private sealed public sealed class LibraryFolderAdmin
-{
-    public string Name { get; set; } = "";
-    public string FullPath { get; set; } = "";
-    public string? ParentPath { get; set; }
-    public bool IsManaged { get; set; }
-}
+    private sealed class LibraryFolderAdmin
+    {
+        public string Name { get; set; } = "";
+        public string FullPath { get; set; } = "";
+        public string? ParentPath { get; set; }
+        public bool IsManaged { get; set; }
+    }
 
-class AdminVideo
+    private sealed class AdminVideo
     {
         public string Id { get; set; } = "";
         public string? Title { get; set; }
