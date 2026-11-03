@@ -63,7 +63,7 @@ main{max-width:1320px;padding:26px 28px 18px}
 .catalog-section-title{font-size:20px;font-weight:800;color:#f5f7fb;margin:24px 0 12px}
 .catalog-page-head{position:sticky;top:0;z-index:5;background:rgba(12,23,39,.94);backdrop-filter:blur(12px);padding:12px 0;border-radius:0 0 10px 10px}
 @media(max-width:600px){.catalog-rail{gap:10px}.catalog-rail .catalog-card{flex-basis:155px}.catalog-section-title{font-size:18px}}
-</style></head><body>
+.app-toast{position:fixed;z-index:9999;right:18px;bottom:18px;max-width:min(92vw,420px);padding:14px 18px;border-radius:12px;background:#176b3a;color:#fff;box-shadow:0 12px 34px #0006;font-weight:bold;line-height:1.7;opacity:0;transform:translateY(14px);pointer-events:none;transition:opacity .2s ease,transform .2s ease}.app-toast.visible{opacity:1;transform:translateY(0)}.app-toast[data-kind="error"]{background:#9f2630}.app-toast[data-kind="info"]{background:#245b87}</style></head><body>
 <header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
 <main><section id="homeView">
 <section class="welcome-panel" id="welcomePanel">
@@ -103,7 +103,7 @@ main{max-width:1320px;padding:26px 28px 18px}
 <button id="customerMessageSend" type="submit">إرسال الرسالة للإدارة</button>
 </form>
 <p id="contactFeedback" role="status" aria-live="polite"></p>
-</section></main>
+</section><div id="appToast" class="app-toast" role="status" aria-live="polite"></div></main>
 <footer class="developer-credit">تصميم وبرمجة: محمد النظاري</footer>
 <script>
 function createViewerId(){try{if(window.crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();if(window.crypto&&crypto.getRandomValues){const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}}catch{}return 'viewer-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);}
@@ -348,7 +348,15 @@ async function startTranscodedPlayback(item,audioIndex,generation,saved){
  throw new Error('استغرق تحويل الفيديو وقتاً أطول من المتوقع. يمكنك المحاولة مرة أخرى.');
 }
 async function play(item){
- if(!item||!item.id||!item.url)return;
+ if(!item||!item.id)return;
+ if(!item.url){
+  navigateCatalog({type:'player',title:item.title||'الفيديو'});
+  const playerSection=document.querySelector('#playerSection');
+  playerSection.hidden=false;playerSection.style.display='block';
+  document.querySelector('#nowPlayingTitle').textContent='تعذر تشغيل: '+(item.title||'الفيديو المحدد');
+  document.querySelector('#playbackHint').textContent='لا يوجد رابط صالح لملف الفيديو في المكتبة. افتح لوحة الإدارة وتأكد من أن الملف مسجل ومربوط بشكل صحيح.';
+  return;
+ }
  navigateCatalog({type:'player',title:item.title});
  const playerSection=document.querySelector('#playerSection');
  playerSection.hidden=false;playerSection.style.display='block';
@@ -460,9 +468,21 @@ document.querySelector('#customerMessageForm').addEventListener('submit',async e
   if(!response.ok)throw new Error(result.error||'تعذر إرسال الرسالة.');
   document.querySelector('#customerMessageForm').reset();
   feedback.textContent=result.message||'تم إرسال رسالتك بنجاح.';
- }catch(error){feedback.textContent=error.message||'حدث خطأ أثناء الإرسال. حاول مرة أخرى.';}
+   showAppToast(result.message||'تم إرسال رسالتك بنجاح.','success');
+ }catch(error){feedback.textContent=error.message||'حدث خطأ أثناء الإرسال. حاول مرة أخرى.';
+   showAppToast(error.message||'حدث خطأ أثناء الإرسال. حاول مرة أخرى.','error');}
  finally{button.disabled=false;button.textContent='إرسال الرسالة للإدارة';}
 });
+let appToastTimer=null;
+function showAppToast(message,kind='success'){
+ const toast=document.querySelector('#appToast');
+ if(!toast)return;
+ toast.textContent=message;
+ toast.dataset.kind=kind;
+ toast.classList.add('visible');
+ if(appToastTimer)clearTimeout(appToastTimer);
+ appToastTimer=setTimeout(()=>toast.classList.remove('visible'),4500);
+}
 async function load(){try{
  const [libraryResponse,seriesResponse,categoryResponse]=await Promise.all([fetch('/api/library'),fetch('/api/series'),fetch('/api/catalog-categories')]);
  if(!libraryResponse.ok||!seriesResponse.ok||!categoryResponse.ok){
