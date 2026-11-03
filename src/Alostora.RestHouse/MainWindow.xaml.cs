@@ -26,6 +26,8 @@ public partial class MainWindow : Window
     private string? _ffmpegPath;
     private readonly HttpClient _http = new() { BaseAddress = new Uri("http://127.0.0.1:8096") };
     private readonly ObservableCollection<AdminVideo> _videos = new();
+    private readonly ICollectionView _videosView;
+    private string? _selectedFolderPath;
     private readonly ObservableCollection<EpisodeCandidate> _episodeCandidates = new();
     private CategoryAdmin[] _categories = Array.Empty<CategoryAdmin>();
     private bool _suppressCustomerMessagePopup;
@@ -44,9 +46,11 @@ public partial class MainWindow : Window
         MediaFolderBox.Text = library;
         PostersFolderBox.Text = posters;
         AddressBox.Text = $"رابط المشاهدة: http://{GetLanAddress()}:8096";
-        VideosGrid.ItemsSource = _videos;
+        _videosView = CollectionViewSource.GetDefaultView(_videos);
+        _videosView.Filter = FilterVideoByFolder;
+        VideosGrid.ItemsSource = _videosView;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); };
+        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadLibraryFoldersAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); };
         _messageRefreshTimer.Tick += async (_, _) => await LoadCustomerMessagesAsync();
         _messageRefreshTimer.Start();
         Closed += (_, _) => _messageRefreshTimer.Stop();
@@ -622,12 +626,13 @@ public partial class MainWindow : Window
         CategoriesGrid.UnselectAll();
         CategoryIdBox.Clear();
         CategoryTitleBox.Clear();
+        CategoryLevelPicker.SelectedIndex = 0;
         CategoryParentPicker.SelectedIndex = -1;
         CategoryKindPicker.SelectedIndex = 0;
         CategoryPosterPathBox.Clear();
         CategoryPublishBox.IsChecked = true;
-        CategoryPosterStatusText.Text = "الغلاف اختياري. القسم سينشر ويظهر للعميل بعد الحفظ.";
-        CategoryStatusText.Text = "نموذج قسم جديد. اكتب الاسم واختر نوع القسم.";
+        CategoryPosterStatusText.Text = "الغلاف اختياري. يمكنك نشر القسم بدونه ورفع الغلاف لاحقاً.";
+        CategoryStatusText.Text = "للبدء: أنشئ قسماً رئيسياً، ثم اختر «قسم فرعي» لإضافة قسم بداخله.";
     }
 
     private void CategoriesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -635,20 +640,37 @@ public partial class MainWindow : Window
         if (CategoriesGrid.SelectedItem is not CategoryAdmin row) return;
         CategoryIdBox.Text = row.CategoryId;
         CategoryTitleBox.Text = row.Title;
+        CategoryLevelPicker.SelectedIndex = row.ParentId is null ? 0 : 1;
         CategoryParentPicker.SelectedValue = row.ParentId;
-        CategoryKindPicker.SelectedItem = CategoryKindPicker.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == row.ContentKind);
+        CategoryKindPicker.SelectedItem = CategoryKindPicker.Items.OfType<ComboBoxItem>()
+            .FirstOrDefault(x => x.Tag?.ToString() == row.ContentKind);
+        if (CategoryKindPicker.SelectedIndex < 0) CategoryKindPicker.SelectedIndex = 0;
         CategoryPosterPathBox.Text = row.PosterPath ?? "";
         CategoryPublishBox.IsChecked = row.IsPublished;
-        CategoryPosterStatusText.Text = string.IsNullOrWhiteSpace(row.PosterPath) ? "لا يوجد غلاف. يمكنك نشر القسم بدونه أو رفع غلاف اختياري." : "تم حفظ غلاف هذا القسم.";
+        CategoryPosterStatusText.Text = string.IsNullOrWhiteSpace(row.PosterPath)
+            ? "لا يوجد غلاف محفوظ. اضغط «اختيار صورة الغلاف ورفعها» لإضافته."
+            : "يوجد غلاف محفوظ لهذا القسم.";
+    }
+
+private void CategoryLevelPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (CategoryParentPanel is null || CategoryContentKindPanel is null) return;
+        var isChild = (CategoryLevelPicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Child";
+        CategoryParentPanel.Visibility = isChild ? Visibility.Visible : Visibility.Collapsed;
+        CategoryContentKindPanel.Visibility = isChild ? Visibility.Visible : Visibility.Collapsed;
+        if (!isChild)
+            CategoryParentPicker.SelectedIndex = -1;
+        else if (CategoryKindPicker.SelectedIndex < 0)
+            CategoryKindPicker.SelectedIndex = 0;
     }
 
     private async void SaveCategory_Click(object sender, RoutedEventArgs e)
     {
-        var kind = (CategoryKindPicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Group";
-        var parentId = CategoryParentPicker.SelectedValue as string;
+        var isChild = (CategoryLevelPicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Child";
+        var kind = isChild ? (CategoryKindPicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Movie" : "Group";
+        var parentId = isChild ? CategoryParentPicker.SelectedValue as string : null;
         if (string.IsNullOrWhiteSpace(CategoryTitleBox.Text)) { CategoryStatusText.Text = "اكتب اسم القسم أولاً."; return; }
-        if (kind == "Group") parentId = null;
-        else if (string.IsNullOrWhiteSpace(parentId)) { CategoryStatusText.Text = "اختر القسم الرئيسي الذي سيندرج تحته هذا القسم."; return; }
+        if (isChild && string.IsNullOrWhiteSpace(parentId)) { CategoryStatusText.Text = "اختر القسم الرئيسي الذي سيوضع هذا القسم الفرعي بداخله."; return; }
         var isNew = string.IsNullOrWhiteSpace(CategoryIdBox.Text);
         var title = CategoryTitleBox.Text.Trim();
         var parentTitle = parentId is null ? null : _categories.FirstOrDefault(x => x.CategoryId == parentId)?.Title;
@@ -660,7 +682,7 @@ public partial class MainWindow : Window
             CategoryIdBox.Text = id;
             await LoadCategoriesAsync();
             CategoriesGrid.SelectedItem = (CategoriesGrid.ItemsSource as CategoryAdmin[])?.FirstOrDefault(x => x.CategoryId == id);
-            var typeName = kind == "Group" ? "القسم الرئيسي" : "القسم الفرعي";
+            var typeName = isChild ? "القسم الفرعي" : "القسم الرئيسي";
             var location = parentTitle is null ? "" : $" داخل القسم الرئيسي «{parentTitle}»";
             var action = isNew ? "تمت إضافة" : "تم تحديث";
             CategoryStatusText.Text = $"{action} {typeName} «{title}»{location}. الحالة: {(CategoryPublishBox.IsChecked == true ? "منشور" : "مسودة")}.";
@@ -705,12 +727,23 @@ public partial class MainWindow : Window
     private async void DeleteCategory_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(CategoryIdBox.Text)) { CategoryStatusText.Text = "اختر قسماً من القائمة أولاً."; return; }
-        if (MessageBox.Show("سيتم حذف القسم وأقسامه الفرعية. لن تُحذف ملفات الفيديو الأصلية. هل تريد المتابعة؟", "تأكيد حذف القسم", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-        var response = await _http.DeleteAsync("/api/admin/catalog-categories/" + Uri.EscapeDataString(CategoryIdBox.Text.Trim()));
-        if (!response.IsSuccessStatusCode) { CategoryStatusText.Text = "تعذر حذف القسم: " + await response.Content.ReadAsStringAsync(); return; }
-        CategoryIdBox.Clear(); CategoryTitleBox.Clear(); CategoryPosterPathBox.Clear();
-        await LoadCategoriesAsync();
-        CategoryStatusText.Text = "تم حذف القسم.";
+        var selectedTitle = CategoryTitleBox.Text.Trim();
+        var confirm = MessageBox.Show(
+            $"سيتم حذف «{selectedTitle}» وجميع أقسامه الفرعية. ستُخفى الأفلام والمسلسلات المرتبطة به وتُفصل عن القسم، لكن ستبقى بياناتها وملفات الفيديو الأصلية محفوظة ويمكن ربطها بقسم آخر لاحقاً.\n\nهل تريد المتابعة؟",
+            "تأكيد حذف القسم ومحتوياته", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes) return;
+        try
+        {
+            var response = await _http.DeleteAsync("/api/admin/catalog-categories/" + Uri.EscapeDataString(CategoryIdBox.Text.Trim()));
+            if (!response.IsSuccessStatusCode) { CategoryStatusText.Text = "تعذر حذف القسم: " + await response.Content.ReadAsStringAsync(); return; }
+            CategoryIdBox.Clear(); CategoryTitleBox.Clear(); CategoryPosterPathBox.Clear();
+            CategoriesGrid.SelectedItem = null;
+            await LoadCategoriesAsync();
+            await LoadVideosAsync();
+            await LoadSeriesAsync();
+            CategoryStatusText.Text = "تم حذف القسم وأقسامه الفرعية، وإخفاء المحتوى المرتبط به. ملفات الفيديو الأصلية لم تُحذف.";
+        }
+        catch (Exception ex) { CategoryStatusText.Text = "تعذر حذف القسم: " + ex.Message; }
     }
 
     private async System.Threading.Tasks.Task LoadVideosAsync()
@@ -729,11 +762,120 @@ public partial class MainWindow : Window
             EpisodeVideoPicker.ItemsSource = _videos;
             CountText.Text = $"عدد ملفات الفيديو: {_videos.Count}";
             var incomplete = _videos.Count(x => !x.MetadataSaved);
+            _videosView.Refresh();
             StatusText.Text = incomplete == 0
                 ? $"سجل الفيديوهات جاهز: {_videos.Count} فيديو، وجميعها لها بيانات محفوظة."
                 : $"سجل الفيديوهات: {_videos.Count} فيديو. يوجد {incomplete} فيديو بانتظار استكمال بياناته وتصنيفه.";
         }
         catch (Exception ex) { StatusText.Text = "تعذر تحميل المكتبة: " + ex.Message; }
+                await LoadLibraryFoldersAsync();
+        }
+
+    private bool FilterVideoByFolder(object item)
+    {
+        if (_selectedFolderPath is null) return true;
+        if (item is not AdminVideo video || string.IsNullOrWhiteSpace(video.FolderPath)) return false;
+        try
+        {
+            var selected = Path.GetFullPath(_selectedFolderPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var folder = Path.GetFullPath(video.FolderPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return folder.Equals(selected, StringComparison.OrdinalIgnoreCase) ||
+                   folder.StartsWith(selected + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        }
+        catch { return false; }
+    }
+
+    private void LibraryFoldersTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+    {
+        _selectedFolderPath = (LibraryFoldersTree.SelectedItem as TreeViewItem)?.Tag as string;
+        _videosView.Refresh();
+        VideosGrid.UnselectAll();
+        var selected = LibraryFoldersTree.SelectedItem as TreeViewItem;
+        if (selected is not null)
+            StatusText.Text = _selectedFolderPath is null
+                ? "عرض جميع ملفات مكتبة الفيديو."
+                : "المجلد المحدد: " + selected.Header + " — تظهر فيديوهاته ومجلداته الداخلية.";
+    }
+
+    private async System.Threading.Tasks.Task LoadLibraryFoldersAsync()
+    {
+        try
+        {
+            var rows = await _http.GetFromJsonAsync<LibraryFolderAdmin[]>("/api/admin/library/folders")
+                ?? Array.Empty<LibraryFolderAdmin>();
+            LibraryFoldersTree.Items.Clear();
+            var all = new TreeViewItem { Header = "كل ملفات المكتبة", IsExpanded = true, Tag = null };
+            var nodes = new Dictionary<string, TreeViewItem>(StringComparer.OrdinalIgnoreCase);
+            foreach (var row in rows.OrderBy(x => x.FullPath.Length).ThenBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase))
+            {
+                var node = new TreeViewItem
+                {
+                    Header = row.Name + (row.IsManaged ? "" : "  (خارجي)"),
+                    Tag = row.FullPath
+                };
+                if (!string.IsNullOrWhiteSpace(row.ParentPath) && nodes.TryGetValue(row.ParentPath, out var parent))
+                    parent.Items.Add(node);
+                else
+                    all.Items.Add(node);
+                nodes[row.FullPath] = node;
+            }
+            LibraryFoldersTree.Items.Add(all);
+            all.IsExpanded = true;
+            _videosView.Refresh();
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "تعذر تحميل مجلدات مكتبة الفيديو: " + ex.Message;
+        }
+    }
+
+    private async void CreateLibraryFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Window
+        {
+            Title = "إنشاء مجلد فيديو جديد",
+            Width = 430,
+            Height = 205,
+            MinWidth = 390,
+            MinHeight = 190,
+            ResizeMode = ResizeMode.NoResize,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Owner = this,
+            FlowDirection = FlowDirection.RightToLeft,
+            Background = System.Windows.Media.Brushes.White
+        };
+        var panel = new StackPanel { Margin = new Thickness(18) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = "اكتب اسم المجلد. سينشأ داخل مكتبة التخزين الرئيسية، ويمكنك إنشاء مجلدات داخله لاحقاً.",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 10)
+        });
+        var nameBox = new TextBox { Padding = new Thickness(9), FontSize = 15 };
+        panel.Children.Add(nameBox);
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 14, 0, 0) };
+        var create = new Button { Content = "إنشاء المجلد", Padding = new Thickness(14, 7, 14, 7), Margin = new Thickness(0, 0, 7, 0), IsDefault = true };
+        var cancel = new Button { Content = "إلغاء", Padding = new Thickness(14, 7, 14, 7), IsCancel = true };
+        create.Click += (_, _) => { if (!string.IsNullOrWhiteSpace(nameBox.Text)) dialog.DialogResult = true; };
+        buttons.Children.Add(create);
+        buttons.Children.Add(cancel);
+        panel.Children.Add(buttons);
+        dialog.Content = panel;
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            var parentPath = _selectedFolderPath ?? _library;
+            var response = await _http.PostAsJsonAsync("/api/admin/library/folders", new { parentPath, name = nameBox.Text.Trim() });
+            if (!response.IsSuccessStatusCode)
+            {
+                StatusText.Text = "تعذر إنشاء المجلد: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            await LoadLibraryFoldersAsync();
+            StatusText.Text = "تم إنشاء المجلد داخل مكتبة الفيديو. يمكنك تحديده ثم إضافة ملفات إليه.";
+        }
+        catch (Exception ex) { StatusText.Text = "تعذر إنشاء المجلد: " + ex.Message; }
     }
 
     private async System.Threading.Tasks.Task CheckMediaToolsAsync()
@@ -1090,15 +1232,9 @@ public partial class MainWindow : Window
 
     private async void UploadSeriesPoster_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(SeriesIdBox.Text))
-        {
-            SeriesStatusText.Text = "احفظ المسلسل أولاً ثم اختر غلافه.";
-            return;
-        }
-
         var dialog = new OpenFileDialog
         {
-            Title = "اختر غلاف المسلسل",
+            Title = "اختر صورة غلاف المسلسل",
             Filter = "صور مدعومة|*.jpg;*.jpeg;*.png;*.webp",
             CheckFileExists = true
         };
@@ -1113,6 +1249,9 @@ public partial class MainWindow : Window
             return;
         }
 
+        // احفظ بيانات المسلسل أولاً تلقائياً، حتى يعمل زر رفع الغلاف عند إنشاء مسلسل جديد.
+        if (!await SaveSeriesAsync()) return;
+
         try
         {
             SeriesStatusText.Text = "جارٍ رفع غلاف المسلسل...";
@@ -1121,13 +1260,13 @@ public partial class MainWindow : Window
             var response = await _http.PostAsync("/api/admin/series-poster/" + Uri.EscapeDataString(SeriesIdBox.Text.Trim()), bytes);
             if (!response.IsSuccessStatusCode)
             {
-                SeriesStatusText.Text = "تعذر رفع الغلاف. تحقق من حفظ المسلسل وصيغة الصورة وحجمها.";
+                SeriesStatusText.Text = "تعذر رفع الغلاف: " + await response.Content.ReadAsStringAsync();
                 return;
             }
 
             var result = await response.Content.ReadFromJsonAsync<PosterUploadResult>();
             SeriesPosterPathBox.Text = result?.PosterPath ?? "";
-            SeriesStatusText.Text = "تم رفع غلاف المسلسل وحفظه.";
+            SeriesStatusText.Text = "تم رفع غلاف المسلسل وحفظه تلقائياً.";
             await LoadSeriesAsync();
             SeriesPicker.SelectedItem = (SeriesPicker.ItemsSource as SeriesAdmin[])?.FirstOrDefault(x => x.SeriesId == SeriesIdBox.Text.Trim());
         }
@@ -1139,22 +1278,27 @@ public partial class MainWindow : Window
 
     private async void SaveSeries_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(SeriesTitleBox.Text)) { SeriesStatusText.Text = "اكتب اسم المسلسل أولاً."; return; }
+        await SaveSeriesAsync();
+    }
+
+    private async System.Threading.Tasks.Task<bool> SaveSeriesAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SeriesTitleBox.Text)) { SeriesStatusText.Text = "اكتب اسم المسلسل أولاً."; return false; }
         int? year = null;
         if (!string.IsNullOrWhiteSpace(SeriesYearBox.Text))
         {
             if (!int.TryParse(SeriesYearBox.Text, out var parsed) || parsed < 1888 || parsed > DateTime.UtcNow.Year + 5)
-            { SeriesStatusText.Text = "سنة الإنتاج غير صحيحة."; return; }
+            { SeriesStatusText.Text = "سنة الإنتاج غير صحيحة."; return false; }
             year = parsed;
         }
         var id = string.IsNullOrWhiteSpace(SeriesIdBox.Text) ? "series-" + Guid.NewGuid().ToString("N") : SeriesIdBox.Text.Trim();
         var folderPath = string.IsNullOrWhiteSpace(SeriesFolderPathBox.Text) ? null : Path.GetFullPath(SeriesFolderPathBox.Text.Trim());
-        if (folderPath is not null && !Directory.Exists(folderPath)) { SeriesStatusText.Text = "مجلد المسلسل المحدد غير موجود."; return; }
+        if (folderPath is not null && !Directory.Exists(folderPath)) { SeriesStatusText.Text = "مجلد المسلسل المحدد غير موجود."; return false; }
         var request = new { seriesId = id, title = SeriesTitleBox.Text.Trim(), description = SeriesDescriptionBox.Text, year, genre = SeriesGenreBox.Text, posterPath = string.IsNullOrWhiteSpace(SeriesPosterPathBox.Text) ? null : SeriesPosterPathBox.Text.Trim(), folderPath, section = string.IsNullOrWhiteSpace(SeriesSectionBox.Text) ? "عام" : SeriesSectionBox.Text.Trim(), categoryId = SeriesCategoryPicker.SelectedValue as string, isPublished = SeriesPublishBox.IsChecked == true, organizationType = (SeriesStructureBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Seasons" };
         try
         {
             var response = await _http.PostAsJsonAsync("/api/admin/series", request);
-            if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "لم يتم حفظ المسلسل: " + await response.Content.ReadAsStringAsync(); return; }
+            if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "لم يتم حفظ المسلسل: " + await response.Content.ReadAsStringAsync(); return false; }
             var wasNewSeries = !((SeriesPicker.ItemsSource as SeriesAdmin[]) ?? Array.Empty<SeriesAdmin>()).Any(x => x.SeriesId == id);
             SeriesIdBox.Text = id;
             var seriesCategoryName = (SeriesCategoryPicker.SelectedItem as CategoryAdmin)?.Title ?? "غير مصنف";
@@ -1163,8 +1307,9 @@ public partial class MainWindow : Window
             SeriesPicker.SelectedItem = (SeriesPicker.ItemsSource as SeriesAdmin[])?.FirstOrDefault(x => x.SeriesId == id);
             if (SeriesPicker.SelectedItem is null) await LoadSeasonsAsync(id);
             await LoadVideosAsync();
+            return true;
         }
-        catch (Exception ex) { SeriesStatusText.Text = "تعذر حفظ المسلسل: " + ex.Message; }
+        catch (Exception ex) { SeriesStatusText.Text = "تعذر حفظ المسلسل: " + ex.Message; return false; }
     }
 
     private async void DeleteSeries_Click(object sender, RoutedEventArgs e)
@@ -1920,7 +2065,15 @@ public partial class MainWindow : Window
         public string DisplayTitle { get; set; } = "";
         public string ContentKindLabel { get; set; } = "";
     }
-    private sealed class AdminVideo
+    private sealed public sealed class LibraryFolderAdmin
+{
+    public string Name { get; set; } = "";
+    public string FullPath { get; set; } = "";
+    public string? ParentPath { get; set; }
+    public bool IsManaged { get; set; }
+}
+
+class AdminVideo
     {
         public string Id { get; set; } = "";
         public string? Title { get; set; }
@@ -1940,6 +2093,7 @@ public partial class MainWindow : Window
         public bool IsPublished { get; set; }
         public bool MetadataSaved { get; set; }
         public string? CategoryTitle { get; set; }
+        public string? FolderPath { get; set; }
         public string? LinkedSeriesId { get; set; }
         public long? LinkedSeasonId { get; set; }
         public int? LinkedEpisodeNumber { get; set; }
