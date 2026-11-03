@@ -104,7 +104,7 @@ if ($app -match 'request\.IsPublished\s*&&\s*!PosterExists\(request\.PosterPath,
 $categoryTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/CatalogCategoryServiceTests.cs"
 if (-not (Test-Path $categoryTestsPath)) { throw "Catalog category regression tests are missing." }
 $categoryTests = Get-Content $categoryTestsPath -Raw
-foreach ($testName in @("PublishedMainAndChildCategoriesAppearWithoutPosterImages", "UnpublishedCategoriesDoNotAppearInCustomerCatalog", "PublishedChildOfUnpublishedParentIsNotExposed", "DeletingMainCategoryRemovesChildCatalogRecordsButKeepsOriginalVideoFile")) {
+foreach ($testName in @("PublishedMainAndChildCategoriesAppearWithoutPosterImages", "UnpublishedCategoriesDoNotAppearInCustomerCatalog", "PublishedChildOfUnpublishedParentIsNotExposed", "DeletingMainCategoryRemovesCategoryTreeAndUnpublishesLinkedContentWithoutDeletingMedia")) {
     if (-not $categoryTests.Contains($testName)) { throw ("Missing category regression test: " + $testName) }
 }
 Write-Host "PASS: customer category publication and optional-poster behavior are regression-tested."
@@ -121,15 +121,17 @@ if ($metadata -notmatch 'r\.IsDBNull\(13\)\s*\?\s*null\s*:\s*r\.GetString\(13\),
 }
 Write-Host "PASS: metadata List query includes CategoryId and matches the reader column layout."
 
-# Protect category references so deletion cannot orphan published library items.
+# Category deletion must detach and unpublish content, never erase metadata or media links.
 $categoryServicePath = Join-Path $root "src/Alostora.RestHouse/CatalogCategoryService.cs"
 $categoryService = Get-Content $categoryServicePath -Raw
-if ($categoryService -notmatch 'ParentId=\$id AND IsPublished=1' -or
-    $categoryService -notmatch 'FROM VideoMetadata\s+WHERE CategoryId IN' -or
-    $categoryService -notmatch 'FROM SeriesCatalog\s+WHERE CategoryId IN') {
-    throw "Catalog category integrity checks are missing."
+$deleteMethod = [regex]::Match($categoryService, '(?s)public void Delete\(string id\)(.*?)private static bool TableExists')
+if (-not $deleteMethod.Success -or
+    $deleteMethod.Groups[1].Value -notmatch 'UPDATE VideoMetadata\s+SET CategoryId\s*=\s*NULL, IsPublished\s*=\s*0' -or
+    $deleteMethod.Groups[1].Value -notmatch 'UPDATE SeriesCatalog\s+SET CategoryId\s*=\s*NULL, IsPublished\s*=\s*0' -or
+    $deleteMethod.Groups[1].Value -match 'DELETE FROM (VideoMetadata|SeriesCatalog)') {
+    throw "Category deletion must detach and unpublish content without deleting its metadata."
 }
-Write-Host "PASS: category publication and linked-content integrity checks are present."
+Write-Host "PASS: category deletion safely detaches and unpublishes content while preserving its records."
 
 # Public catalog and media routes must enforce publication on the server, not only in browser JavaScript.
 $publicAccessPath = Join-Path $root "src/Alostora.RestHouse/PublicCatalogAccessService.cs"
