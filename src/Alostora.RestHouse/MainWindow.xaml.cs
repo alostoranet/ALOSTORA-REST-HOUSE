@@ -2004,12 +2004,20 @@ public partial class MainWindow : Window
 
     private void DashboardCard_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (sender is not FrameworkElement element ||
-            !int.TryParse(element.Tag?.ToString(), out var tabIndex) ||
+        if (sender is not FrameworkElement element)
+            return;
+
+        var parts = element.Tag?.ToString()?.Split(':');
+        if (parts is null || parts.Length != 2 ||
+            !int.TryParse(parts[0], out var tabIndex) ||
+            !int.TryParse(parts[1], out var subTabIndex) ||
             tabIndex < 1 || tabIndex >= MainNavigationTabs.Items.Count)
             return;
 
         MainNavigationTabs.SelectedIndex = tabIndex;
+        if (tabIndex == 1 && subTabIndex >= 0 && subTabIndex < LibraryTabs.Items.Count)
+            LibraryTabs.SelectedIndex = subTabIndex;
+
         e.Handled = true;
     }
 
