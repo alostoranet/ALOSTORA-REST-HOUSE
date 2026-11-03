@@ -1291,6 +1291,7 @@ private void OpenLibraryFolder_Click(object sender, RoutedEventArgs e)
         }
 
         // احفظ بيانات المسلسل أولاً تلقائياً، حتى يعمل زر رفع الغلاف عند إنشاء مسلسل جديد.
+        if (!await SaveSeriesAsync()) return;
 
         try
         {
