@@ -19,14 +19,20 @@ if ($missing.Count -gt 0) {
 }
 Write-Host ("PASS: all {0} XAML event handlers are implemented." -f $events.Count)
 
-# The management window and embedded server must use the same loopback endpoint.
-if ($code -notmatch 'http://127\.0\.0\.1:8097' -or $app -notmatch 'ListenAnyIP\(8097\)') {
-    throw "Management client/server port configuration is inconsistent."
+# The management client and embedded server must share the persisted configurable LAN port.
+$settingsPath = Join-Path $root "src/Alostora.RestHouse/AppSettings.cs"
+$settings = Get-Content $settingsPath -Raw
+if ($code -notmatch '127\.0\.0\.1:\{_port\}' -or
+    $app -notmatch 'ListenAnyIP\(settings\.Port\)' -or
+    $settings -notmatch 'int Port = 8097' -or
+    $settings -notmatch 'SavePort\(' -or
+    $code -notmatch 'SavePort\(_root, port\)') {
+    throw "Management client/server configurable port persistence is inconsistent."
 }
 if ($app -notmatch 'ListenAnyIP\(8443,listen=>listen\.UseHttps' -or $app -notmatch 'ALOSTORA_HTTPS_CERT_PATH') {
     throw "Remote administration must use the optional dedicated HTTPS listener."
 }
-Write-Host "PASS: management client and embedded server port configuration match."
+Write-Host "PASS: management client and embedded server share the persisted configurable LAN port."
 
 # Check that key management routes used by the UI exist in the embedded API.
 $requiredRoutes = @(
