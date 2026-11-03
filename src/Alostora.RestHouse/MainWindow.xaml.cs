@@ -829,7 +829,25 @@ private void CategoryLevelPicker_SelectionChanged(object sender, SelectionChange
         }
     }
 
-    private async void CreateLibraryFolder_Click(object sender, RoutedEventArgs e)
+private void OpenLibraryFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var path = _selectedFolderPath ?? _library;
+        if (!Directory.Exists(path))
+        {
+            StatusText.Text = "المجلد المحدد غير موجود أو لم يعد متاحاً.";
+            return;
+        }
+        try
+        {
+            Process.Start(new ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "تعذر فتح المجلد: " + ex.Message;
+        }
+    }
+
+        private async void CreateLibraryFolder_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new Window
         {
