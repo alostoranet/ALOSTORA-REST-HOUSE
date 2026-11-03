@@ -762,25 +762,62 @@ public partial class MainWindow : Window
 
     private async void UploadCategoryPoster_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(CategoryIdBox.Text)) { CategoryStatusText.Text = "احفظ القسم أولاً ثم ارفع غلافه."; return; }
-        var dialog = new OpenFileDialog { Title = "اختر غلاف القسم", Filter = "صور مدعومة|*.jpg;*.jpeg;*.png;*.webp", CheckFileExists = true };
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختر صورة غلاف القسم",
+            Filter = "صور مدعومة|*.jpg;*.jpeg;*.png;*.webp",
+            CheckFileExists = true
+        };
         if (dialog.ShowDialog(this) != true) return;
-        var ext = Path.GetExtension(dialog.FileName).ToLowerInvariant();
-        var type = ext switch { ".jpg" or ".jpeg" => "image/jpeg", ".png" => "image/png", ".webp" => "image/webp", _ => "" };
-        var info = new FileInfo(dialog.FileName);
-        if (type.Length == 0 || info.Length == 0 || info.Length > 5_242_880) { CategoryStatusText.Text = "اختر صورة JPG أو PNG أو WEBP لا تتجاوز 5 ميجابايت."; return; }
+
+        var path = dialog.FileName;
+        var ext = Path.GetExtension(path).ToLowerInvariant();
+        var info = new FileInfo(path);
+        if (ext is not (".jpg" or ".jpeg" or ".png" or ".webp") || !info.Exists || info.Length == 0 || info.Length > 5_242_880)
+        {
+            CategoryStatusText.Text = "اختر صورة JPG أو PNG أو WEBP موجودة ولا يتجاوز حجمها 5 ميجابايت.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(CategoryIdBox.Text))
+        {
+            _pendingCategoryPosterPath = path;
+            CategoryPosterPathBox.Text = Path.GetFileName(path) + " — سيتم رفعها بعد حفظ القسم";
+            CategoryPosterStatusText.Text = "تم اختيار الصورة. احفظ القسم وسيتم رفع الغلاف تلقائياً.";
+            return;
+        }
+
+        await UploadCategoryPosterFileAsync(CategoryIdBox.Text.Trim(), path);
+        await LoadCategoriesAsync();
+    }
+
+    private async System.Threading.Tasks.Task<bool> UploadCategoryPosterFileAsync(string categoryId, string path)
+    {
+        var ext = Path.GetExtension(path).ToLowerInvariant();
+        var contentType = ext switch { ".jpg" or ".jpeg" => "image/jpeg", ".png" => "image/png", ".webp" => "image/webp", _ => "" };
         try
         {
-            using var bytes = new ByteArrayContent(await File.ReadAllBytesAsync(dialog.FileName));
-            bytes.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(type);
-            var response = await _http.PostAsync("/api/admin/catalog-categories/" + Uri.EscapeDataString(CategoryIdBox.Text.Trim()) + "/poster", bytes);
-            if (!response.IsSuccessStatusCode) { CategoryStatusText.Text = "تعذر رفع الغلاف: " + await response.Content.ReadAsStringAsync(); return; }
+            CategoryPosterStatusText.Text = "جارٍ رفع صورة الغلاف...";
+            using var bytes = new ByteArrayContent(await File.ReadAllBytesAsync(path));
+            bytes.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            var response = await _http.PostAsync("/api/admin/catalog-categories/" + Uri.EscapeDataString(categoryId) + "/poster", bytes);
+            if (!response.IsSuccessStatusCode)
+            {
+                CategoryStatusText.Text = "تم حفظ القسم، لكن تعذر رفع الغلاف: " + await response.Content.ReadAsStringAsync();
+                return false;
+            }
+
             var result = await response.Content.ReadFromJsonAsync<PosterUploadResult>();
             CategoryPosterPathBox.Text = result?.PosterPath ?? "";
-            CategoryPosterStatusText.Text = "تم رفع الغلاف. اضغط حفظ القسم لتحديث بياناته.";
-            await LoadCategoriesAsync();
+            _pendingCategoryPosterPath = null;
+            CategoryPosterStatusText.Text = "تم رفع صورة الغلاف وحفظها بنجاح.";
+            return true;
         }
-        catch (Exception ex) { CategoryStatusText.Text = "تعذر رفع الغلاف: " + ex.Message; }
+        catch (Exception ex)
+        {
+            CategoryStatusText.Text = "تعذر رفع غلاف القسم: " + ex.Message;
+            return false;
+        }
     }
 
     private async void DeleteCategory_Click(object sender, RoutedEventArgs e)
