@@ -189,7 +189,7 @@ public sealed class PublicCatalogAccessTests : IDisposable
     }
 
     [Fact]
-    public void DeletingCategoryRemovesItsVideoMetadataAndCategoryRecord()
+    public void DeletingCategoryUnpublishesAndDetachesItsVideoMetadataWithoutDeletingIt()
     {
         CreateRootAndMovieCategory();
         const string videoId = "eeeeeeeeeeeeeeeeeeeeeeee";
@@ -198,7 +198,12 @@ public sealed class PublicCatalogAccessTests : IDisposable
         _categories.Delete("movies");
 
         Assert.Null(_categories.Get("movies"));
-        Assert.Null(_metadata.Get(videoId));
+        var savedVideo = _metadata.Get(videoId);
+        Assert.NotNull(savedVideo);
+        Assert.Null(savedVideo.CategoryId);
+        Assert.False(savedVideo.IsPublished);
+        Assert.False(_access.IsVideoPublished(videoId));
+        Assert.DoesNotContain(videoId, _access.GetPublishedVideoIds());
         Assert.Single(_categories.List());
     }
 
