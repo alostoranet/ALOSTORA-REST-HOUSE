@@ -1258,10 +1258,15 @@ public partial class MainWindow : Window
             if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "لم يتم حفظ المسلسل: " + await response.Content.ReadAsStringAsync(); return; }
             var wasNewSeries = !((SeriesPicker.ItemsSource as SeriesAdmin[]) ?? Array.Empty<SeriesAdmin>()).Any(x => x.SeriesId == id);
             SeriesIdBox.Text = id;
+            string? posterUploadError = null;
             if (!string.IsNullOrWhiteSpace(_pendingSeriesPosterPath))
+            {
                 await UploadSeriesPosterFileAsync(id, _pendingSeriesPosterPath);
+                if (!string.IsNullOrWhiteSpace(_pendingSeriesPosterPath))
+                    posterUploadError = SeriesStatusText.Text;
+            }
             var seriesCategoryName = (SeriesCategoryPicker.SelectedItem as CategoryAdmin)?.Title ?? "غير مصنف";
-            SeriesStatusText.Text = $"{(wasNewSeries ? "تمت إضافة المسلسل" : "تم تحديث المسلسل")} «{SeriesTitleBox.Text.Trim()}» إلى سجل المسلسلات. القسم: {seriesCategoryName}. الحالة: {(SeriesPublishBox.IsChecked == true ? "منشور" : "مسودة")}.";
+            SeriesStatusText.Text = posterUploadError ?? $"{(wasNewSeries ? "تمت إضافة المسلسل" : "تم تحديث المسلسل")} «{SeriesTitleBox.Text.Trim()}» إلى سجل المسلسلات. القسم: {seriesCategoryName}. الحالة: {(SeriesPublishBox.IsChecked == true ? "منشور" : "مسودة")}.";
             await LoadSeriesAsync();
             SeriesPicker.SelectedItem = (SeriesPicker.ItemsSource as SeriesAdmin[])?.FirstOrDefault(x => x.SeriesId == id);
             if (SeriesPicker.SelectedItem is null) await LoadSeasonsAsync(id);
