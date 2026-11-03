@@ -20,8 +20,11 @@ if ($missing.Count -gt 0) {
 Write-Host ("PASS: all {0} XAML event handlers are implemented." -f $events.Count)
 
 # The management window and embedded server must use the same loopback endpoint.
-if ($code -notmatch 'http://127\.0\.0\.1:8096' -or $app -notmatch 'http://0\.0\.0\.0:8096') {
+if ($code -notmatch 'http://127\.0\.0\.1:8096' -or $app -notmatch 'ListenAnyIP\(8096\)') {
     throw "Management client/server port configuration is inconsistent."
+}
+if ($app -notmatch 'ListenAnyIP\(8443,listen=>listen\.UseHttps' -or $app -notmatch 'ALOSTORA_HTTPS_CERT_PATH') {
+    throw "Remote administration must use the optional dedicated HTTPS listener."
 }
 Write-Host "PASS: management client and embedded server port configuration match."
 
