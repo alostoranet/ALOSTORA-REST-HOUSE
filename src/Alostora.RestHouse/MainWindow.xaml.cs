@@ -508,11 +508,12 @@ public partial class MainWindow : Window
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             FlowDirection = FlowDirection.RightToLeft,
             Background = System.Windows.Media.Brushes.White,
-            Content = _activeEditorContent
+            Content = new ScrollViewer { Content = _activeEditorContent, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }
         };
         _activeEditorWindow = window;
         window.Closed += (_, _) =>
         {
+            if (window.Content is ScrollViewer editorScrollViewer) editorScrollViewer.Content = null;
             window.Content = null;
             if (_activeEditorExpander is not null)
             {
