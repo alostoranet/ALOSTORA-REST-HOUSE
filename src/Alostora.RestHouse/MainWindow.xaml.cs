@@ -887,6 +887,7 @@ public partial class MainWindow : Window
         CategoryPublishBox.IsChecked = true;
         CategoryPosterStatusText.Text = "الغلاف اختياري. القسم الرئيسي سيظهر في الصفحة الأولى بعد النشر.";
         CategoryStatusText.Text = "قسم رئيسي جديد: اكتب الاسم ثم احفظ. لإضافة قسم تحته استخدم «قسم فرعي جديد».";
+        CategoryEditorExpander.IsExpanded = true;
         UpdateCategoryParentState();
     }
 
@@ -906,6 +907,7 @@ public partial class MainWindow : Window
         CategoryPublishBox.IsChecked = true;
         CategoryPosterStatusText.Text = "غلاف القسم الفرعي اختياري ويمكن رفعه بعد حفظ القسم.";
         CategoryStatusText.Text = "قسم فرعي جديد: اختر القسم الرئيسي الذي يتبعه، ثم حدد هل يحتوي أفلاماً أم مسلسلات أم محتوى آخر.";
+        CategoryEditorExpander.IsExpanded = true;
         UpdateCategoryParentState();
         CategoryParentPicker.Focus();
     }
@@ -924,6 +926,7 @@ public partial class MainWindow : Window
     private void CategoriesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (CategoriesGrid.SelectedItem is not CategoryAdmin row) return;
+        CategoryEditorExpander.IsExpanded = true;
         CategoryIdBox.Text = row.CategoryId;
         CategoryTitleBox.Text = row.Title;
         CategoryParentPicker.SelectedValue = row.ParentId;
@@ -961,6 +964,7 @@ public partial class MainWindow : Window
             var location = parentTitle is null ? "" : $" داخل القسم الرئيسي «{parentTitle}»";
             var action = isNew ? "تمت إضافة" : "تم تحديث";
             CategoryStatusText.Text = $"{action} {typeName} «{title}»{location}. الحالة: {(CategoryPublishBox.IsChecked == true ? "منشور" : "مسودة")}.";
+        CategoryEditorExpander.IsExpanded = false;
         }
         catch (Exception ex) { CategoryStatusText.Text = "تعذر حفظ القسم: " + ex.Message; }
     }
@@ -1343,6 +1347,7 @@ public partial class MainWindow : Window
         _episodeCandidates.Clear();
         MissingEpisodesGrid.SelectedIndex = -1;
         SeriesStatusText.Text = "نموذج مسلسل جديد. أدخل بياناته واحفظه أولاً.";
+        SeriesEditorExpander.IsExpanded = true;
     }
 
     private async void CreateSeriesFromVideo_Click(object sender, RoutedEventArgs e)
@@ -1388,6 +1393,7 @@ public partial class MainWindow : Window
     private async void SeriesPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (SeriesPicker.SelectedItem is not SeriesAdmin s) return;
+        SeriesEditorExpander.IsExpanded = true;
         _pendingSeriesPosterPath = null;
         SeriesIdBox.Text = s.SeriesId;
         SeriesTitleBox.Text = s.Title ?? "";
@@ -1545,6 +1551,7 @@ public partial class MainWindow : Window
             if (SeriesPicker.SelectedItem is null) await LoadSeasonsAsync(id);
             await LoadVideosAsync();
             SeriesStatusText.Text = saveMessage;
+        SeriesEditorExpander.IsExpanded = false;
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر حفظ المسلسل: " + ex.Message; }
     }
