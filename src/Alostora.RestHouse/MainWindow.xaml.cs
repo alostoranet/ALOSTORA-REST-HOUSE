@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private string _library;
     private string _posters;
     private string? _ffmpegPath;
+    private string? _pendingSeriesPosterPath;
     private readonly HttpClient _http = new() { BaseAddress = new Uri("http://127.0.0.1:8096") };
     private readonly ObservableCollection<AdminVideo> _videos = new();
     private readonly ObservableCollection<EpisodeCandidate> _episodeCandidates = new();
@@ -626,8 +627,35 @@ public partial class MainWindow : Window
         CategoryKindPicker.SelectedIndex = 0;
         CategoryPosterPathBox.Clear();
         CategoryPublishBox.IsChecked = true;
-        CategoryPosterStatusText.Text = "الغلاف اختياري. القسم سينشر ويظهر للعميل بعد الحفظ.";
-        CategoryStatusText.Text = "نموذج قسم جديد. اكتب الاسم واختر نوع القسم.";
+        CategoryPosterStatusText.Text = "الغلاف اختياري. القسم الرئيسي سيظهر في الصفحة الأولى بعد النشر.";
+        CategoryStatusText.Text = "قسم رئيسي جديد: اكتب الاسم ثم احفظ. لإضافة قسم تحته استخدم «قسم فرعي جديد».";
+        UpdateCategoryParentState();
+    }
+
+    private void NewSubCategory_Click(object sender, RoutedEventArgs e)
+    {
+        CategoriesGrid.UnselectAll();
+        CategoryIdBox.Clear();
+        CategoryTitleBox.Clear();
+        CategoryParentPicker.SelectedIndex = -1;
+        CategoryKindPicker.SelectedItem = CategoryKindPicker.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == "Movie");
+        CategoryPosterPathBox.Clear();
+        CategoryPublishBox.IsChecked = true;
+        CategoryPosterStatusText.Text = "غلاف القسم الفرعي اختياري ويمكن رفعه بعد حفظ القسم.";
+        CategoryStatusText.Text = "قسم فرعي جديد: اختر القسم الرئيسي الذي يتبعه، ثم حدد هل يحتوي أفلاماً أم مسلسلات أم محتوى آخر.";
+        UpdateCategoryParentState();
+        CategoryParentPicker.Focus();
+    }
+
+    private void CategoryKindPicker_SelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateCategoryParentState();
+
+    private void UpdateCategoryParentState()
+    {
+        if (CategoryParentPicker is null || CategoryKindPicker is null) return;
+        var kind = (CategoryKindPicker.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Group";
+        var isMain = kind == "Group";
+        CategoryParentPicker.IsEnabled = !isMain;
+        if (isMain) CategoryParentPicker.SelectedIndex = -1;
     }
 
     private void CategoriesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1090,12 +1118,6 @@ public partial class MainWindow : Window
 
     private async void UploadSeriesPoster_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(SeriesIdBox.Text))
-        {
-            SeriesStatusText.Text = "احفظ المسلسل أولاً ثم اختر غلافه.";
-            return;
-        }
-
         var dialog = new OpenFileDialog
         {
             Title = "اختر غلاف المسلسل",
@@ -1104,32 +1126,65 @@ public partial class MainWindow : Window
         };
         if (dialog.ShowDialog(this) != true) return;
 
-        var ext = Path.GetExtension(dialog.FileName).ToLowerInvariant();
-        var contentType = ext switch { ".jpg" or ".jpeg" => "image/jpeg", ".png" => "image/png", ".webp" => "image/webp", _ => "" };
-        var info = new FileInfo(dialog.FileName);
-        if (contentType.Length == 0 || info.Length == 0 || info.Length > 5_242_880)
+        var path = dialog.FileName;
+        if (!ValidateSeriesPoster(path, out var error))
         {
-            SeriesStatusText.Text = "اختر صورة JPG أو PNG أو WEBP لا يتجاوز حجمها 5 ميجابايت.";
+            SeriesStatusText.Text = error;
             return;
         }
 
+        if (string.IsNullOrWhiteSpace(SeriesIdBox.Text))
+        {
+            _pendingSeriesPosterPath = path;
+            SeriesPosterPathBox.Text = Path.GetFileName(path) + " — بانتظار حفظ المسلسل";
+            SeriesStatusText.Text = "تم اختيار الغلاف. احفظ بيانات المسلسل الآن وسيتم رفع الصورة تلقائياً دون الحاجة لاختيارها مرة أخرى.";
+            return;
+        }
+
+        await UploadSeriesPosterFileAsync(SeriesIdBox.Text.Trim(), path);
+    }
+
+    private static bool ValidateSeriesPoster(string path, out string error)
+    {
+        var ext = Path.GetExtension(path).ToLowerInvariant();
+        var info = new FileInfo(path);
+        if (ext is not (".jpg" or ".jpeg" or ".png" or ".webp") || !info.Exists || info.Length == 0 || info.Length > 5_242_880)
+        {
+            error = "اختر صورة JPG أو PNG أو WEBP موجودة ولا يتجاوز حجمها 5 ميجابايت.";
+            return false;
+        }
+        error = "";
+        return true;
+    }
+
+    private async System.Threading.Tasks.Task UploadSeriesPosterFileAsync(string seriesId, string path)
+    {
+        if (!ValidateSeriesPoster(path, out var error))
+        {
+            SeriesStatusText.Text = error;
+            return;
+        }
+
+        var ext = Path.GetExtension(path).ToLowerInvariant();
+        var contentType = ext switch { ".jpg" or ".jpeg" => "image/jpeg", ".png" => "image/png", ".webp" => "image/webp", _ => "" };
         try
         {
-            SeriesStatusText.Text = "جارٍ رفع غلاف المسلسل...";
-            using var bytes = new ByteArrayContent(await File.ReadAllBytesAsync(dialog.FileName));
+            SeriesStatusText.Text = "جارٍ رفع غلاف المسلسل وحفظه...";
+            using var bytes = new ByteArrayContent(await File.ReadAllBytesAsync(path));
             bytes.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
-            var response = await _http.PostAsync("/api/admin/series-poster/" + Uri.EscapeDataString(SeriesIdBox.Text.Trim()), bytes);
+            var response = await _http.PostAsync("/api/admin/series-poster/" + Uri.EscapeDataString(seriesId), bytes);
             if (!response.IsSuccessStatusCode)
             {
-                SeriesStatusText.Text = "تعذر رفع الغلاف. تحقق من حفظ المسلسل وصيغة الصورة وحجمها.";
+                SeriesStatusText.Text = "تم حفظ بيانات المسلسل، لكن تعذر رفع الغلاف: " + await response.Content.ReadAsStringAsync();
                 return;
             }
 
             var result = await response.Content.ReadFromJsonAsync<PosterUploadResult>();
             SeriesPosterPathBox.Text = result?.PosterPath ?? "";
-            SeriesStatusText.Text = "تم رفع غلاف المسلسل وحفظه.";
+            _pendingSeriesPosterPath = null;
+            SeriesStatusText.Text = "تم رفع غلاف المسلسل وحفظه بنجاح.";
             await LoadSeriesAsync();
-            SeriesPicker.SelectedItem = (SeriesPicker.ItemsSource as SeriesAdmin[])?.FirstOrDefault(x => x.SeriesId == SeriesIdBox.Text.Trim());
+            SeriesPicker.SelectedItem = (SeriesPicker.ItemsSource as SeriesAdmin[])?.FirstOrDefault(x => x.SeriesId == seriesId);
         }
         catch (Exception ex)
         {
@@ -1150,13 +1205,15 @@ public partial class MainWindow : Window
         var id = string.IsNullOrWhiteSpace(SeriesIdBox.Text) ? "series-" + Guid.NewGuid().ToString("N") : SeriesIdBox.Text.Trim();
         var folderPath = string.IsNullOrWhiteSpace(SeriesFolderPathBox.Text) ? null : Path.GetFullPath(SeriesFolderPathBox.Text.Trim());
         if (folderPath is not null && !Directory.Exists(folderPath)) { SeriesStatusText.Text = "مجلد المسلسل المحدد غير موجود."; return; }
-        var request = new { seriesId = id, title = SeriesTitleBox.Text.Trim(), description = SeriesDescriptionBox.Text, year, genre = SeriesGenreBox.Text, posterPath = string.IsNullOrWhiteSpace(SeriesPosterPathBox.Text) ? null : SeriesPosterPathBox.Text.Trim(), folderPath, section = string.IsNullOrWhiteSpace(SeriesSectionBox.Text) ? "عام" : SeriesSectionBox.Text.Trim(), categoryId = SeriesCategoryPicker.SelectedValue as string, isPublished = SeriesPublishBox.IsChecked == true, organizationType = (SeriesStructureBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Seasons" };
+        var request = new { seriesId = id, title = SeriesTitleBox.Text.Trim(), description = SeriesDescriptionBox.Text, year, genre = SeriesGenreBox.Text, posterPath = _pendingSeriesPosterPath is not null ? null : (string.IsNullOrWhiteSpace(SeriesPosterPathBox.Text) ? null : SeriesPosterPathBox.Text.Trim()), folderPath, section = string.IsNullOrWhiteSpace(SeriesSectionBox.Text) ? "عام" : SeriesSectionBox.Text.Trim(), categoryId = SeriesCategoryPicker.SelectedValue as string, isPublished = SeriesPublishBox.IsChecked == true, organizationType = (SeriesStructureBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Seasons" };
         try
         {
             var response = await _http.PostAsJsonAsync("/api/admin/series", request);
             if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "لم يتم حفظ المسلسل: " + await response.Content.ReadAsStringAsync(); return; }
             var wasNewSeries = !((SeriesPicker.ItemsSource as SeriesAdmin[]) ?? Array.Empty<SeriesAdmin>()).Any(x => x.SeriesId == id);
             SeriesIdBox.Text = id;
+            if (!string.IsNullOrWhiteSpace(_pendingSeriesPosterPath))
+                await UploadSeriesPosterFileAsync(id, _pendingSeriesPosterPath);
             var seriesCategoryName = (SeriesCategoryPicker.SelectedItem as CategoryAdmin)?.Title ?? "غير مصنف";
             SeriesStatusText.Text = $"{(wasNewSeries ? "تمت إضافة المسلسل" : "تم تحديث المسلسل")} «{SeriesTitleBox.Text.Trim()}» إلى سجل المسلسلات. القسم: {seriesCategoryName}. الحالة: {(SeriesPublishBox.IsChecked == true ? "منشور" : "مسودة")}.";
             await LoadSeriesAsync();
