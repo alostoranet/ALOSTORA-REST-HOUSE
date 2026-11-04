@@ -416,7 +416,11 @@ public partial class App : Application
     var info=new FileInfo(path);
     if(!info.Exists||info.Length<=0)return Results.NotFound();
     long start=0,end=info.Length-1;
-    var range=context.Request.Headers.Range.ToString();
+    var entityTag=$"\"{info.Length:x}-{info.LastWriteTimeUtc.Ticks:x}\"";
+    var lastModified=info.LastWriteTimeUtc.ToString("R");
+    var range=context.Request.Headers["Range"].ToString();
+    var ifRange=context.Request.Headers["If-Range"].ToString();
+    if(!string.IsNullOrWhiteSpace(ifRange)&&!string.Equals(ifRange,entityTag,StringComparison.Ordinal)&&!string.Equals(ifRange,lastModified,StringComparison.Ordinal))range="";
     var partial=false;
     if(!string.IsNullOrWhiteSpace(range))
     {
@@ -469,8 +473,8 @@ public partial class App : Application
     context.Response.ContentLength=length;
     context.Response.Headers["Accept-Ranges"]="bytes";
     context.Response.Headers["Content-Disposition"]=new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment"){FileNameStar=info.Name}.ToString();
-    context.Response.Headers["Last-Modified"]=info.LastWriteTimeUtc.ToString("R");
-    context.Response.Headers["ETag"]=$"\"{info.Length:x}-{info.LastWriteTimeUtc.Ticks:x}\"";
+    context.Response.Headers["Last-Modified"]=lastModified;
+    context.Response.Headers["ETag"]=entityTag;
     if(partial)context.Response.Headers["Content-Range"]=$"bytes {start}-{end}/{info.Length}";
     downloads.Begin(clientId,downloadId,id,info.Name,info.Length,start);
     try
