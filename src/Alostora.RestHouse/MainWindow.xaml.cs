@@ -2437,6 +2437,10 @@ public partial class MainWindow : Window
             if (subTabIndex >= 0 && subTabIndex < LibraryTabs.Items.Count)
                 LibraryTabs.SelectedIndex = subTabIndex;
         }
+        else if (tabIndex == 5 && subTabIndex >= 0 && subTabIndex < SettingsTabs.Items.Count)
+        {
+            SettingsTabs.SelectedIndex = subTabIndex;
+        }
 
         e.Handled = true;
     }
