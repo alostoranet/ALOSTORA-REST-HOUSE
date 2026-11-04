@@ -415,3 +415,19 @@ if ($app -notmatch '/api/admin/media-libraries/roots' -or
     throw "Multiple media source folders, safe unlinking, and storage reporting are incomplete."
 }
 Write-Host "PASS: audio, books and apps support multiple source folders, safe unlinking, and storage reporting."
+# Customer download center supports tracked downloads and HTTP byte-range resumption.
+$downloadService = Get-Content (Join-Path $root "src/Alostora.RestHouse/DownloadProgressService.cs") -Raw
+$downloadTests = Get-Content (Join-Path $root "tests/Alostora.RestHouse.Tests/DownloadProgressServiceTests.cs") -Raw
+if ($app -notmatch '/api/downloads/\{clientId\}' -or
+    $app -notmatch '/api/media-library/\{id\}/download' -or
+    $app -notmatch 'Accept-Ranges' -or
+    $html -notmatch 'id="downloadCenter"' -or
+    $html -notmatch 'function renderDownloads\(' -or
+    $html -notmatch 'showDownloads' -or
+    $xaml -notmatch 'CustomerShowDownloadsBox' -or
+    $downloadService -notmatch 'Interrupt\(' -or
+    $downloadTests -notmatch 'TracksProgressAndCompletesDownload' -or
+    $downloadTests -notmatch 'ResumeStartsFromRequestedRangeAndKeepsClientHistoriesSeparate') {
+    throw "Customer download progress, visibility controls, or resumable range support are incomplete."
+}
+Write-Host "PASS: customer downloads expose progress, resume-friendly byte ranges, and admin visibility control."
