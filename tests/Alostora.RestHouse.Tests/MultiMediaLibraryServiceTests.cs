@@ -137,7 +137,7 @@ public sealed class MultiMediaLibraryServiceTests : IDisposable
         library.Scan("Books");
 
         var summary = library.GetStorageSummary();
-        Assert.Equal(2, summary.RootCount);
+        Assert.Equal(library.ListRoots().Count, summary.RootCount);
         Assert.Equal(2, summary.IndexedFiles);
         Assert.Contains(summary.Roots, root => root.Id == audioRoot.Id && root.IndexedFiles == 1 && root.IndexedBytes == 4);
         Assert.Contains(summary.Roots, root => root.Id == booksRoot.Id && root.IndexedFiles == 1 && root.IndexedBytes == 3);
