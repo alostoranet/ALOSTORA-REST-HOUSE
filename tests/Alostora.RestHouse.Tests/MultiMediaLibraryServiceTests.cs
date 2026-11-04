@@ -120,6 +120,30 @@ public sealed class MultiMediaLibraryServiceTests : IDisposable
     }
 
     [Fact]
+    public void StorageSummaryReportsIndexedSizeForEachRegisteredRoot()
+    {
+        var mediaRoot = Path.Combine(_root, "media");
+        var library = new MultiMediaLibraryService(mediaRoot, _databasePath);
+        var externalAudio = Path.Combine(_root, "external-audio");
+        var externalBooks = Path.Combine(_root, "external-books");
+        Directory.CreateDirectory(externalAudio);
+        Directory.CreateDirectory(externalBooks);
+        File.WriteAllBytes(Path.Combine(externalAudio, "track.mp3"), [1, 2, 3, 4]);
+        File.WriteAllBytes(Path.Combine(externalBooks, "guide.pdf"), [5, 6, 7]);
+
+        var audioRoot = library.AddRoot("Audio", externalAudio);
+        var booksRoot = library.AddRoot("Books", externalBooks);
+        library.Scan("Audio");
+        library.Scan("Books");
+
+        var summary = library.GetStorageSummary();
+        Assert.Equal(2, summary.RootCount);
+        Assert.Equal(2, summary.IndexedFiles);
+        Assert.Contains(summary.Roots, root => root.Id == audioRoot.Id && root.IndexedFiles == 1 && root.IndexedBytes == 4);
+        Assert.Contains(summary.Roots, root => root.Id == booksRoot.Id && root.IndexedFiles == 1 && root.IndexedBytes == 3);
+    }
+
+    [Fact]
     public void RemovingExternalRootUnlinksItWithoutDeletingOriginalFiles()
     {
         var mediaRoot = Path.Combine(_root, "media");
