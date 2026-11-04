@@ -170,6 +170,24 @@
 <Button Content="فحص التطبيقات" Click="ScanAppsLibrary_Click" Padding="13,8" Margin="0,0,7,6" Background="#E7F5EC"/>
 <Button Content="تحديث القائمة" Click="RefreshMultiMediaLibrary_Click" Padding="13,8" Margin="0,0,7,6"/>
 </WrapPanel>
+<TextBlock Text="ربط مجلدات من أقراص مختلفة" FontSize="15" FontWeight="Bold" Foreground="#142D4A" Margin="0,5,0,7"/>
+<WrapPanel Margin="0,0,0,8">
+<Button Content="إضافة مجلد صوتيات" Click="AddAudioLibraryRoot_Click" Padding="12,7" Margin="0,0,6,6"/>
+<Button Content="إضافة مجلد كتب" Click="AddBooksLibraryRoot_Click" Padding="12,7" Margin="0,0,6,6"/>
+<Button Content="إضافة مجلد تطبيقات" Click="AddAppsLibraryRoot_Click" Padding="12,7" Margin="0,0,6,6"/>
+<Button Content="إزالة المجلد المحدد من الفهرس" Click="RemoveMediaLibraryRoot_Click" Padding="12,7" Margin="0,0,6,6" Background="#FFF1E8"/>
+<Button Content="تحديث المجلدات" Click="RefreshMediaLibraryRoots_Click" Padding="12,7" Margin="0,0,6,6"/>
+<Button Content="حساب مساحة التخزين" Click="RefreshStorageSummary_Click" Padding="12,7" Margin="0,0,6,6" Background="#E6F1FA"/>
+</WrapPanel>
+<TextBlock Text="المجلدات المسجلة — إزالة المسار لا تحذف الملفات الأصلية" Foreground="#64748B" FontSize="12" Margin="0,0,0,5"/>
+<DataGrid x:Name="MediaLibraryRootsGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" CanUserAddRows="False" HeadersVisibility="Column" Height="135" Margin="0,0,0,8">
+<DataGrid.Columns>
+<DataGridTextColumn Header="نوع المكتبة" Binding="{Binding KindLabel}" Width="115"/>
+<DataGridTextColumn Header="مسار المجلد" Binding="{Binding Path}" Width="*"/>
+<DataGridTextColumn Header="النوع" Binding="{Binding RootTypeLabel}" Width="90"/>
+</DataGrid.Columns>
+</DataGrid>
+<TextBlock x:Name="StorageSummaryText" Text="مساحة التخزين: اضغط حساب مساحة التخزين لعرض الملخص." Foreground="#245B87" TextWrapping="Wrap" Margin="0,0,0,10"/>
 <TextBlock x:Name="MultiMediaLibraryStatusText" Text="لم يتم فحص المكتبات بعد." Foreground="#526174" Margin="0,0,0,8"/>
 </StackPanel>
 <DataGrid x:Name="MultiMediaGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column">
