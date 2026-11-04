@@ -492,3 +492,19 @@ if ($app -match 'MapGet\("/live"' -or
     throw "Live broadcast routes, controls, or assets must not be included in this ALOSTORA REST HOUSE build."
 }
 Write-Host "PASS: no live-broadcast route, admin control, player page, or HLS assets are included."
+
+# Series cover selection must preview immediately, after upload/lookup, and when an existing series is selected.
+if ($xaml -notmatch 'x:Name="SeriesPosterPreview"' -or
+    $code -notmatch 'UpdateSeriesPosterPreview\(s\.PosterPath\)' -or
+    $code -notmatch 'UpdateSeriesPosterPreview\(path,\s*isLocalFile:\s*true\)' -or
+    $code -notmatch 'UpdateSeriesPosterPreview\(result\?\.PosterPath\)' -or
+    $code -notmatch 'UpdateSeriesPosterPreview\(result\.PosterPath\)') {
+    throw "Series poster selection is missing its visible preview workflow."
+}
+Write-Host "PASS: series posters preview on selection, before upload, after upload, and after metadata lookup."
+
+# Published standalone videos must be assigned a customer-facing subcategory before saving.
+if ($code -notmatch 'PublishBox\.IsChecked\s*==\s*true\s*&&\s*selectedCategory\s+is\s+null') {
+    throw "Published videos must be linked to a valid customer-facing subcategory."
+}
+Write-Host "PASS: published videos cannot be saved without a customer-facing subcategory."
