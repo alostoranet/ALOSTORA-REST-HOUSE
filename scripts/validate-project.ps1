@@ -445,4 +445,21 @@ if ($app -notmatch '/api/admin/download-speed-limit' -or
     throw "Optional download speed limit, admin controls, or backup coverage are incomplete."
 }
 Write-Host "PASS: aggregate download speed limit is optional, admin-controlled, and backed up."
+# Customer image-ad gallery is local, admin-managed, and independently visible.
+$customerAdsService = Get-Content (Join-Path $root "src/Alostora.RestHouse/CustomerAdService.cs") -Raw
+$customerAdsTests = Get-Content (Join-Path $root "tests/Alostora.RestHouse.Tests/CustomerAdServiceTests.cs") -Raw
+if ($app -notmatch '/api/customer-ads' -or
+    $app -notmatch '/api/admin/customer-ads' -or
+    $xaml -notmatch 'CustomerAdsGrid' -or
+    $xaml -notmatch 'CustomerShowImageAdsBox' -or
+    $code -notmatch 'AddCustomerAd_Click' -or
+    $html -notmatch 'id="customerAds"' -or
+    $html -notmatch 'function renderCustomerAd\(' -or
+    $customerAdsService -notmatch 'MaximumImageBytes' -or
+    $customerAdsTests -notmatch 'RejectsUnsupportedOrMismatchedImagesAndUnsafeLinks' -or
+    $backup -notmatch 'customer-ads.json') {
+    throw "Customer image-ad gallery, admin controls, or backup support are incomplete."
+}
+Write-Host "PASS: customer image ads support safe local upload, carousel display, admin control, and backup."
+
 
