@@ -131,7 +131,7 @@ public partial class MainWindow : Window
         {
             "Audio" => Environment.GetFolderPath(Environment.SpecialFolder.MyMusic),
             "Books" => Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            _ => Environment.GetFolderPath(Environment.SpecialFolder.MyDownloads)
+            _ => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads")
         };
         var dialog = new OpenFolderDialog
         {
