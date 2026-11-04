@@ -19,14 +19,32 @@ if ($missing.Count -gt 0) {
 }
 Write-Host ("PASS: all {0} XAML event handlers are implemented." -f $events.Count)
 
-# The management window and embedded server must use the same loopback endpoint.
-if ($code -notmatch 'http://127\.0\.0\.1:8097' -or $app -notmatch 'ListenAnyIP\(8097\)') {
+# The management window and embedded server must use the persisted configurable port.
+if ($code -notmatch 'http://127\.0\.0\.1:\{_port\}' -or
+    $app -notmatch 'ListenAnyIP\(settings\.Port\)' -or
+    $app -notmatch 'settings\.FfmpegPath,settings\.Port\)') {
     throw "Management client/server port configuration is inconsistent."
 }
 if ($app -notmatch 'ListenAnyIP\(8443,listen=>listen\.UseHttps' -or $app -notmatch 'ALOSTORA_HTTPS_CERT_PATH') {
     throw "Remote administration must use the optional dedicated HTTPS listener."
 }
 Write-Host "PASS: management client and embedded server port configuration match."
+
+# Original media must never be deleted through the management API or UI.
+if ($app -notmatch 'MapDelete\("/api/admin/library/\{id\}"' -or
+    $app -notmatch 'حذف ملفات الفيديو الأصلية غير متاح' -or
+    $app -match 'librarySvc\.DeleteFile\(' -or
+    $code -match 'DeleteVideo_Click' -or
+    $xaml -match 'DeleteVideo_Click' -or
+    $libraryService -match 'public void DeleteFile\(') {
+    throw "Permanent deletion of original video files must remain disabled."
+}
+if ($xaml -notmatch 'Click="RemoveVideoFromLibrary_Click"' -or
+    $xaml -notmatch 'Click="RemoveExternalLibraryFolder_Click"') {
+    throw "Non-destructive video and external-folder removal controls are missing."
+}
+Write-Host "PASS: original video deletion is disabled and safe removal controls are exposed."
+
 
 # Check that key management routes used by the UI exist in the embedded API.
 $requiredRoutes = @(
@@ -152,6 +170,21 @@ foreach ($testName in @("CreatesAndListsNestedManagedFolders", "RejectsPathTrave
     if (-not $libraryFolderTests.Contains($testName)) { throw ("Missing library folder regression test: " + $testName) }
 }
 Write-Host "PASS: nested folder management, path traversal protection, and non-destructive copy controls are wired."
+
+foreach ($testName in @("RegisterSelectedFilesIndexesOnlyChosenVideosFromFolder", "RemovingSelectedVideoFromLibraryNeverDeletesOriginalFile")) {
+    if (-not $libraryFolderTests.Contains($testName)) { throw ("Missing safe library selection regression test: " + $testName) }
+}
+if ($app -notmatch 'MapGet\("/api/media-libraries"' -or
+    $app -notmatch 'MapPost\("/api/admin/media-libraries/scan"' -or
+    $app -notmatch 'MapGet\("/api/media-library/\{id\}"' -or
+    $html -notmatch 'data-kind="Audio"' -or
+    $html -notmatch 'data-kind="Books"' -or
+    $html -notmatch 'data-kind="Apps"' -or
+    $html -notmatch 'function renderMediaLibraries\(') {
+    throw "Customer-facing audio, books, and Android application libraries are incomplete."
+}
+Write-Host "PASS: selected-file import, safe source preservation, and audio/books/apps customer access are covered."
+
 
 # Public catalog and media routes must enforce publication on the server, not only in browser JavaScript.
 $publicAccessPath = Join-Path $root "src/Alostora.RestHouse/PublicCatalogAccessService.cs"
