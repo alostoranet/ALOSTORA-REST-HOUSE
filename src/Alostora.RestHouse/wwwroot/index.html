@@ -801,6 +801,8 @@ document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener(
  applyCustomerSettings();if(mediaOnly){document.querySelector('#mediaLibrary').hidden=false;renderMediaLibraries();}
  else{document.querySelector('#catalogView').hidden=false;document.querySelector('#catalogToolbar').hidden=false;document.querySelector('#welcomePanel').hidden=false;renderMediaLibraries();}
 }));
+document.querySelector('#customerAdPrev').addEventListener('click',()=>renderCustomerAd(customerAdIndex-1));
+document.querySelector('#customerAdNext').addEventListener('click',()=>renderCustomerAd(customerAdIndex+1));
 for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();load();loadCustomerSettings();loadAnnouncement();loadCustomerAds();
 setInterval(async()=>{await loadCustomerSettings();await loadAnnouncement();await loadCustomerAds();},60000);
 setInterval(()=>{if(downloadRows.length)loadDownloads();},2000);
