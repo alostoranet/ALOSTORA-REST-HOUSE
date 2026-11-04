@@ -231,10 +231,19 @@ public sealed class MultiMediaLibraryService
             summaries.Add(new(root.Id, root.Kind, root.Path, root.IsDefault,
                 rootItems.Length, rootItems.Sum(x => x.SizeBytes), total, free));
         }
-        var drives = roots.Select(x => Path.GetPathRoot(x.Path))
-            .Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase)
-            .Select(x => { try { var d = new DriveInfo(x!); return d.IsReady ? (Total: (long?)d.TotalSize, Free: (long?)d.AvailableFreeSpace) : (null, null); } catch { return ((long?)null, (long?)null); } })
-            .ToArray();
+        var drives = new List<(long? Total, long? Free)>();
+        foreach (var driveRoot in roots.Select(x => Path.GetPathRoot(x.Path))
+                     .Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var drive = new DriveInfo(driveRoot!);
+                drives.Add(drive.IsReady
+                    ? ((long?)drive.TotalSize, (long?)drive.AvailableFreeSpace)
+                    : ((long?)null, (long?)null));
+            }
+            catch { drives.Add((null, null)); }
+        }
         return new(roots.Count, items.Count, items.Sum(x => x.SizeBytes),
             drives.Any(x => x.Total.HasValue) ? drives.Sum(x => x.Total ?? 0) : null,
             drives.Any(x => x.Free.HasValue) ? drives.Sum(x => x.Free ?? 0) : null,
