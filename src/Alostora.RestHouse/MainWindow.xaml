@@ -340,6 +340,7 @@
 <CheckBox x:Name="CustomerShowContactBox" Content="إظهار زر التواصل مع الإدارة" IsChecked="True" Margin="0,0,0,10"/>
 <CheckBox x:Name="CustomerShowWelcomeBox" Content="إظهار واجهة الترحيب التعريفية" IsChecked="True" Margin="0,0,0,10"/>
 <CheckBox x:Name="CustomerShowAnnouncementBox" Content="السماح بعرض شريط الإعلانات والتنبيهات" IsChecked="True"/>
+<CheckBox x:Name="CustomerShowDownloadsBox" Content="إظهار مركز التنزيلات للعميل" IsChecked="True" Margin="0,10,0,0"/>
 </StackPanel>
 </Border>
 <WrapPanel Margin="0,0,0,10">
