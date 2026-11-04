@@ -189,7 +189,8 @@ let activeVideo=null,loadedVideoId=null,items=[],seriesItems=[],categories=[],me
 
 function startMediaDownload(item){
  const downloadId=createViewerId();
- const url=item.url.replace(/\\/$/,'')+'/download?clientId='+encodeURIComponent(viewerId)+'&downloadId='+encodeURIComponent(downloadId);
+ const baseUrl=item.url.endsWith('/')?item.url.slice(0,-1):item.url;
+ const url=baseUrl+'/download?clientId='+encodeURIComponent(viewerId)+'&downloadId='+encodeURIComponent(downloadId);
  const link=document.createElement('a');link.href=url;link.download=item.fileName||item.title;link.rel='noopener';document.body.append(link);link.click();link.remove();
  setTimeout(loadDownloads,350);
 }
