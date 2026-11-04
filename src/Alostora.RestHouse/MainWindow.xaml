@@ -43,6 +43,27 @@
  <Border Background="#E8EEF5" CornerRadius="10" Padding="16" Margin="4"><StackPanel><TextBlock Text="مسارات التخزين الخارجية" Foreground="#526174" FontSize="12"/><TextBlock x:Name="DashboardStorageRootsCount" Text="—" Foreground="#142D4A" FontSize="27" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
  <Border Background="#E8EEF5" CornerRadius="10" Padding="16" Margin="4"><StackPanel><TextBlock Text="الفيديوهات المنشورة" Foreground="#526174" FontSize="12"/><TextBlock x:Name="DashboardPublishedCount" Text="—" Foreground="#16834A" FontSize="27" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
 </UniformGrid>
+<TextBlock Text="إحصاءات المشاهدة الفعلية" FontSize="18" FontWeight="Bold" Foreground="#142D4A" Margin="2,8,0,8"/>
+<Border Background="#F8FAFC" CornerRadius="10" Padding="12" Margin="4,0,4,12">
+ <StackPanel>
+  <DockPanel Margin="0,0,0,8"><TextBlock x:Name="DashboardWatchHistoryStatus" Text="جارٍ تحميل سجل المشاهدة..." Foreground="#64748B" VerticalAlignment="Center"/><Button DockPanel.Dock="Right" Content="تحديث المشاهدات" Click="RefreshWatchHistory_Click" Padding="10,5"/></DockPanel>
+  <Grid>
+   <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+   <StackPanel Grid.Column="0" Margin="0,0,6,0">
+    <TextBlock Text="الأكثر مشاهدة" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,6"/>
+    <DataGrid x:Name="DashboardPopularGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" Height="190">
+     <DataGrid.Columns><DataGridTextColumn Header="الفيديو" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="مرات التشغيل" Binding="{Binding PlayCount}" Width="95"/></DataGrid.Columns>
+    </DataGrid>
+   </StackPanel>
+   <StackPanel Grid.Column="1" Margin="6,0,0,0">
+    <TextBlock Text="آخر المشاهدات" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,6"/>
+    <DataGrid x:Name="DashboardRecentGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" Height="190">
+     <DataGrid.Columns><DataGridTextColumn Header="الفيديو" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="وقت التشغيل" Binding="{Binding StartedLocal}" Width="130"/></DataGrid.Columns>
+    </DataGrid>
+   </StackPanel>
+  </Grid>
+ </StackPanel>
+</Border>
 <TextBlock Text="إدارة المحتوى" FontSize="18" FontWeight="Bold" Foreground="#142D4A" Margin="2,0,0,8"/>
 <UniformGrid Columns="2" Rows="3" Margin="0,0,0,12">
  <Border Background="#F1F5F9" CornerRadius="10" Padding="16" Margin="4" Tag="1:0" Cursor="Hand" ToolTip="فتح جميع ملفات الفيديو المسجلة" MouseLeftButtonUp="DashboardCard_Click"><StackPanel><TextBlock Text="١. مكتبة الفيديو" FontWeight="Bold" FontSize="16" Foreground="#142D4A"/><TextBlock Text="عرض جميع الملفات المسجلة، سواء كانت أفلاماً أو حلقات أو فيديوهات مستقلة، وإدارتها من مكان واحد." TextWrapping="Wrap" Foreground="#526174" Margin="0,7,0,0"/></StackPanel></Border>
