@@ -33,8 +33,14 @@ public sealed class CustomerPageSettingsService
             try
             {
                 if (!File.Exists(_path)) return new CustomerPageSettings();
-                return JsonSerializer.Deserialize<CustomerPageSettings>(File.ReadAllText(_path))
+                var json = File.ReadAllText(_path);
+                var settings = JsonSerializer.Deserialize<CustomerPageSettings>(json)
                     ?? new CustomerPageSettings();
+                using var document = JsonDocument.Parse(json);
+                var hasDownloadsSetting = document.RootElement.ValueKind == JsonValueKind.Object &&
+                    (document.RootElement.TryGetProperty(nameof(CustomerPageSettings.ShowDownloads), out _) ||
+                     document.RootElement.TryGetProperty("showDownloads", out _));
+                return hasDownloadsSetting ? settings : settings with { ShowDownloads = true };
             }
             catch
             {
