@@ -1690,6 +1690,39 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void LookupSeriesMetadata_Click(object sender, RoutedEventArgs e)
+    {
+        var query = SeriesTitleBox.Text.Trim();
+        if (query.Length < 2)
+        {
+            SeriesMetadataLookupStatusText.Text = "اكتب اسم المسلسل أولاً.";
+            return;
+        }
+        try
+        {
+            SeriesMetadataLookupStatusText.Text = "جارٍ البحث عن بيانات المسلسل والغلاف...";
+            var url = "/api/admin/metadata/lookup?query=" + Uri.EscapeDataString(query) + "&kind=Series";
+            var result = await _http.GetFromJsonAsync<MetadataLookupAdmin>(url);
+            if (result is null)
+            {
+                SeriesMetadataLookupStatusText.Text = "لم يتم العثور على بيانات مطابقة.";
+                return;
+            }
+            SeriesTitleBox.Text = result.Title ?? query;
+            SeriesDescriptionBox.Text = result.Description ?? "";
+            SeriesYearBox.Text = result.Year?.ToString() ?? "";
+            SeriesGenreBox.Text = result.Genre ?? "";
+            _pendingSeriesPosterPath = result.PosterPath;
+            SeriesPosterPathBox.Text = _pendingSeriesPosterPath ?? "";
+            SeriesMetadataLookupStatusText.Text = "تم جلب البيانات من " + (result.Provider ?? "TVmaze") +
+                (_pendingSeriesPosterPath is null ? " دون غلاف متاح." : " وتم حفظ الغلاف محلياً. راجع البيانات ثم احفظ المسلسل.");
+        }
+        catch (Exception ex)
+        {
+            SeriesMetadataLookupStatusText.Text = "تعذر جلب بيانات المسلسل: " + ex.Message;
+        }
+    }
+
     private async void SaveSeries_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(SeriesTitleBox.Text)) { SeriesStatusText.Text = "اكتب اسم المسلسل أولاً."; return; }
