@@ -59,7 +59,7 @@ public partial class MainWindow : Window
         _videosView.Filter = FilterVideosByFolder;
         VideosGrid.ItemsSource = _videosView;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); };
+        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadLiveStreamInitialAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); };
         _messageRefreshTimer.Tick += async (_, _) => await LoadCustomerMessagesAsync();
         _messageRefreshTimer.Start();
         Closed += (_, _) => _messageRefreshTimer.Stop();
@@ -276,6 +276,67 @@ public partial class MainWindow : Window
             StatusText.Text = "تعذر إضافة ملفات الفيديو: " + ex.Message;
         }
     }
+
+    private async System.Threading.Tasks.Task LoadLiveStreamInitialAsync()
+    {
+        try { var result = await _http.GetFromJsonAsync<LiveStreamAdminResult>("/api/admin/live-stream"); LiveStreamUrlBox.Text = result?.Url ?? ""; LiveStreamStatusText.Text = string.IsNullOrWhiteSpace(result?.Url) ? "لم تتم إضافة رابط بث بعد." : "تم تحميل رابط البث المحفوظ."; }
+        catch (Exception ex) { LiveStreamStatusText.Text = "تعذر تحميل رابط البث: " + ex.Message; }
+    }
+
+    private async void LoadLiveStream_Click(object sender, RoutedEventArgs e) => await LoadLiveStreamInitialAsync();
+
+    private async void SaveLiveStream_Click(object sender, RoutedEventArgs e)
+    {
+        var value = LiveStreamUrlBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(value)) { LiveStreamStatusText.Text = "أدخل عنوان IP والمنفذ أولاً."; return; }
+        try
+        {
+            LiveStreamStatusText.Text = "جارٍ حفظ رابط البث...";
+            var response = await _http.PostAsJsonAsync("/api/admin/live-stream", new { url = value });
+            if (!response.IsSuccessStatusCode) { LiveStreamStatusText.Text = "تعذر حفظ الرابط: " + await response.Content.ReadAsStringAsync(); return; }
+            var result = await response.Content.ReadFromJsonAsync<LiveStreamAdminResult>();
+            LiveStreamUrlBox.Text = result?.Url ?? value;
+            LiveStreamStatusText.Text = "تم حفظ رابط البث. سيظهر للعملاء في صفحة البث المباشر.";
+        }
+        catch (Exception ex) { LiveStreamStatusText.Text = "تعذر حفظ الرابط: " + ex.Message; }
+    }
+
+    private async void TestLiveStream_Click(object sender, RoutedEventArgs e)
+    {
+        var value = LiveStreamUrlBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(value)) { LiveStreamStatusText.Text = "أدخل الرابط قبل الاختبار."; return; }
+        try
+        {
+            LiveStreamStatusText.Text = "جارٍ اختبار الاتصال بالرابط (مهلة 5 ثوانٍ)...";
+            var response = await _http.PostAsJsonAsync("/api/admin/live-stream/test", new { url = value });
+            var result = await response.Content.ReadFromJsonAsync<LiveStreamTestResult>();
+            LiveStreamStatusText.Text = result?.Message ?? "انتهى الاختبار دون نتيجة واضحة.";
+        }
+        catch (Exception ex) { LiveStreamStatusText.Text = "تعذر اختبار الرابط: " + ex.Message; }
+    }
+
+    private void CopyLiveStream_Click(object sender, RoutedEventArgs e)
+    {
+        var value = LiveStreamUrlBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(value)) { LiveStreamStatusText.Text = "لا يوجد رابط لنسخه."; return; }
+        try { Clipboard.SetText(value.Contains("://", StringComparison.Ordinal) ? value : "http://" + value); LiveStreamStatusText.Text = "تم نسخ الرابط."; }
+        catch (Exception ex) { LiveStreamStatusText.Text = "تعذر نسخ الرابط: " + ex.Message; }
+    }
+
+    private async void DeleteLiveStream_Click(object sender, RoutedEventArgs e)
+    {
+        if (MessageBox.Show("هل تريد حذف رابط البث المباشر من صفحة العملاء؟", "تأكيد الحذف", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        try
+        {
+            var response = await _http.DeleteAsync("/api/admin/live-stream");
+            if (!response.IsSuccessStatusCode) { LiveStreamStatusText.Text = "تعذر حذف الرابط."; return; }
+            LiveStreamUrlBox.Clear(); LiveStreamStatusText.Text = "تم حذف رابط البث من صفحة العملاء.";
+        }
+        catch (Exception ex) { LiveStreamStatusText.Text = "تعذر حذف الرابط: " + ex.Message; }
+    }
+
+    private sealed record LiveStreamAdminResult(string? Url);
+    private sealed record LiveStreamTestResult(bool Reachable, int Status, string Message);
 
     private async System.Threading.Tasks.Task LoadBrandProfileAsync()
     {
