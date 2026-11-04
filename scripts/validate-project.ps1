@@ -438,7 +438,7 @@ $speedTests = Get-Content (Join-Path $root "tests/Alostora.RestHouse.Tests/Downl
 if ($app -notmatch '/api/admin/download-speed-limit' -or
     $app -notmatch 'speedLimit.WaitAsync' -or
     $xaml -notmatch 'DownloadSpeedLimitBox' -or
-    $window -notmatch 'SaveDownloadSpeedLimit_Click' -or
+    $code -notmatch 'SaveDownloadSpeedLimit_Click' -or
     $speedService -notmatch 'WaitAsync\(' -or
     $speedTests -notmatch 'DefaultsToUnlimitedAndPersistsConfiguredLimit' -or
     $backup -notmatch 'download-speed-settings.json') {
