@@ -160,7 +160,7 @@ foreach ($testName in @("CreatesAndListsNestedManagedFolders", "RejectsPathTrave
 }
 Write-Host "PASS: nested folder management, path traversal protection, and non-destructive copy controls are wired."
 
-if ($libraryService -notmatch 'public int UnregisterFolder\\(' -or
+if ($libraryService -notmatch 'public int UnregisterFolder' -or
     $libraryService -notmatch 'RegisteredExternalFolders' -or
     $code -notmatch 'RemoveExternalLibraryFolder_Click' -or
     $xaml -notmatch 'Click="RemoveExternalLibraryFolder_Click"' -or
