@@ -266,7 +266,7 @@
 <TextBlock Text="الإعلانات والتنبيهات للعملاء" FontSize="16" FontWeight="Bold" Foreground="#80551A" Margin="0,0,0,8"/>
 <TextBlock Text="العنوان (اختياري)"/><TextBox x:Name="AnnouncementTitleBox" Padding="8" Margin="0,4,0,8" MaxLength="120"/>
 <TextBlock Text="رسالة الإعلان أو التنبيه"/><TextBox x:Name="AnnouncementMessageBox" Padding="8" Margin="0,4,0,8" Height="70" AcceptsReturn="True" TextWrapping="Wrap" MaxLength="1000"/>
-<WrapPanel Margin="0,0,0,8"><RadioButton x:Name="AnnouncementNoticeRadio" Content="تنبيه" IsChecked="True" Margin="0,0,18,0"/><RadioButton x:Name="AnnouncementAdRadio" Content="إعلان" GroupName="AnnouncementKind"/></WrapPanel>
+<WrapPanel Margin="0,0,0,8"><RadioButton x:Name="AnnouncementNoticeRadio" Content="تنبيه" GroupName="AnnouncementKind" IsChecked="True" Margin="0,0,18,0"/><RadioButton x:Name="AnnouncementAdRadio" Content="إعلان" GroupName="AnnouncementKind"/></WrapPanel>
 <CheckBox x:Name="AnnouncementActiveBox" Content="إظهار الإعلان للعملاء" Margin="0,0,0,8"/>
 <WrapPanel><Button Content="حفظ ونشر" Click="SaveAnnouncement_Click" Padding="12,7" Background="#C93640" Foreground="White" Margin="0,0,6,0"/><Button Content="تحميل الحالة الحالية" Click="LoadAnnouncement_Click" Padding="12,7"/></WrapPanel>
 <TextBlock x:Name="AnnouncementStatusText" Text="لا يوجد إعلان منشور حالياً." Foreground="#80551A" Margin="0,8,0,0" TextWrapping="Wrap"/>
