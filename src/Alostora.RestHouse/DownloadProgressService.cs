@@ -50,15 +50,21 @@ public sealed class DownloadProgressService
     public void Complete(string clientId, string downloadId)
     {
         var key = Key(clientId, downloadId);
-        if (_downloads.TryGetValue(key, out var old))
-            _downloads[key] = old with { BytesTransferred = old.TotalBytes, Status = "اكتمل", UpdatedUtc = DateTime.UtcNow };
+        while (_downloads.TryGetValue(key, out var old))
+        {
+            var updated = old with { BytesTransferred = old.TotalBytes, Status = "اكتمل", UpdatedUtc = DateTime.UtcNow };
+            if (_downloads.TryUpdate(key, updated, old)) return;
+        }
     }
 
     public void Interrupt(string clientId, string downloadId)
     {
         var key = Key(clientId, downloadId);
-        if (_downloads.TryGetValue(key, out var old) && old.Status != "اكتمل")
-            _downloads[key] = old with { Status = "توقف الاتصال — يمكن محاولة الاستئناف من مدير التنزيلات", UpdatedUtc = DateTime.UtcNow };
+        while (_downloads.TryGetValue(key, out var old) && old.Status != "اكتمل")
+        {
+            var updated = old with { Status = "توقف الاتصال — يمكن محاولة الاستئناف من مدير التنزيلات", UpdatedUtc = DateTime.UtcNow };
+            if (_downloads.TryUpdate(key, updated, old)) return;
+        }
     }
 
     private void PruneClientHistory(string clientId, string keepDownloadId)
