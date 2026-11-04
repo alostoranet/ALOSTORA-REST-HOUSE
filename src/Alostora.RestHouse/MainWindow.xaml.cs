@@ -38,6 +38,7 @@ public partial class MainWindow : Window
     private readonly int _port;
     private string? _dashboardKindFilter;
     private int _dashboardSeriesCount;
+    private int _dashboardMediaCount;
     private int _dashboardExternalRootCount;
     private Window? _activeEditorWindow;
     private Expander? _activeEditorExpander;
@@ -101,6 +102,8 @@ public partial class MainWindow : Window
             var items = await _http.GetFromJsonAsync<MultiMediaAdminItem[]>("/api/media-libraries")
                 ?? Array.Empty<MultiMediaAdminItem>();
             MultiMediaGrid.ItemsSource = items;
+            _dashboardMediaCount = items.Length;
+            UpdateDashboardStats();
             MultiMediaLibraryStatusText.Text = $"عدد الملفات المسجلة: {items.Length}. الملفات تبقى في مجلداتها الأصلية.";
         }
         catch (Exception ex)
@@ -2356,6 +2359,7 @@ public partial class MainWindow : Window
         DashboardIncompleteCount.Text = _videos.Count(x => !x.MetadataSaved).ToString("N0");
         DashboardStorageRootsCount.Text = _dashboardExternalRootCount.ToString("N0");
         DashboardPublishedCount.Text = _videos.Count(x => x.IsPublished).ToString("N0");
+        DashboardMediaCount.Text = _dashboardMediaCount.ToString("N0");
     }
 
     private void DashboardCard_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
