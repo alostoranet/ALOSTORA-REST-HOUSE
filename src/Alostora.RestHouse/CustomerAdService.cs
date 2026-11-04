@@ -48,7 +48,14 @@ public sealed class CustomerAdService
             throw new ArgumentException("الصيغ المدعومة للإعلانات: JPG وPNG وWebP فقط.");
 
         using var buffer = new MemoryStream();
-        image.CopyTo(buffer);
+        var copyBuffer = new byte[64 * 1024];
+        int copied;
+        while ((copied = image.Read(copyBuffer, 0, copyBuffer.Length)) > 0)
+        {
+            if (buffer.Length + copied > MaximumImageBytes)
+                throw new ArgumentException("حجم صورة الإعلان يجب ألا يتجاوز 5 ميجابايت.");
+            buffer.Write(copyBuffer, 0, copied);
+        }
         if (buffer.Length is <= 0 or > MaximumImageBytes)
             throw new ArgumentException("حجم صورة الإعلان يجب ألا يتجاوز 5 ميجابايت.");
         var bytes = buffer.ToArray();
@@ -145,7 +152,9 @@ public sealed class CustomerAdService
             var item = items.FirstOrDefault(x => x.Id == id);
             if (item is null) return false;
             items.Remove(item);
-            for (var i = 0; i < items.Count; i++) items[i] = items.OrderBy(x => x.SortOrder).ElementAt(i) with { SortOrder = i + 1 };
+            var ordered = items.OrderBy(x => x.SortOrder).ToList();
+            for (var i = 0; i < ordered.Count; i++) ordered[i] = ordered[i] with { SortOrder = i + 1 };
+            items = ordered;
             SaveLocked(items);
             var path = SafeImagePath(item.FileName);
             if (path is not null && File.Exists(path)) File.Delete(path);
@@ -157,7 +166,7 @@ public sealed class CustomerAdService
     {
         lock (_gate)
         {
-            var item = LoadLocked().FirstOrDefault(x => x.Id == id);
+            var item = LoadLocked().FirstOrDefault(x => x.Id == id && x.IsActive);
             var resolved = item is null ? null : SafeImagePath(item.FileName);
             if (resolved is not null && File.Exists(resolved))
             {
@@ -186,6 +195,7 @@ public sealed class CustomerAdService
             return rows.Where(x => Guid.TryParseExact(x.Id, "N", out _) &&
                                    Path.GetFileName(x.FileName) == x.FileName &&
                                    x.FileName.StartsWith(x.Id, StringComparison.OrdinalIgnoreCase) &&
+                                   Path.GetExtension(x.FileName).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".webp" &&
                                    x.DurationSeconds is >= 5 and <= 120 &&
                                    x.SortOrder > 0).ToList();
         }
