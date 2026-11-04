@@ -378,7 +378,8 @@ if ($xaml -notmatch 'VideoFoldersTree' -or
 Write-Host "PASS: admin folder browser filters the video register by folder."
 $librarySelectionTests = Get-Content (Join-Path $root "tests/Alostora.RestHouse.Tests/LibraryServiceFolderTests.cs") -Raw
 if ($librarySelectionTests -notmatch 'SelectingAnExternalFolderRegistersOnlyTheFilesTheUserChecked' -or
-    $code -notmatch 'RegisterSelectedFiles' -or
+    $code -notmatch 'register-selected-files' -or
+    $app -notmatch 'library\.RegisterSelectedFiles' -or
     $xaml -notmatch 'AddExternalMediaFolder_Click') {
     throw "External folder selection must add only the files explicitly selected by the user."
 }
