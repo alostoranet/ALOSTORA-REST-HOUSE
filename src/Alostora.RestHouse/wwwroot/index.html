@@ -649,11 +649,12 @@ function showCustomerView(view){
  window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelector('#homeNav').addEventListener('click',()=>{activeMediaKind='all';document.querySelectorAll('.media-tab').forEach(x=>x.classList.toggle('active',x.dataset.kind==='all'));showCustomerView('home');document.querySelector('#catalogView').hidden=false;document.querySelector('#catalogToolbar').hidden=false;document.querySelector('#welcomePanel').hidden=false;renderMediaLibraries();goCatalogHome();});
-document.querySelector('#contactNav').addEventListener('click',()=>showCustomerView('contact'));
+document.querySelector('#contactNav').addEventListener('click',()=>{goCatalogHome();document.querySelector('#sharedAudioPlayer')?.pause();showCustomerView('contact');});
 document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener('click',()=>{
  activeMediaKind=button.dataset.kind||'all';
  document.querySelectorAll('.media-tab').forEach(x=>x.classList.toggle('active',x===button));
  showCustomerView('home');
+ goCatalogHome();
  const mediaOnly=activeMediaKind!=='all';
  document.querySelector('#catalogView').hidden=mediaOnly;
  document.querySelector('#catalogToolbar').hidden=mediaOnly;
