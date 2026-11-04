@@ -86,9 +86,11 @@ main{max-width:1320px;padding:26px 28px 18px}
 .catalog-card h3{font-size:15px;line-height:1.45;margin:1px 0 0}
 .catalog-card small{font-size:12px;line-height:1.55}
 @media(max-width:600px){.catalog-grid,.catalog-rail{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.catalog-card{padding:8px}.catalog-card h3{font-size:14px}}
+.announcement-banner{max-width:1200px;margin:14px auto 0;padding:12px 18px;border-radius:10px;background:#273f59;border-right:4px solid #d5a84e;color:#fff}.announcement-banner[hidden]{display:none!important}.announcement-banner strong{display:block;margin-bottom:4px;color:#f6d58b}.announcement-banner p{margin:0;line-height:1.7;white-space:pre-wrap}
 
 </style></head><body>
 <header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button></nav></header>
+<div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p id="announcementMessage"></p></div>
 <main><section id="homeView">
 <div class="toolbar" id="catalogToolbar">
 <input id="search" type="search" placeholder="ابحث عن قسم أو برنامج أو فيلم...">
@@ -124,6 +126,18 @@ main{max-width:1320px;padding:26px 28px 18px}
 </section><div id="appToast" class="app-toast" role="status" aria-live="polite"></div></main>
 <footer class="developer-credit">تصميم وبرمجة: محمد النظاري</footer>
 <script>
+async function loadAnnouncement(){
+ try{
+  const response=await fetch('/api/announcement',{cache:'no-store'});
+  if(!response.ok)return;
+  const item=await response.json();
+  const banner=document.querySelector('#announcementBanner');
+  if(!item.isActive||!item.message){banner.hidden=true;return;}
+  document.querySelector('#announcementTitle').textContent=item.title|| (item.kind==='ad'?'إعلان':'تنبيه من الإدارة');
+  document.querySelector('#announcementMessage').textContent=item.message;
+  banner.hidden=false;
+ }catch{}
+}
 function createViewerId(){try{if(window.crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();if(window.crypto&&crypto.getRandomValues){const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}}catch{}return 'viewer-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);}
 let viewerId='';try{viewerId=localStorage.getItem('alostora-viewer')||'';if(!viewerId){viewerId=createViewerId();localStorage.setItem('alostora-viewer',viewerId);}}catch{viewerId=createViewerId();}
 let favorites=new Set();try{favorites=new Set(JSON.parse(localStorage.getItem('alostora-favorites')||'[]'));}catch{}
@@ -600,5 +614,5 @@ function showCustomerView(view){
 }
 document.querySelector('#homeNav').addEventListener('click',()=>{showCustomerView('home');goCatalogHome();});
 document.querySelector('#contactNav').addEventListener('click',()=>showCustomerView('contact'));
-for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();load();
+for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();loadAnnouncement();load();
 </script></body></html>
