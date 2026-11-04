@@ -9,6 +9,8 @@ $xaml = Get-Content $xamlPath -Raw
 $code = Get-Content $codePath -Raw
 $app = Get-Content $appPath -Raw
 $html = Get-Content $htmlPath -Raw
+$libraryServicePath = Join-Path $root "src/Alostora.RestHouse/LibraryService.cs"
+$libraryService = Get-Content $libraryServicePath -Raw
 
 # Every event wired in XAML must have a real code-behind handler.
 $events = [regex]::Matches($xaml, '\b(?:Click|SelectionChanged|Loaded|Checked|Unchecked|TextChanged|Drop|DragOver)="([A-Za-z_]\w*)"') |
