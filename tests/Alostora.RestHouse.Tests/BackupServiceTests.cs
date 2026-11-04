@@ -38,6 +38,7 @@ public sealed class BackupServiceTests : IDisposable
         {
             Assert.Contains(zip.Entries, x => x.FullName == "profile.json");
             Assert.Contains(zip.Entries, x => x.FullName == "announcement.json");
+            Assert.Contains(zip.Entries, x => x.FullName == "customer-page-settings.json");
             var manifest = zip.GetEntry("backup-info.txt");
             Assert.NotNull(manifest);
             using var reader = new StreamReader(manifest!.Open());
@@ -51,6 +52,7 @@ public sealed class BackupServiceTests : IDisposable
 
         Assert.Contains("قبل النسخة", File.ReadAllText(Path.Combine(_root, "profile.json")));
         Assert.Contains("تنبيه قديم", File.ReadAllText(Path.Combine(_root, "announcement.json")));
+        Assert.Contains("\\\"ShowApps\\\":false", File.ReadAllText(Path.Combine(_root, "customer-page-settings.json")));
     }
 
     public void Dispose()
