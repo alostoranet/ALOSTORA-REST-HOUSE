@@ -32,6 +32,7 @@ public partial class MainWindow : Window
     private string _posters;
     private string? _ffmpegPath;
     private string? _pendingSeriesPosterPath;
+    private string? _pendingVideoPosterPath;
     private string? _pendingCategoryPosterPath;
     private readonly HttpClient _http = new();
     private readonly int _port;
@@ -82,7 +83,7 @@ public partial class MainWindow : Window
         DashboardPopularGrid.ItemsSource = _popularPlaybackRows;
         DashboardRecentGrid.ItemsSource = _recentPlaybackRows;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); };
+        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await LoadAnnouncementAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); };
         _messageRefreshTimer.Tick += async (_, _) => await LoadCustomerMessagesAsync();
         _messageRefreshTimer.Start();
         Closed += (_, _) => _messageRefreshTimer.Stop();
@@ -573,8 +574,7 @@ public partial class MainWindow : Window
 
     private void CopyAddress_Click(object sender, RoutedEventArgs e)
     {
-        var port = int.TryParse(PortBox.Text.Trim(), out var selectedPort) && selectedPort is >= 1024 and <= 65535 ? selectedPort : _port;
-        var url = $"http://{GetLanAddress()}:{port}";
+        var url = $"http://{GetLanAddress()}:{_port}";
         Clipboard.SetText(url);
         MessageBox.Show("تم نسخ رابط المشاهدة: " + url, "نسخ الرابط", MessageBoxButton.OK, MessageBoxImage.Information);
     }
@@ -1406,7 +1406,7 @@ public partial class MainWindow : Window
             year,
             genre = GenreBox.Text,
             kind = kindItem?.Tag?.ToString() ?? "Movie",
-            posterPath = (string?)null,
+            posterPath = _pendingVideoPosterPath,
             director = DirectorBox.Text,
             cast = CastBox.Text,
             rating,
@@ -1429,6 +1429,7 @@ public partial class MainWindow : Window
             var categoryName = selectedCategory?.Title ?? "غير مصنف";
             var publication = PublishBox.IsChecked == true ? "منشور للعميل" : "محفوظ كمسودة";
             StatusText.Text = $"{(isNewMetadata ? "تمت إضافة بيانات الفيديو" : "تم تحديث بيانات الفيديو")} «{videoTitle}» إلى سجل الفيديوهات. القسم: {categoryName}. الحالة: {publication}.";
+            _pendingVideoPosterPath = null;
             await LoadVideosAsync();
             VideosGrid.SelectedItem = _videos.FirstOrDefault(v => v.Id == IdBox.Text);
         }
@@ -2191,6 +2192,91 @@ public partial class MainWindow : Window
         return "عنوان الشبكة غير معروف";
     }
 
+    private async void LoadAnnouncement_Click(object sender, RoutedEventArgs e) => await LoadAnnouncementAsync();
+
+    private async System.Threading.Tasks.Task LoadAnnouncementAsync()
+    {
+        try
+        {
+            var item = await _http.GetFromJsonAsync<AnnouncementAdmin>("/api/admin/announcement");
+            if (item is null) return;
+            AnnouncementTitleBox.Text = item.Title ?? "";
+            AnnouncementMessageBox.Text = item.Message ?? "";
+            AnnouncementActiveBox.IsChecked = item.IsActive;
+            AnnouncementAdRadio.IsChecked = item.Kind == "ad";
+            AnnouncementNoticeRadio.IsChecked = item.Kind != "ad";
+            AnnouncementStatusText.Text = item.IsActive ? "الإعلان منشور للعملاء." : "الإعلان محفوظ لكنه غير ظاهر للعملاء.";
+        }
+        catch (Exception ex) { AnnouncementStatusText.Text = "تعذر تحميل الإعلان: " + ex.Message; }
+    }
+
+    private async void SaveAnnouncement_Click(object sender, RoutedEventArgs e)
+    {
+        var request = new
+        {
+            title = AnnouncementTitleBox.Text.Trim(),
+            message = AnnouncementMessageBox.Text.Trim(),
+            isActive = AnnouncementActiveBox.IsChecked == true,
+            kind = AnnouncementAdRadio.IsChecked == true ? "ad" : "notice",
+            updatedUtc = DateTime.UtcNow
+        };
+        if (request.isActive && string.IsNullOrWhiteSpace(request.message))
+        {
+            AnnouncementStatusText.Text = "اكتب نص الإعلان قبل نشره.";
+            return;
+        }
+        try
+        {
+            var response = await _http.PostAsJsonAsync("/api/admin/announcement", request);
+            if (!response.IsSuccessStatusCode)
+            {
+                AnnouncementStatusText.Text = "تعذر حفظ الإعلان: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            AnnouncementStatusText.Text = request.isActive ? "تم حفظ الإعلان ونشره للعملاء." : "تم حفظ الإعلان وإيقاف ظهوره.";
+        }
+        catch (Exception ex) { AnnouncementStatusText.Text = "تعذر حفظ الإعلان: " + ex.Message; }
+    }
+
+    private async void LookupMetadata_Click(object sender, RoutedEventArgs e)
+    {
+        var query = TitleBox.Text.Trim();
+        if (query.Length < 2)
+        {
+            MetadataLookupStatusText.Text = "اكتب اسم الفيلم أو المسلسل أولاً.";
+            return;
+        }
+        try
+        {
+            MetadataLookupStatusText.Text = "جارٍ البحث عن البيانات والغلاف...";
+            var kind = (KindBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Movie";
+            var url = "/api/admin/metadata/lookup?query=" + Uri.EscapeDataString(query) + "&kind=" + Uri.EscapeDataString(kind);
+            var result = await _http.GetFromJsonAsync<MetadataLookupAdmin>(url);
+            if (result is null)
+            {
+                MetadataLookupStatusText.Text = "لم يتم العثور على بيانات مطابقة.";
+                return;
+            }
+            TitleBox.Text = result.Title ?? query;
+            DescriptionBox.Text = result.Description ?? "";
+            YearBox.Text = result.Year?.ToString() ?? "";
+            GenreBox.Text = result.Genre ?? "";
+            DirectorBox.Text = result.Director ?? "";
+            RatingBox.Text = result.Rating?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
+            RuntimeBox.Text = result.RuntimeMinutes?.ToString() ?? "";
+            ReleaseDateBox.Text = result.ReleaseDate ?? "";
+            _pendingVideoPosterPath = result.PosterPath;
+            PosterStatusText.Text = string.IsNullOrWhiteSpace(_pendingVideoPosterPath)
+                ? "تم جلب البيانات، ولم يتوفر غلاف قابل للحفظ."
+                : "تم تنزيل الغلاف وحفظه محلياً: " + _pendingVideoPosterPath;
+            MetadataLookupStatusText.Text = "تم جلب البيانات من " + (result.Provider ?? "المصدر") + ". راجعها ثم اضغط حفظ بيانات الفيديو.";
+        }
+        catch (Exception ex)
+        {
+            MetadataLookupStatusText.Text = "تعذر جلب البيانات: " + ex.Message;
+        }
+    }
+
     private async void RefreshWatchHistory_Click(object sender, RoutedEventArgs e)
     {
         await LoadDashboardWatchHistoryAsync();
@@ -2200,17 +2286,17 @@ public partial class MainWindow : Window
     {
         try
         {
+            var summary = await _http.GetFromJsonAsync<WatchCountsAdmin>("/api/admin/watch-counts") ?? new WatchCountsAdmin();
             var history = await _http.GetFromJsonAsync<WatchPlaybackAdmin[]>("/api/admin/watch-history")
                 ?? Array.Empty<WatchPlaybackAdmin>();
             var titles = _videos.ToDictionary(v => v.Id, v => v.Title ?? v.FileName ?? v.Id);
             _popularPlaybackRows.Clear();
-            foreach (var item in history
-                .GroupBy(x => x.VideoId, StringComparer.OrdinalIgnoreCase)
-                .Select(g => new PlaybackPopularRow
+            foreach (var item in summary.ViewCounts
+                .Select(pair => new PlaybackPopularRow
                 {
-                    VideoId = g.Key,
-                    Title = titles.TryGetValue(g.Key, out var title) ? title : "فيديو غير موجود في المكتبة",
-                    PlayCount = g.Count()
+                    VideoId = pair.Key,
+                    Title = titles.TryGetValue(pair.Key, out var title) ? title : "فيديو غير موجود في المكتبة",
+                    PlayCount = pair.Value
                 })
                 .OrderByDescending(x => x.PlayCount)
                 .ThenBy(x => x.Title, StringComparer.OrdinalIgnoreCase)
@@ -2227,10 +2313,10 @@ public partial class MainWindow : Window
                 _recentPlaybackRows.Add(new PlaybackRecentRow { Title = title, StartedLocal = localTime });
             }
 
-            var total = history.Length;
+            var total = summary.Total;
             DashboardWatchHistoryStatus.Text = total == 0
                 ? "لا توجد مشاهدات مسجلة بعد. ستظهر البيانات عند تشغيل العملاء للفيديوهات."
-                : $"سجل آخر {total:N0} عملية تشغيل فعلية — الأكثر مشاهدة محسوب من السجل المتاح.";
+                : $"إجمالي مرات التشغيل منذ بدء التسجيل: {total:N0}. ترتيب الأكثر مشاهدة محسوب من كامل السجل، وآخر المشاهدات من أحدث 200 عملية.";
         }
         catch (Exception ex)
         {
@@ -2674,6 +2760,35 @@ public partial class MainWindow : Window
         public string VideoId { get; set; } = "";
         public string ViewerId { get; set; } = "";
         public string StartedUtc { get; set; } = "";
+    }
+    
+    private sealed class WatchCountsAdmin
+    {
+        public int Total { get; set; }
+        public Dictionary<string, int> ViewCounts { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private sealed class AnnouncementAdmin
+    {
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public bool IsActive { get; set; }
+        public string Kind { get; set; } = "notice";
+    }
+
+    private sealed class MetadataLookupAdmin
+    {
+        public string? Title { get; set; }
+        public string? Description { get; set; }
+        public int? Year { get; set; }
+        public string? Genre { get; set; }
+        public string? Kind { get; set; }
+        public string? PosterPath { get; set; }
+        public string? Director { get; set; }
+        public double? Rating { get; set; }
+        public int? RuntimeMinutes { get; set; }
+        public string? ReleaseDate { get; set; }
+        public string? Provider { get; set; }
     }
 
     private sealed class AdminVideo
