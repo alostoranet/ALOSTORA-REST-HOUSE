@@ -424,6 +424,7 @@ if ($app -notmatch '/api/downloads/\{clientId\}' -or
     $html -notmatch 'id="downloadCenter"' -or
     $html -notmatch 'function renderDownloads\(' -or
     $html -notmatch 'showDownloads' -or
+    $app -notmatch '/api/downloads/\{clientId\}/\{downloadId\}' -or
     $xaml -notmatch 'CustomerShowDownloadsBox' -or
     $downloadService -notmatch 'Interrupt\(' -or
     $downloadTests -notmatch 'TracksProgressAndCompletesDownload' -or
