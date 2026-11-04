@@ -700,4 +700,5 @@ document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener(
  else{document.querySelector('#catalogView').hidden=false;document.querySelector('#catalogToolbar').hidden=false;document.querySelector('#welcomePanel').hidden=false;renderMediaLibraries();}
 }));
 for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();load();
+setInterval(async()=>{await loadCustomerSettings();await loadAnnouncement();},60000);
 </script></body></html>
