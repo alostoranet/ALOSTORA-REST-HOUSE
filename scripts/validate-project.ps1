@@ -461,3 +461,13 @@ if ($app -notmatch '/api/customer-ads' -or
     throw "Customer image-ad gallery, admin controls, or backup support are incomplete."
 }
 Write-Host "PASS: customer image ads support safe local upload, carousel display, admin control, and backup."
+# This product build intentionally excludes all live-broadcast routes, controls, and player assets.
+if ($app -match 'MapGet\("/live"' -or
+    $xaml -match 'CopyLiveAddress_Click|LiveUrlText' -or
+    $code -match 'CopyLiveAddress_Click|LiveUrlText' -or
+    (Test-Path (Join-Path $root "src/Alostora.RestHouse/wwwroot/live.html")) -or
+    (Test-Path (Join-Path $root "src/Alostora.RestHouse/wwwroot/hls.min.js")) -or
+    (Test-Path (Join-Path $root "src/Alostora.RestHouse/wwwroot/HLSJS-LICENSE.txt"))) {
+    throw "Live broadcast routes, controls, or assets must not be included in this ALOSTORA REST HOUSE build."
+}
+Write-Host "PASS: no live-broadcast route, admin control, player page, or HLS assets are included."
