@@ -65,6 +65,32 @@ public sealed class LibraryServiceFolderTests : IDisposable
     }
 
     [Fact]
+    public void SelectingAnExternalFolderRegistersOnlyTheFilesTheUserChecked()
+    {
+        var mediaRoot = Path.Combine(_root, "media");
+        var externalFolder = Path.Combine(_root, "external-selection");
+        Directory.CreateDirectory(externalFolder);
+        var first = Path.Combine(externalFolder, "first.mp4");
+        var selected = Path.Combine(externalFolder, "selected.mkv");
+        var third = Path.Combine(externalFolder, "third.avi");
+        File.WriteAllBytes(first, [1, 2, 3]);
+        File.WriteAllBytes(selected, [4, 5, 6]);
+        File.WriteAllBytes(third, [7, 8, 9]);
+
+        using var library = new LibraryService(mediaRoot, _databasePath);
+        var added = library.RegisterSelectedFiles(externalFolder, new[] { selected });
+
+        Assert.Equal(1, added);
+        var videos = library.List();
+        var onlyVideo = Assert.Single(videos);
+        Assert.Equal("selected.mkv", onlyVideo.FileName);
+        Assert.DoesNotContain(videos, video => video.FileName == "first.mp4" || video.FileName == "third.avi");
+        Assert.True(File.Exists(first));
+        Assert.True(File.Exists(selected));
+        Assert.True(File.Exists(third));
+    }
+
+    [Fact]
     public void CannotUnregisterTheManagedLibraryRoot()
     {
         var mediaRoot = Path.Combine(_root, "media");
