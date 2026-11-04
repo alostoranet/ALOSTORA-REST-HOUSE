@@ -37,6 +37,18 @@ public sealed class DownloadProgressServiceTests
     }
 
     [Fact]
+    public void RemovingActiveHistoryDoesNotRecreateAnEmptyProgressRow()
+    {
+        var service = new DownloadProgressService();
+        service.Begin("client-a", "download-a", "item-a", "book.pdf", 100, 0);
+
+        Assert.True(service.Remove("client-a", "download-a"));
+        service.Report("client-a", "download-a", 50);
+
+        Assert.Empty(service.List("client-a"));
+    }
+
+    [Fact]
     public void CanRemoveOnlyTheDownloadHistoryEntry()
     {
         var service = new DownloadProgressService();
