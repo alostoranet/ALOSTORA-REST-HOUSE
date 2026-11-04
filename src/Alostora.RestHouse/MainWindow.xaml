@@ -32,6 +32,19 @@
   <Setter Property="Foreground" Value="#1E293B"/>
   <Setter Property="FontSize" Value="13"/>
  </Style>
+ <Style TargetType="{x:Type CheckBox}">
+  <Setter Property="Foreground" Value="#334155"/>
+  <Setter Property="FontSize" Value="13"/>
+  <Setter Property="VerticalContentAlignment" Value="Center"/>
+ </Style>
+ <Style TargetType="{x:Type ComboBox}">
+  <Setter Property="Padding" Value="8"/>
+  <Setter Property="Background" Value="#FFFFFF"/>
+  <Setter Property="Foreground" Value="#1E293B"/>
+  <Setter Property="BorderBrush" Value="#CBD5E1"/>
+  <Setter Property="BorderThickness" Value="1"/>
+  <Setter Property="FontSize" Value="13"/>
+ </Style>
  <Style TargetType="{x:Type DataGrid}">
   <Setter Property="RowBackground" Value="#FFFFFF"/>
   <Setter Property="AlternatingRowBackground" Value="#F3F7FB"/>
