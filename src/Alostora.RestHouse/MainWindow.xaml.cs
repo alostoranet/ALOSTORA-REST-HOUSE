@@ -100,6 +100,7 @@ public partial class MainWindow : Window
     private async void RefreshMultiMediaLibrary_Click(object sender, RoutedEventArgs e)
     {
         await RefreshMultiMediaLibraryAsync();
+        await RefreshMediaLibraryRootsAsync();
     }
 
     private async System.Threading.Tasks.Task RefreshMultiMediaLibraryAsync()
