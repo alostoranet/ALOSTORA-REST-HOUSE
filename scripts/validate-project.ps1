@@ -184,7 +184,7 @@ if ($libraryService -notmatch 'public int UnregisterFolder' -or
     $code -notmatch 'RemoveExternalLibraryFolder_Click' -or
     $xaml -notmatch 'Click="RemoveExternalLibraryFolder_Click"' -or
     $xaml -notmatch 'Header="🎧 الصوتيات والكتب والتطبيقات"' -or
-    $xaml -match 'Visibility="Collapsed"[^>]*Header="🎧 الصوتيات والكتب والتطبيقات"' -or
+    $xaml -match 'Header="🎧 الصوتيات والكتب والتطبيقات"[^>]*Visibility="Collapsed"' -or
     $xaml -match 'Click="DeleteVideo_Click"' -or
     $app -notmatch 'حذف ملفات الفيديو الأصلية معطّل') {
     throw "External storage removal must preserve original files, audio/books/apps administration must remain visible, and permanent deletion must be disabled."
