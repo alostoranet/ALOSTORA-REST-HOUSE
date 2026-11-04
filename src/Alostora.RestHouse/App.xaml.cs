@@ -252,7 +252,7 @@ public partial class App : Application
      if(file is null||file.Length<=0||file.Length>CustomerAdService.MaximumImageBytes)
       return Results.BadRequest(new{error="اختر صورة لا يتجاوز حجمها 5 ميجابايت."});
      await using var stream=file.OpenReadStream();
-     var duration=int.TryParse(form["durationSeconds"],out var parsed)?parsed:10;
+     var duration=int.TryParse(form["durationSeconds"].ToString(),out var parsed)?parsed:10;
      var item=ads.Add(stream,file.FileName,form["title"].ToString(),form["linkUrl"].ToString(),duration);
      return Results.Ok(new{saved=true,ad=item});
     }
