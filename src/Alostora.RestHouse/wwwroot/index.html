@@ -131,13 +131,14 @@ main{max-width:1320px;padding:26px 28px 18px}
 const defaultCustomerSettings={showCatalog:true,showContinueWatching:true,showAudio:true,showBooks:true,showApps:true,showContact:true,showWelcome:true,showAnnouncement:true};
 let customerSettings={...defaultCustomerSettings};
 async function loadCustomerSettings(){
+ const previous=JSON.stringify(customerSettings);
  try{
   const response=await fetch('/api/customer-settings',{cache:'no-store'});
   if(response.ok)customerSettings={...defaultCustomerSettings,...await response.json()};
  }catch{customerSettings={...defaultCustomerSettings};}
- applyCustomerSettings();
+ applyCustomerSettings(previous!==JSON.stringify(customerSettings));
 }
-function applyCustomerSettings(){
+function applyCustomerSettings(refreshMedia=false){
  const enabled={Audio:customerSettings.showAudio!==false,Books:customerSettings.showBooks!==false,Apps:customerSettings.showApps!==false};
  document.querySelectorAll('.media-tab').forEach(button=>{
   const kind=button.dataset.kind||'all';
@@ -152,8 +153,10 @@ function applyCustomerSettings(){
  document.querySelector('#welcomePanel').hidden=customerSettings.showWelcome===false||activeMediaKind!=='all';
  document.querySelector('#continueSection').hidden=customerSettings.showContinueWatching===false||activeMediaKind!=='all';
  document.querySelector('#message').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all';
+ document.querySelectorAll('.media-tab').forEach(button=>button.classList.toggle('active',(button.dataset.kind||'all')===activeMediaKind));
  document.querySelector('#mediaLibrary').hidden=activeMediaKind==='all'&&!mediaItems.some(x=>enabled[x.kind]);
  document.querySelector('#announcementBanner').hidden=customerSettings.showAnnouncement===false||document.querySelector('#announcementBanner').dataset.active!=='true';
+ if(refreshMedia)renderMediaLibraries();
 }
 async function loadAnnouncement(){
  try{
