@@ -107,7 +107,6 @@ public partial class App : Application
     await next();
    });
    _server.UseDefaultFiles(); _server.UseStaticFiles();
-   _server.MapGet("/live",(HttpContext c)=>Results.Redirect("/live.html"+c.Request.QueryString));
    static bool IsLocal(HttpContext c)
    {
     var address = c.Connection.RemoteIpAddress;
