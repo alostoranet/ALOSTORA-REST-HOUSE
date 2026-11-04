@@ -75,6 +75,7 @@ public partial class App : Application
    builder.Services.AddSingleton(new CustomerMessageService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new RestHouseProfileService(root));
    builder.Services.AddSingleton(new AnnouncementService(root));
+   builder.Services.AddSingleton(new CustomerPageSettingsService(root));
    builder.Services.AddSingleton<MetadataLookupService>();
    builder.Services.AddSingleton(new PublicCatalogAccessService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddHostedService(provider => new ScheduledBackupService(root,posters,provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ScheduledBackupService>>()));
@@ -208,6 +209,15 @@ public partial class App : Application
    });
    _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
    _server.MapGet("/api/profile",(RestHouseProfileService profile)=>Results.Ok(profile.Load()));
+   _server.MapGet("/api/customer-settings",(CustomerPageSettingsService settings)=>Results.Ok(settings.Load()));
+   _server.MapGet("/api/admin/customer-settings",(HttpContext c,CustomerPageSettingsService settings)=>
+    IsAdmin(c)?Results.Ok(settings.Load()):Results.NotFound());
+   _server.MapPost("/api/admin/customer-settings",(HttpContext c,CustomerPageSettings request,CustomerPageSettingsService settings)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(request is null)return Results.BadRequest(new{error="إعدادات واجهة العميل غير صالحة."});
+    return Results.Ok(new{saved=true,settings=settings.Save(request)});
+   });
    _server.MapGet("/api/announcement",(AnnouncementService announcements)=>
    {
     var item=announcements.Load();
