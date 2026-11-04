@@ -79,6 +79,31 @@ public sealed class MetadataLookupService
         return null;
     }
 
+    public async Task<string?> DownloadPosterAsync(string? posterUrl, string postersRoot, CancellationToken token = default)
+    {
+        if (!Uri.TryCreate(posterUrl, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+            return null;
+        using var response = await Client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, token);
+        if (!response.IsSuccessStatusCode || (response.Content.Headers.ContentLength ?? 0) > 5_242_880)
+            return null;
+        var mediaType = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant();
+        var extension = mediaType switch { "image/jpeg" => ".jpg", "image/png" => ".png", "image/webp" => ".webp", _ => null };
+        if (extension is null) return null;
+        var bytes = await response.Content.ReadAsByteArrayAsync(token);
+        if (bytes.Length == 0 || bytes.Length > 5_242_880) return null;
+        var valid = mediaType switch {
+            "image/jpeg" => bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF,
+            "image/png" => bytes.Length >= 8 && bytes.Take(8).SequenceEqual(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }),
+            "image/webp" => bytes.Length >= 12 && System.Text.Encoding.ASCII.GetString(bytes, 0, 4) == "RIFF" && System.Text.Encoding.ASCII.GetString(bytes, 8, 4) == "WEBP",
+            _ => false
+        };
+        if (!valid) return null;
+        Directory.CreateDirectory(postersRoot);
+        var fileName = "lookup-" + Guid.NewGuid().ToString("N") + extension;
+        await File.WriteAllBytesAsync(Path.Combine(postersRoot, fileName), bytes, token);
+        return "/posters/" + fileName;
+    }
+
     private static string? Text(JsonElement element, string name) =>
         element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
 
