@@ -43,6 +43,25 @@ public sealed class LibraryServiceFolderTests : IDisposable
         Assert.False(Directory.Exists(Path.Combine(externalFolder, "new-folder")));
     }
 
+    [Fact]
+    public void RemovingSelectedVideoFromLibraryNeverDeletesOriginalFile()
+    {
+        using var library = new LibraryService(Path.Combine(_root, "media"), _databasePath);
+        var externalFolder = Path.Combine(_root, "external");
+        Directory.CreateDirectory(externalFolder);
+        var videoPath = Path.Combine(externalFolder, "keep-this.mp4");
+        File.WriteAllBytes(videoPath, new byte[] { 10, 20, 30, 40 });
+
+        Assert.Equal(1, library.RegisterFiles(new[] { videoPath }));
+        var video = Assert.Single(library.List());
+
+        library.RemoveFromLibrary(video.Id);
+
+        Assert.True(File.Exists(videoPath));
+        Assert.Equal(new byte[] { 10, 20, 30, 40 }, File.ReadAllBytes(videoPath));
+        Assert.Empty(library.List());
+    }
+
     public void Dispose()
     {
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
