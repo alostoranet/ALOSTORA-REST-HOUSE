@@ -131,12 +131,13 @@ main{max-width:1320px;padding:26px 28px 18px}
 const defaultCustomerSettings={showCatalog:true,showContinueWatching:true,showAudio:true,showBooks:true,showApps:true,showContact:true,showWelcome:true,showAnnouncement:true};
 let customerSettings={...defaultCustomerSettings};
 async function loadCustomerSettings(){
- const previous=JSON.stringify(customerSettings);
+ const previousMedia=[customerSettings.showAudio,customerSettings.showBooks,customerSettings.showApps].join('|');
  try{
   const response=await fetch('/api/customer-settings',{cache:'no-store'});
   if(response.ok)customerSettings={...defaultCustomerSettings,...await response.json()};
  }catch{}
- applyCustomerSettings(previous!==JSON.stringify(customerSettings));
+ const currentMedia=[customerSettings.showAudio,customerSettings.showBooks,customerSettings.showApps].join('|');
+ applyCustomerSettings(previousMedia!==currentMedia);
 }
 function applyCustomerSettings(refreshMedia=false){
  const enabled={Audio:customerSettings.showAudio!==false,Books:customerSettings.showBooks!==false,Apps:customerSettings.showApps!==false};
