@@ -433,6 +433,10 @@ async function play(item){
  document.querySelector('#nowPlayingTitle').textContent='يتم تشغيل: '+(item.title||'الفيديو المحدد');
  playerSection.scrollIntoView({behavior:'smooth',block:'start'});
  const generation=++playbackGeneration,previous=activeVideo;
+ const playbackId=(globalThis.crypto?.randomUUID?.()||(`${Date.now()}-${Math.random().toString(16).slice(2)}`));
+ let playbackRecorded=false;
+ const recordPlayback=()=>{if(playbackRecorded||generation!==playbackGeneration)return;playbackRecorded=true;fetch("/api/watch-events",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({viewerId,videoId:item.id,playbackId})}).catch(()=>{});};
+ player.addEventListener("playing",recordPlayback,{once:true});
  player.dataset.transcodeAttempted='0';
  if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
  const previousSave=previous?saveProgress(previous,false):Promise.resolve();
