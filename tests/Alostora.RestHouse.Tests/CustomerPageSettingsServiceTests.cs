@@ -31,6 +31,14 @@ public sealed class CustomerPageSettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public void LegacySettingsWithoutDownloadVisibilityKeepDownloadsEnabled()
+    {
+        File.WriteAllText(Path.Combine(_root, "customer-page-settings.json"),
+            "{\"ShowCatalog\":false,\"ShowAnnouncement\":true}");
+        Assert.True(_service.Load().ShowDownloads);
+    }
+
+    [Fact]
     public void SavesAndReloadsIndependentSectionVisibility()
     {
         var saved = _service.Save(new CustomerPageSettings(
