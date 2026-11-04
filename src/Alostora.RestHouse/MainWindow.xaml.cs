@@ -931,27 +931,9 @@ public partial class MainWindow : Window
         catch (Exception ex) { StatusText.Text = "تعذرت إزالة الملفات: " + ex.Message; }
     }
 
-    private async void DeleteVideo_Click(object sender, RoutedEventArgs e)
+    private void DeleteVideo_Click(object sender, RoutedEventArgs e)
     {
-        var selected = GetSelectedVideos();
-        if (selected.Length == 0) { StatusText.Text = "حدد ملفاً واحداً أو عدة ملفات أولاً."; return; }
-        var confirm = MessageBox.Show(
-            $"تحذير: سيتم حذف {selected.Length} ملف فيديو نهائياً من القرص ولا يمكن التراجع عن ذلك.\n\nسيتم حذف بياناتها وسجلات مشاهدتها أيضاً. إذا كانت مرتبطة بحلقات فستبقى الحلقات مسجلة كملفات مفقودة ويمكن إعادة ربطها لاحقاً.\n\nهل أنت متأكد؟",
-            "تأكيد الحذف النهائي للملفات المحددة", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-        if (confirm != MessageBoxResult.Yes) return;
-        try
-        {
-            StatusText.Text = $"جارٍ حذف {selected.Length} ملفاً من الجهاز...";
-            var response = await _http.PostAsJsonAsync("/api/admin/library/bulk-delete", new { ids = selected.Select(x => x.Id).ToArray() });
-            if (!response.IsSuccessStatusCode) { StatusText.Text = "تعذر حذف الملفات: " + await response.Content.ReadAsStringAsync(); return; }
-            VideosGrid.UnselectAll();
-            IdBox.Clear(); TitleBox.Clear(); DescriptionBox.Clear(); YearBox.Clear(); GenreBox.Clear();
-            DirectorBox.Clear(); CastBox.Clear(); RatingBox.Clear(); RuntimeBox.Clear(); ReleaseDateBox.Clear(); TagsBox.Clear();
-            await LoadVideosAsync();
-            await LoadMissingEpisodesAsync();
-            StatusText.Text = $"تم حذف {selected.Length} ملفاً نهائياً من القرص وتحديث المكتبة.";
-        }
-        catch (Exception ex) { StatusText.Text = "تعذر حذف الملفات: " + ex.Message; }
+        StatusText.Text = "الحذف النهائي لملفات الفيديو معطّل حفاظاً على ملفاتك الأصلية. استخدم «إزالة المحدد من المكتبة» لإخفائها دون حذفها من القرص.";
     }
 
     private async System.Threading.Tasks.Task LoadCategoriesAsync()
