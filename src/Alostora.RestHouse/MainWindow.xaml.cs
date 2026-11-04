@@ -1516,6 +1516,12 @@ public partial class MainWindow : Window
         var previousMetadata = _videos.FirstOrDefault(v => v.Id == IdBox.Text);
         var isNewMetadata = previousMetadata?.MetadataSaved != true;
         var selectedCategory = VideoCategoryPicker.SelectedItem as CategoryAdmin;
+        if (PublishBox.IsChecked == true && selectedCategory is null)
+        {
+            StatusText.Text = "لا يمكن نشر الفيديو دون قسم فرعي. إذا كان تابعاً لمسلسل، اختر المسلسل أولاً ليتم تحديد قسمه تلقائياً.";
+            VideoMainCategoryPicker.Focus();
+            return;
+        }
         int? linkedEpisodeNumber = null;
         if (VideoSeasonPicker.SelectedValue is not null)
         {
@@ -1638,6 +1644,7 @@ public partial class MainWindow : Window
         SeriesCategoryPicker.SelectedIndex = -1;
         SeriesPublishBox.IsChecked = true;
         SeriesPosterPathBox.Clear();
+        UpdateSeriesPosterPreview(null);
         SeriesFolderPathBox.Clear();
         SeasonsGrid.ItemsSource = null;
         EpisodesGrid.ItemsSource = null;
@@ -1708,6 +1715,7 @@ public partial class MainWindow : Window
         RefreshSeriesCategoryPicker(s.CategoryId);
         SeriesPublishBox.IsChecked = s.IsPublished;
         SeriesPosterPathBox.Text = s.PosterPath ?? "";
+        UpdateSeriesPosterPreview(s.PosterPath);
         SeriesFolderPathBox.Text = s.FolderPath ?? "";
         SeriesStructureBox.SelectedItem = SeriesStructureBox.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == s.OrganizationType);
         UpdateSeriesStructureLabels();
@@ -1738,6 +1746,36 @@ public partial class MainWindow : Window
         catch (Exception ex) { SeriesStatusText.Text = "تعذر تحميل المواسم: " + ex.Message; }
     }
 
+    private void UpdateSeriesPosterPreview(string? path, bool isLocalFile = false)
+    {
+        if (SeriesPosterPreview is null) return;
+        SeriesPosterPreview.Source = null;
+        if (string.IsNullOrWhiteSpace(path)) return;
+        try
+        {
+            Uri uri;
+            if (isLocalFile)
+                uri = new Uri(Path.GetFullPath(path), UriKind.Absolute);
+            else if (Uri.TryCreate(path, UriKind.Absolute, out var absolute) &&
+                     (absolute.Scheme == Uri.UriSchemeHttp || absolute.Scheme == Uri.UriSchemeHttps))
+                uri = absolute;
+            else
+                uri = new Uri(_http.BaseAddress!, path.TrimStart('/'));
+
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.UriSource = uri;
+            image.EndInit();
+            image.Freeze();
+            SeriesPosterPreview.Source = image;
+        }
+        catch
+        {
+            // Preview errors must not prevent the series metadata from being saved.
+        }
+    }
+
     private async void UploadSeriesPoster_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
@@ -1754,6 +1792,8 @@ public partial class MainWindow : Window
             SeriesStatusText.Text = error;
             return;
         }
+
+        UpdateSeriesPosterPreview(path, isLocalFile: true);
 
         if (string.IsNullOrWhiteSpace(SeriesIdBox.Text))
         {
@@ -1803,6 +1843,7 @@ public partial class MainWindow : Window
 
             var result = await response.Content.ReadFromJsonAsync<PosterUploadResult>();
             SeriesPosterPathBox.Text = result?.PosterPath ?? "";
+            UpdateSeriesPosterPreview(result?.PosterPath);
             _pendingSeriesPosterPath = null;
             SeriesStatusText.Text = "تم رفع غلاف المسلسل وحفظه بنجاح.";
             await LoadSeriesAsync();
@@ -1838,6 +1879,7 @@ public partial class MainWindow : Window
             SeriesGenreBox.Text = result.Genre ?? "";
             _pendingSeriesPosterPath = null;
             SeriesPosterPathBox.Text = result.PosterPath ?? "";
+            UpdateSeriesPosterPreview(result.PosterPath);
             SeriesMetadataLookupStatusText.Text = "تم جلب البيانات من " + (result.Provider ?? "TVmaze") +
                 (string.IsNullOrWhiteSpace(result.PosterPath) ? " دون غلاف متاح." : " وتم حفظ الغلاف محلياً. راجع البيانات ثم احفظ المسلسل.");
         }
