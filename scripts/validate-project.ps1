@@ -38,6 +38,7 @@ Write-Host "PASS: management client and embedded server share the persisted conf
 $requiredRoutes = @(
     '/api/admin/catalog-categories',
     '/api/admin/library/folders',
+    '/api/admin/library/unregister-folder',
     '/api/admin/profile',
     '/api/admin/profile/logo',
     '/api/profile',
@@ -158,6 +159,21 @@ foreach ($testName in @("CreatesAndListsNestedManagedFolders", "RejectsPathTrave
     if (-not $libraryFolderTests.Contains($testName)) { throw ("Missing library folder regression test: " + $testName) }
 }
 Write-Host "PASS: nested folder management, path traversal protection, and non-destructive copy controls are wired."
+
+if ($libraryService -notmatch 'public int UnregisterFolder\\(' -or
+    $libraryService -notmatch 'RegisteredExternalFolders' -or
+    $code -notmatch 'RemoveExternalLibraryFolder_Click' -or
+    $xaml -notmatch 'Click="RemoveExternalLibraryFolder_Click"' -or
+    $xaml -notmatch 'Header="المكتبات غير المستخدمة" Visibility="Collapsed"' -or
+    $xaml -match 'Click="DeleteVideo_Click"' -or
+    $app -notmatch 'حذف ملفات الفيديو الأصلية معطّل') {
+    throw "External storage removal must preserve original files, non-video sections must remain hidden, and permanent deletion must be disabled."
+}
+foreach ($testName in @("UnregistersSelectedExternalFolderWithoutDeletingOriginalVideos", "CannotUnregisterTheManagedLibraryRoot")) {
+    if (-not $libraryFolderTests.Contains($testName)) { throw ("Missing safe storage removal regression test: " + $testName) }
+}
+Write-Host "PASS: external storage paths can be unregistered without deleting source videos; destructive deletion is disabled."
+
 
 # Public catalog and media routes must enforce publication on the server, not only in browser JavaScript.
 $publicAccessPath = Join-Path $root "src/Alostora.RestHouse/PublicCatalogAccessService.cs"
