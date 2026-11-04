@@ -91,7 +91,7 @@ public partial class MainWindow : Window
         DashboardPopularGrid.ItemsSource = _popularPlaybackRows;
         DashboardRecentGrid.ItemsSource = _recentPlaybackRows;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await LoadAnnouncementAsync(); await LoadCustomerPageSettingsAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); await RefreshMediaLibraryRootsAsync(); };
+        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await LoadAnnouncementAsync(); await LoadCustomerPageSettingsAsync(); await LoadDownloadSpeedLimitAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); await RefreshMediaLibraryRootsAsync(); };
         _messageRefreshTimer.Tick += async (_, _) => await LoadCustomerMessagesAsync();
         _messageRefreshTimer.Start();
         Closed += (_, _) => _messageRefreshTimer.Stop();
@@ -2387,6 +2387,48 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             CustomerPageSettingsStatusText.Text = "تعذر حفظ إعدادات صفحة العملاء: " + ex.Message;
+        }
+    }
+
+    private async System.Threading.Tasks.Task LoadDownloadSpeedLimitAsync()
+    {
+        try
+        {
+            var settings = await _http.GetFromJsonAsync<DownloadSpeedLimitSettings>("/api/admin/download-speed-limit");
+            if (settings is null) return;
+            DownloadSpeedLimitBox.Text = settings.LimitMbps.ToString();
+            DownloadSpeedLimitStatusText.Text = settings.LimitMbps == 0
+                ? "التنزيلات دون حد للسرعة."
+                : $"الحد الإجمالي الحالي لجميع التنزيلات: {settings.LimitMbps} ميجابت/ثانية.";
+        }
+        catch (Exception ex)
+        {
+            DownloadSpeedLimitStatusText.Text = "تعذر تحميل حد السرعة: " + ex.Message;
+        }
+    }
+
+    private async void SaveDownloadSpeedLimit_Click(object sender, RoutedEventArgs e)
+    {
+        if (!int.TryParse(DownloadSpeedLimitBox.Text.Trim(), out var limit) || limit is < 0 or > 1000)
+        {
+            DownloadSpeedLimitStatusText.Text = "أدخل رقماً من 0 إلى 1000. الصفر يعني دون حد.";
+            return;
+        }
+        try
+        {
+            var response = await _http.PostAsJsonAsync("/api/admin/download-speed-limit", new DownloadSpeedLimitSettings(limit));
+            if (!response.IsSuccessStatusCode)
+            {
+                DownloadSpeedLimitStatusText.Text = "تعذر حفظ حد السرعة: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            DownloadSpeedLimitStatusText.Text = limit == 0
+                ? "تم إلغاء حد السرعة؛ التنزيلات تعمل بأقصى سرعة متاحة."
+                : $"تم تطبيق حد إجمالي قدره {limit} ميجابت/ثانية على جميع التنزيلات.";
+        }
+        catch (Exception ex)
+        {
+            DownloadSpeedLimitStatusText.Text = "تعذر حفظ حد السرعة: " + ex.Message;
         }
     }
 
