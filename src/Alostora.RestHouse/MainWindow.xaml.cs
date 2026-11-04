@@ -32,7 +32,17 @@ public partial class MainWindow : Window
         public string KindLabel => Kind switch { "Audio" => "الصوتيات", "Books" => "الكتب", "Apps" => "التطبيقات", _ => Kind };
         public string RootTypeLabel => IsDefault ? "أساسي" : "خارجي";
     }
-    private sealed record MediaStorageSummaryAdmin(int RootCount, int IndexedFiles, long IndexedBytes, long? DriveTotalBytes, long? DriveFreeBytes);
+    private sealed record MediaStorageRootAdmin(string Id, string Kind, string Path, bool IsDefault, int IndexedFiles, long IndexedBytes, long? DriveTotalBytes, long? DriveFreeBytes)
+    {
+        public string KindLabel => Kind switch { "Audio" => "الصوتيات", "Books" => "الكتب", "Apps" => "التطبيقات", _ => Kind };
+        public string RootTypeLabel => IsDefault ? "أساسي" : "خارجي";
+        public string IndexedBytesLabel => FormatStorageBytes(IndexedBytes);
+        public string DriveTotalLabel => DriveTotalBytes.HasValue ? FormatStorageBytes(DriveTotalBytes.Value) : "غير متاح";
+        public string DriveFreeLabel => DriveFreeBytes.HasValue ? FormatStorageBytes(DriveFreeBytes.Value) : "غير متاح";
+        public string FolderStatusLabel => Directory.Exists(Path) ? "المجلد متاح" : "المجلد غير متاح";
+        public string DriveStatusLabel => DriveTotalBytes.HasValue ? "القرص جاهز" : "القرص غير متاح";
+    }
+    private sealed record MediaStorageSummaryAdmin(int RootCount, int IndexedFiles, long IndexedBytes, long? DriveTotalBytes, long? DriveFreeBytes, MediaStorageRootAdmin[]? Roots);
 
     private readonly string _root;
     private string _library;
@@ -220,7 +230,8 @@ public partial class MainWindow : Window
             var total = summary.DriveTotalBytes.HasValue ? FormatStorageBytes(summary.DriveTotalBytes.Value) : "غير متاح";
             var free = summary.DriveFreeBytes.HasValue ? FormatStorageBytes(summary.DriveFreeBytes.Value) : "غير متاح";
             StorageSummaryText.Text = $"المجلدات المرتبطة: {summary.RootCount} | الملفات المفهرسة: {summary.IndexedFiles:N0} | حجم المحتوى المفهرس: {indexed} | إجمالي الأقراص المرتبطة: {total} | المساحة الحرة: {free}.";
-            if (showStatus) MultiMediaLibraryStatusText.Text = "تم تحديث ملخص التخزين.";
+            MediaStorageRootsGrid.ItemsSource = summary.Roots ?? Array.Empty<MediaStorageRootAdmin>();
+            if (showStatus) MultiMediaLibraryStatusText.Text = "تم تحديث ملخص التخزين وتفاصيل كل مجلد وقرص.";
         }
         catch (Exception ex)
         {
