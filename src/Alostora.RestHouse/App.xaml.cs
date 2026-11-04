@@ -72,6 +72,7 @@ public partial class App : Application
    builder.Services.AddSingleton(new VideoMetadataService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new MultiMediaLibraryService(library,Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton<DownloadProgressService>();
+   builder.Services.AddSingleton(new DownloadSpeedLimitService(root));
    builder.Services.AddSingleton(new SeriesCatalogService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new CatalogCategoryService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new CustomerMessageService(Path.Combine(root,"resthouse.db")));
@@ -219,6 +220,16 @@ public partial class App : Application
     if(!IsAdmin(c))return Results.NotFound();
     if(request is null)return Results.BadRequest(new{error="إعدادات واجهة العميل غير صالحة."});
     return Results.Ok(new{saved=true,settings=settings.Save(request)});
+   });
+   _server.MapGet("/api/admin/download-speed-limit",(HttpContext c,DownloadSpeedLimitService speedLimit)=>
+    IsAdmin(c)?Results.Ok(speedLimit.GetSettings()):Results.NotFound());
+   _server.MapPost("/api/admin/download-speed-limit",(HttpContext c,DownloadSpeedLimitSettings request,DownloadSpeedLimitService speedLimit)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(request is null||request.LimitMbps is < 0 or > 1000)
+     return Results.BadRequest(new{error="أدخل حداً بين 0 و1000 ميجابت/ثانية. الصفر يعني دون حد."});
+    try{return Results.Ok(new{saved=true,settings=speedLimit.Save(request)});}
+    catch(IOException){return Results.Problem("تعذر حفظ إعداد سرعة التنزيل.",statusCode:500);}
    });
    _server.MapGet("/api/announcement",(AnnouncementService announcements)=>
    {
@@ -407,7 +418,7 @@ public partial class App : Application
     if(string.IsNullOrWhiteSpace(clientId)||clientId.Length>80||!Regex.IsMatch(clientId,@"^[a-zA-Z0-9_-]+$")||string.IsNullOrWhiteSpace(downloadId)||downloadId.Length>80||!Regex.IsMatch(downloadId,@"^[a-zA-Z0-9_-]+$"))return Results.BadRequest(new{error="معرّف التنزيل غير صالح"});
     return downloads.Remove(clientId,downloadId)?Results.Ok(new{removed=true}):Results.NotFound();
    });
-   _server.MapGet("/api/media-library/{id}/download",async (HttpContext context,string id,string clientId,string downloadId,MultiMediaLibraryService media,DownloadProgressService downloads)=>
+   _server.MapGet("/api/media-library/{id}/download",async (HttpContext context,string id,string clientId,string downloadId,MultiMediaLibraryService media,DownloadProgressService downloads,DownloadSpeedLimitService speedLimit)=>
    {
     if(string.IsNullOrWhiteSpace(clientId)||clientId.Length>80||!Regex.IsMatch(clientId,@"^[a-zA-Z0-9_-]+$")||string.IsNullOrWhiteSpace(downloadId)||downloadId.Length>80||!Regex.IsMatch(downloadId,@"^[a-zA-Z0-9_-]+$"))
      return Results.BadRequest(new{error="معرّف التنزيل غير صالح"});
@@ -488,6 +499,7 @@ public partial class App : Application
       var wanted=(int)Math.Min(buffer.Length,length-sent);
       var read=await stream.ReadAsync(buffer.AsMemory(0,wanted),context.RequestAborted);
       if(read<=0)break;
+      await speedLimit.WaitAsync(read,context.RequestAborted);
       await context.Response.Body.WriteAsync(buffer.AsMemory(0,read),context.RequestAborted);
       sent+=read;
       downloads.Report(clientId,downloadId,start+sent);
