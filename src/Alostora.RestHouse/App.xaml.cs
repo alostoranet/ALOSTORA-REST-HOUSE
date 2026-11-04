@@ -71,6 +71,7 @@ public partial class App : Application
    builder.Services.AddSingleton(new WatchProgressService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new VideoMetadataService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new MultiMediaLibraryService(library,Path.Combine(root,"resthouse.db")));
+   builder.Services.AddSingleton<DownloadProgressService>();
    builder.Services.AddSingleton(new SeriesCatalogService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new CatalogCategoryService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new CustomerMessageService(Path.Combine(root,"resthouse.db")));
@@ -395,6 +396,104 @@ public partial class App : Application
     try{return Results.Ok(new{scanned=true,kind=request.Kind,count=media.Scan(request.Kind),items=media.List(request.Kind)});}
     catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
     catch(IOException){return Results.Problem("تعذر فحص مجلد المكتبة. تحقق من صلاحيات الوصول إلى الملفات.",statusCode:500);}
+   });
+   _server.MapGet("/api/downloads/{clientId}",(string clientId,DownloadProgressService downloads)=>
+   {
+    if(string.IsNullOrWhiteSpace(clientId)||clientId.Length>80||!Regex.IsMatch(clientId,@"^[a-zA-Z0-9_-]+$"))return Results.BadRequest(new{error="معرّف العميل غير صالح"});
+    return Results.Ok(downloads.List(clientId));
+   });
+   _server.MapDelete("/api/downloads/{clientId}/{downloadId}",(string clientId,string downloadId,DownloadProgressService downloads)=>
+   {
+    if(string.IsNullOrWhiteSpace(clientId)||clientId.Length>80||!Regex.IsMatch(clientId,@"^[a-zA-Z0-9_-]+$")||string.IsNullOrWhiteSpace(downloadId)||downloadId.Length>80||!Regex.IsMatch(downloadId,@"^[a-zA-Z0-9_-]+$"))return Results.BadRequest(new{error="معرّف التنزيل غير صالح"});
+    return downloads.Remove(clientId,downloadId)?Results.Ok(new{removed=true}):Results.NotFound();
+   });
+   _server.MapGet("/api/media-library/{id}/download",async (HttpContext context,string id,string clientId,string downloadId,MultiMediaLibraryService media,DownloadProgressService downloads)=>
+   {
+    if(string.IsNullOrWhiteSpace(clientId)||clientId.Length>80||!Regex.IsMatch(clientId,@"^[a-zA-Z0-9_-]+$")||string.IsNullOrWhiteSpace(downloadId)||downloadId.Length>80||!Regex.IsMatch(downloadId,@"^[a-zA-Z0-9_-]+$"))
+     return Results.BadRequest(new{error="معرّف التنزيل غير صالح"});
+    var path=media.ResolveById(id);
+    if(path is null)return Results.NotFound();
+    var info=new FileInfo(path);
+    if(!info.Exists||info.Length<=0)return Results.NotFound();
+    long start=0,end=info.Length-1;
+    var range=context.Request.Headers.Range.ToString();
+    var partial=false;
+    if(!string.IsNullOrWhiteSpace(range))
+    {
+     if(!range.StartsWith("bytes=",StringComparison.OrdinalIgnoreCase)||range.Contains(','))
+     {
+      context.Response.Headers.ContentRange=$"bytes */{info.Length}";
+      return Results.StatusCode(StatusCodes.Status416RangeNotSatisfiable);
+     }
+     var parts=range[6..].Split('-',2);
+     if(parts.Length!=2)
+     {
+      context.Response.Headers.ContentRange=$"bytes */{info.Length}";
+      return Results.StatusCode(StatusCodes.Status416RangeNotSatisfiable);
+     }
+     if(parts[0].Length==0)
+     {
+      if(!long.TryParse(parts[1],out var suffix)||suffix<=0)
+      {
+       context.Response.Headers.ContentRange=$"bytes */{info.Length}";
+       return Results.StatusCode(StatusCodes.Status416RangeNotSatisfiable);
+      }
+      start=Math.Max(0,info.Length-suffix);
+     }
+     else if(!long.TryParse(parts[0],out start)||start<0||start>=info.Length)
+     {
+      context.Response.Headers.ContentRange=$"bytes */{info.Length}";
+      return Results.StatusCode(StatusCodes.Status416RangeNotSatisfiable);
+     }
+     if(parts[1].Length>0&&(!long.TryParse(parts[1],out end)||end<start))
+     {
+      context.Response.Headers.ContentRange=$"bytes */{info.Length}";
+      return Results.StatusCode(StatusCodes.Status416RangeNotSatisfiable);
+     }
+     end=Math.Min(end,info.Length-1);
+     partial=true;
+    }
+    var length=end-start+1;
+    var extension=Path.GetExtension(path).ToLowerInvariant();
+    var contentType=extension switch
+    {
+     ".mp3"=>"audio/mpeg",".m4a"=>"audio/mp4",".aac"=>"audio/aac",".ogg"=>"audio/ogg",
+     ".opus"=>"audio/opus",".wav"=>"audio/wav",".flac"=>"audio/flac",
+     ".pdf"=>"application/pdf",".epub"=>"application/epub+zip",".txt"=>"text/plain",
+     ".cbz"=>"application/vnd.comicbook+zip",".cbr"=>"application/vnd.comicbook-rar",
+     ".apk" or ".xapk" or ".apks"=>"application/vnd.android.package-archive",
+     _=>"application/octet-stream"
+    };
+    context.Response.StatusCode=partial?StatusCodes.Status206PartialContent:StatusCodes.Status200OK;
+    context.Response.ContentType=contentType;
+    context.Response.ContentLength=length;
+    context.Response.Headers.AcceptRanges="bytes";
+    context.Response.Headers.ContentDisposition=new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment"){FileNameStar=info.Name}.ToString();
+    context.Response.Headers.LastModified=info.LastWriteTimeUtc.ToString("R");
+    context.Response.Headers.ETag=$"\"{info.Length:x}-{info.LastWriteTimeUtc.Ticks:x}\"";
+    if(partial)context.Response.Headers.ContentRange=$"bytes {start}-{end}/{info.Length}";
+    downloads.Begin(clientId,downloadId,id,info.Name,info.Length,start);
+    try
+    {
+     await using var stream=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read,64*1024,FileOptions.Asynchronous|FileOptions.SequentialScan);
+     stream.Seek(start,SeekOrigin.Begin);
+     var buffer=new byte[64*1024];
+     long sent=0;
+     while(sent<length)
+     {
+      var wanted=(int)Math.Min(buffer.Length,length-sent);
+      var read=await stream.ReadAsync(buffer.AsMemory(0,wanted),context.RequestAborted);
+      if(read<=0)break;
+      await context.Response.Body.WriteAsync(buffer.AsMemory(0,read),context.RequestAborted);
+      sent+=read;
+      downloads.Report(clientId,downloadId,start+sent);
+     }
+     if(sent==length)downloads.Complete(clientId,downloadId);
+     else downloads.Interrupt(clientId,downloadId);
+    }
+    catch(OperationCanceledException){downloads.Interrupt(clientId,downloadId);}
+    catch(IOException){downloads.Interrupt(clientId,downloadId);throw;}
+    return Results.Empty;
    });
    _server.MapGet("/api/media-library/{id}",(string id,MultiMediaLibraryService media)=>
    {
