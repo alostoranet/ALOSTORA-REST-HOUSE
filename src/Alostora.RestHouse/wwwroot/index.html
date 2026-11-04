@@ -146,10 +146,10 @@ function applyCustomerSettings(refreshMedia=false){
   button.hidden=kind==='all'?!customerSettings.showCatalog&&!enabled.Audio&&!enabled.Books&&!enabled.Apps:!enabled[kind];
  });
  document.querySelector('#contactNav').hidden=customerSettings.showContact===false;
- document.querySelector('.header-search').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all'||!document.querySelector('#contactView').hidden;
  if(customerSettings.showContact===false&&!document.querySelector('#contactView').hidden)showCustomerView('home');
  const mediaOnly=activeMediaKind!=='all';
  if(mediaOnly&&!enabled[activeMediaKind])activeMediaKind='all';
+ document.querySelector('.header-search').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all'||!document.querySelector('#contactView').hidden;
  document.querySelector('#catalogView').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all';
  document.querySelector('#catalogToolbar').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all';
  document.querySelector('#welcomePanel').hidden=customerSettings.showWelcome===false||activeMediaKind!=='all';
