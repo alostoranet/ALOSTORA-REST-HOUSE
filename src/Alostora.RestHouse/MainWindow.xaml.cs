@@ -2871,12 +2871,12 @@ public sealed class FolderVideoSelectionWindow : Window
             FullPath = x.FullPath,
             FileName = x.FileName,
             SizeText = FormatSize(x.SizeBytes),
-            Selected = true
+            Selected = false
         }));
 
         var root = new DockPanel { Margin = new Thickness(16) };
         var header = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
-        header.Children.Add(new TextBlock { Text = "تم تحديد جميع الفيديوهات تلقائياً. ألغِ تحديد ما لا تريد إضافته.", FontSize = 19, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(20,45,74)) });
+        header.Children.Add(new TextBlock { Text = "حدد الفيديوهات التي تريد إضافتها فقط، ويمكنك استخدام تحديد الكل أو إلغاء التحديد.", FontSize = 19, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(20,45,74)) });
         header.Children.Add(new TextBlock { Text = folderPath, TextWrapping = TextWrapping.Wrap, Foreground = System.Windows.Media.Brushes.DimGray, Margin = new Thickness(0,6,0,8) });
         var selectionButtons = new StackPanel { Orientation = Orientation.Horizontal };
         var allButton = new Button { Content = "تحديد الكل", Padding = new Thickness(12,6,12,6), Margin = new Thickness(0,0,6,0) };

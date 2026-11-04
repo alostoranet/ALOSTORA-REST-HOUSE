@@ -47,6 +47,15 @@ if ($xaml -notmatch 'Click="RemoveVideoFromLibrary_Click"' -or
 }
 Write-Host "PASS: original video deletion is disabled and safe removal controls are exposed."
 
+if ($code -notmatch 'Selected\s*=\s*false' -or
+    $code -notmatch 'حدد الفيديوهات التي تريد إضافتها فقط' -or
+    $code -notmatch 'Content = "تحديد الكل"' -or
+    $code -notmatch 'Content = "إلغاء التحديد"') {
+    throw "Folder video selection must start empty and provide select-all and clear-selection controls."
+}
+Write-Host "PASS: folder import starts with no files selected and exposes explicit selection controls."
+
+
 
 # Check that key management routes used by the UI exist in the embedded API.
 $requiredRoutes = @(
