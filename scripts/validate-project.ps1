@@ -110,6 +110,10 @@ Write-Host "PASS: customer audio, books, and apps libraries are wired to the loc
 $customerSettingsTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/CustomerPageSettingsServiceTests.cs"
 if (-not (Test-Path $customerSettingsTestsPath) -or
     $xaml -notmatch 'Header="🖥️ واجهة العميل"' -or
+    $xaml -notmatch 'Header="📢 الإعلانات"' -or
+    $xaml -notmatch 'x:Name="SettingsTabs"' -or
+    $xaml -notmatch 'Tag="5:1"' -or
+    $xaml -notmatch 'Tag="5:3"' -or
     $xaml -notmatch 'CustomerShowCatalogBox' -or
     $xaml -notmatch 'CustomerShowContinueBox' -or
     $xaml -notmatch 'CustomerShowAudioBox' -or
@@ -123,6 +127,8 @@ if (-not (Test-Path $customerSettingsTestsPath) -or
     $app -notmatch 'MapGet\("\/api\/customer-settings"' -or
     $app -notmatch 'MapPost\("\/api\/admin\/customer-settings"' -or
     $html -notmatch 'function applyCustomerSettings\(' -or
+    $html -notmatch 'class="header-search"' -or
+    $html -notmatch 'id="search"' -or
     $html -notmatch 'customerSettings\.showApps' -or
     $html -notmatch 'customerSettings\.showBooks' -or
     $html -notmatch 'customerSettings\.showAudio') {
