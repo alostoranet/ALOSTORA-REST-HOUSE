@@ -49,6 +49,17 @@ public sealed class DownloadProgressServiceTests
     }
 
     [Fact]
+    public void KeepsDownloadHistoryBoundedPerClient()
+    {
+        var service = new DownloadProgressService();
+        for (var i = 0; i < 40; i++)
+            service.Begin("client-a", "download-" + i, "item-" + i, "file-" + i, 100, 0);
+
+        Assert.Equal(30, service.List("client-a").Count);
+        Assert.Empty(service.List("client-b"));
+    }
+
+    [Fact]
     public void CanRemoveOnlyTheDownloadHistoryEntry()
     {
         var service = new DownloadProgressService();
