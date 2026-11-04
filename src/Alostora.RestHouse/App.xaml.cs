@@ -422,32 +422,32 @@ public partial class App : Application
     {
      if(!range.StartsWith("bytes=",StringComparison.OrdinalIgnoreCase)||range.Contains(','))
      {
-      context.Response.Headers.ContentRange=$"bytes */{info.Length}";
+      context.Response.Headers["Content-Range"]=$"bytes */{info.Length}";
       return Results.StatusCode(StatusCodes.Status416RangeNotSatisfiable);
      }
      var parts=range[6..].Split('-',2);
      if(parts.Length!=2)
      {
-      context.Response.Headers.ContentRange=$"bytes */{info.Length}";
+      context.Response.Headers["Content-Range"]=$"bytes */{info.Length}";
       return Results.StatusCode(StatusCodes.Status416RangeNotSatisfiable);
      }
      if(parts[0].Length==0)
      {
       if(!long.TryParse(parts[1],out var suffix)||suffix<=0)
       {
-       context.Response.Headers.ContentRange=$"bytes */{info.Length}";
+       context.Response.Headers["Content-Range"]=$"bytes */{info.Length}";
        return Results.StatusCode(StatusCodes.Status416RangeNotSatisfiable);
       }
       start=Math.Max(0,info.Length-suffix);
      }
      else if(!long.TryParse(parts[0],out start)||start<0||start>=info.Length)
      {
-      context.Response.Headers.ContentRange=$"bytes */{info.Length}";
+      context.Response.Headers["Content-Range"]=$"bytes */{info.Length}";
       return Results.StatusCode(StatusCodes.Status416RangeNotSatisfiable);
      }
      if(parts[1].Length>0&&(!long.TryParse(parts[1],out end)||end<start))
      {
-      context.Response.Headers.ContentRange=$"bytes */{info.Length}";
+      context.Response.Headers["Content-Range"]=$"bytes */{info.Length}";
       return Results.StatusCode(StatusCodes.Status416RangeNotSatisfiable);
      }
      end=Math.Min(end,info.Length-1);
@@ -467,11 +467,11 @@ public partial class App : Application
     context.Response.StatusCode=partial?StatusCodes.Status206PartialContent:StatusCodes.Status200OK;
     context.Response.ContentType=contentType;
     context.Response.ContentLength=length;
-    context.Response.Headers.AcceptRanges="bytes";
-    context.Response.Headers.ContentDisposition=new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment"){FileNameStar=info.Name}.ToString();
-    context.Response.Headers.LastModified=info.LastWriteTimeUtc.ToString("R");
-    context.Response.Headers.ETag=$"\"{info.Length:x}-{info.LastWriteTimeUtc.Ticks:x}\"";
-    if(partial)context.Response.Headers.ContentRange=$"bytes {start}-{end}/{info.Length}";
+    context.Response.Headers["Accept-Ranges"]="bytes";
+    context.Response.Headers["Content-Disposition"]=new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment"){FileNameStar=info.Name}.ToString();
+    context.Response.Headers["Last-Modified"]=info.LastWriteTimeUtc.ToString("R");
+    context.Response.Headers["ETag"]=$"\"{info.Length:x}-{info.LastWriteTimeUtc.Ticks:x}\"";
+    if(partial)context.Response.Headers["Content-Range"]=$"bytes {start}-{end}/{info.Length}";
     downloads.Begin(clientId,downloadId,id,info.Name,info.Length,start);
     try
     {
