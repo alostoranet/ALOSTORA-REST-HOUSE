@@ -98,7 +98,7 @@ main{max-width:1320px;padding:26px 28px 18px}
 </div>
 <p id="message">يتم تحميل المكتبة...</p>
 <section id="catalogView" aria-live="polite">
-<div class="catalog-page-head"><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div></div>
+<div class="catalog-page-head"><button id="catalogHome" class="catalog-home" type="button">الرئيسية</button><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div></div>
 <div id="catalogContent"></div>
 <section id="playerSection" aria-live="polite" hidden>
 <h2 id="nowPlayingTitle">المشغل</h2><video id="player" controls playsinline preload="metadata"></video>
@@ -583,6 +583,7 @@ async function loadBrandProfile(){
  }catch{}
 }
 document.querySelector('#catalogBack').addEventListener('click',goCatalogBack);
+document.querySelector('#catalogHome').addEventListener('click',goCatalogHome);
 function goCatalogHome(){if(catalogPage.type==='player'){flushProgress();player.pause();player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;}catalogStack=[];catalogPage={type:'home',title:'الرئيسية'};renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});}
 function showCustomerView(view){
  const home=view==='home',homeView=document.querySelector('#homeView'),contactView=document.querySelector('#contactView');
