@@ -32,16 +32,17 @@
 <TabItem Header="🏠 لوحة التحكم">
 <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
 <Border Background="#142D4A" CornerRadius="12" Padding="22" Margin="0,0,0,14">
- <StackPanel><TextBlock Text="لوحة إدارة مكتبة الفيديو" Foreground="White" FontSize="22" FontWeight="Bold"/>
- <TextBlock Text="نظرة عامة على جميع محتويات المكتبة وأدوات إدارتها. الأرقام التالية تُحمّل من بيانات البرنامج الفعلية." Foreground="#D7E5F3" FontSize="13" TextWrapping="Wrap" Margin="0,8,0,0"/></StackPanel>
+ <StackPanel><TextBlock Text="لوحة إدارة مكتبة الاستراحة" Foreground="White" FontSize="22" FontWeight="Bold"/>
+ <TextBlock Text="نظرة عامة على الفيديوهات والمسلسلات والصوتيات والكتب والتطبيقات وأدوات إدارتها. الأرقام تُحمّل من بيانات البرنامج الفعلية." Foreground="#D7E5F3" FontSize="13" TextWrapping="Wrap" Margin="0,8,0,0"/></StackPanel>
 </Border>
-<UniformGrid Columns="3" Rows="2" Margin="0,0,0,14">
+<UniformGrid Columns="3" Rows="3" Margin="0,0,0,14">
  <Border Background="#E8EEF5" CornerRadius="10" Padding="16" Margin="4"><StackPanel><TextBlock Text="إجمالي الفيديوهات" Foreground="#526174" FontSize="12"/><TextBlock x:Name="DashboardVideosCount" Text="—" Foreground="#142D4A" FontSize="27" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
  <Border Background="#E8EEF5" CornerRadius="10" Padding="16" Margin="4"><StackPanel><TextBlock Text="المسلسلات" Foreground="#526174" FontSize="12"/><TextBlock x:Name="DashboardSeriesCount" Text="—" Foreground="#142D4A" FontSize="27" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
  <Border Background="#E8EEF5" CornerRadius="10" Padding="16" Margin="4"><StackPanel><TextBlock Text="الأقسام والتصنيفات" Foreground="#526174" FontSize="12"/><TextBlock x:Name="DashboardCategoriesCount" Text="—" Foreground="#142D4A" FontSize="27" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
  <Border Background="#E8EEF5" CornerRadius="10" Padding="16" Margin="4"><StackPanel><TextBlock Text="بيانات تحتاج استكمالاً" Foreground="#526174" FontSize="12"/><TextBlock x:Name="DashboardIncompleteCount" Text="—" Foreground="#C93640" FontSize="27" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
  <Border Background="#E8EEF5" CornerRadius="10" Padding="16" Margin="4"><StackPanel><TextBlock Text="مسارات التخزين الخارجية" Foreground="#526174" FontSize="12"/><TextBlock x:Name="DashboardStorageRootsCount" Text="—" Foreground="#142D4A" FontSize="27" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
  <Border Background="#E8EEF5" CornerRadius="10" Padding="16" Margin="4"><StackPanel><TextBlock Text="الفيديوهات المنشورة" Foreground="#526174" FontSize="12"/><TextBlock x:Name="DashboardPublishedCount" Text="—" Foreground="#16834A" FontSize="27" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
+ <Border Background="#E8EEF5" CornerRadius="10" Padding="16" Margin="4"><StackPanel><TextBlock Text="الصوتيات والكتب والتطبيقات" Foreground="#526174" FontSize="12"/><TextBlock x:Name="DashboardMediaCount" Text="—" Foreground="#245B87" FontSize="27" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
 </UniformGrid>
 <TextBlock Text="إحصاءات المشاهدة الفعلية" FontSize="18" FontWeight="Bold" Foreground="#142D4A" Margin="2,8,0,8"/>
 <Border Background="#F8FAFC" CornerRadius="10" Padding="12" Margin="4,0,4,12">
