@@ -162,7 +162,7 @@ public static class BackupService
         }
         finally
         {
-            foreach (var configName in new[] { "profile.json", "announcement.json", "customer-page-settings.json" })
+            foreach (var configName in new[] { "profile.json", "announcement.json", "customer-page-settings.json", "download-speed-settings.json" })
                 try { var staged = Path.Combine(applicationRoot, configName + ".restore.tmp"); if (File.Exists(staged)) File.Delete(staged); } catch { }
             try { if (File.Exists(stagedDatabase)) File.Delete(stagedDatabase); } catch { }
             try { if (Directory.Exists(stagedPosters)) Directory.Delete(stagedPosters, recursive: true); } catch { }
@@ -265,7 +265,7 @@ public static class BackupService
             }
 
             var applicationRoot = Path.GetDirectoryName(Path.GetFullPath(databasePath))!;
-            foreach (var configName in new[] { "profile.json", "announcement.json", "customer-page-settings.json" })
+            foreach (var configName in new[] { "profile.json", "announcement.json", "customer-page-settings.json", "download-speed-settings.json" })
             {
                 var sourceConfig = Path.Combine(applicationRoot, configName);
                 if (File.Exists(sourceConfig))
