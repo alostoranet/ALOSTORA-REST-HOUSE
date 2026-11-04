@@ -4,7 +4,7 @@
 <style>
 :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#0c1727;color:#f5f7fb;font-family:Tahoma,Arial}
 header{background:#142d4a;padding:25px 5%;border-bottom:3px solid #c93640}h1{margin:0;font-size:27px}header p{color:#d4e3f1;margin:8px 0 0}.brand-bar{display:flex;align-items:center;gap:14px;min-height:62px}.brand-logo{width:64px;height:64px;object-fit:contain;border-radius:12px;background:#fff;padding:4px}.brand-logo[hidden]{display:none!important}
-.customer-nav{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.nav-button{border:1px solid #526b85;background:#1b3550;color:#f5f7fb;border-radius:9px;padding:11px 18px;font:inherit;font-weight:700;cursor:pointer}.nav-button.active{background:#c93640;border-color:#c93640}.nav-button:focus-visible{outline:3px solid #f2c56b;outline-offset:2px}
+.customer-nav{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.header-search{display:flex;align-items:center;margin-top:15px;max-width:1320px}.header-search input{width:min(100%,520px);background:#1a3049;color:#fff;border:1px solid #49627c;border-radius:10px;padding:12px 15px;font:inherit;box-shadow:0 5px 16px #0002}.header-search[hidden]{display:none!important}@media(max-width:600px){.header-search input{width:100%}}.nav-button{border:1px solid #526b85;background:#1b3550;color:#f5f7fb;border-radius:9px;padding:11px 18px;font:inherit;font-weight:700;cursor:pointer}.nav-button.active{background:#c93640;border-color:#c93640}.nav-button:focus-visible{outline:3px solid #f2c56b;outline-offset:2px}
 
 main{max-width:1200px;margin:auto;padding:24px}h2{font-size:22px}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.toolbar input,.toolbar select{background:#172a40;color:#fff;border:1px solid #38516d;border-radius:9px;padding:12px;font:inherit;min-width:180px}
@@ -89,12 +89,12 @@ main{max-width:1320px;padding:26px 28px 18px}
 .announcement-banner{max-width:1320px;margin:14px auto 0;padding:12px 18px;border-radius:11px;background:linear-gradient(100deg,#263f59,#1b3149);border-right:4px solid #d5a84e;color:#fff;display:flex;align-items:center;gap:16px;overflow:hidden;box-shadow:0 8px 22px #0003}.announcement-banner[hidden]{display:none!important}.announcement-banner strong{flex:0 0 auto;margin:0;color:#f6d58b;white-space:nowrap}.announcement-banner p{flex:1 1 auto;min-width:0;margin:0;line-height:1.8;white-space:nowrap;direction:rtl;width:max-content;max-width:none;animation:announcement-marquee 28s linear infinite}.announcement-banner:hover p{animation-play-state:paused}@keyframes announcement-marquee{from{transform:translateX(100%)}to{transform:translateX(-100%)}}@media(max-width:600px){.announcement-banner{margin:10px 12px;padding:10px 12px;gap:10px}.announcement-banner strong{font-size:12px}.announcement-banner p{font-size:13px}}
 
 </style></head><body>
-<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
+<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><div class="header-search"><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل أو قسم..."></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
 <div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p id="announcementMessage"></p></div>
 <main><section id="homeView">
 <section class="welcome-panel" id="welcomePanel"><div><span class="welcome-kicker">ALOSTORA REST HOUSE</span><h2>خدمات الاستراحة ومكتبتها في مكان واحد</h2><p>تصفح الأفلام والمسلسلات، واستمع إلى الصوتيات، وافتح الكتب وحمّل التطبيقات المتاحة على الشبكة المحلية.</p></div><div class="welcome-mark" aria-hidden="true">▶</div></section>
 <div class="toolbar" id="catalogToolbar">
-<input id="search" type="search" placeholder="ابحث عن قسم أو برنامج أو فيلم...">
+
 <select id="categoryFilter" aria-label="القسم" hidden><option value="">كل الأقسام</option></select>
 <select id="collection"><option value="">كل الأعمال المنشورة</option><option value="favorites">المفضلة</option></select>
 <select id="sort" aria-label="ترتيب المكتبة"><option value="title">ترتيب حسب الاسم</option><option value="year">الأحدث إنتاجاً</option><option value="rating">الأعلى تقييماً</option></select>
@@ -146,6 +146,7 @@ function applyCustomerSettings(refreshMedia=false){
   button.hidden=kind==='all'?!customerSettings.showCatalog&&!enabled.Audio&&!enabled.Books&&!enabled.Apps:!enabled[kind];
  });
  document.querySelector('#contactNav').hidden=customerSettings.showContact===false;
+ document.querySelector('.header-search').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all'||!document.querySelector('#contactView').hidden;
  if(customerSettings.showContact===false&&!document.querySelector('#contactView').hidden)showCustomerView('home');
  const mediaOnly=activeMediaKind!=='all';
  if(mediaOnly&&!enabled[activeMediaKind])activeMediaKind='all';
@@ -686,6 +687,7 @@ function showCustomerView(view){
  document.querySelector('#contactNav').classList.toggle('active',!home);
  document.querySelector('#homeNav').setAttribute('aria-pressed',String(home));
  document.querySelector('#contactNav').setAttribute('aria-pressed',String(!home));
+ document.querySelector('.header-search').hidden=!home||customerSettings.showCatalog===false||activeMediaKind!=='all';
  window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelector('#homeNav').addEventListener('click',()=>{activeMediaKind='all';document.querySelectorAll('.media-tab').forEach(x=>x.classList.toggle('active',x.dataset.kind==='all'));showCustomerView('home');document.querySelector('#catalogView').hidden=false;document.querySelector('#catalogToolbar').hidden=false;document.querySelector('#welcomePanel').hidden=false;document.querySelector('#message').hidden=false;renderMediaLibraries();goCatalogHome();applyCustomerSettings();});
