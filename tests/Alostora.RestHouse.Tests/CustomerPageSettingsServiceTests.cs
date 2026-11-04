@@ -28,6 +28,7 @@ public sealed class CustomerPageSettingsServiceTests : IDisposable
         Assert.True(value.ShowWelcome);
         Assert.True(value.ShowAnnouncement);
         Assert.True(value.ShowDownloads);
+        Assert.True(value.ShowImageAds);
     }
 
     [Fact]
@@ -36,6 +37,7 @@ public sealed class CustomerPageSettingsServiceTests : IDisposable
         File.WriteAllText(Path.Combine(_root, "customer-page-settings.json"),
             "{\"ShowCatalog\":false,\"ShowAnnouncement\":true}");
         Assert.True(_service.Load().ShowDownloads);
+        Assert.True(_service.Load().ShowImageAds);
     }
 
     [Fact]
@@ -44,7 +46,7 @@ public sealed class CustomerPageSettingsServiceTests : IDisposable
         var saved = _service.Save(new CustomerPageSettings(
             ShowCatalog: true, ShowContinueWatching: false, ShowAudio: true,
             ShowBooks: false, ShowApps: false, ShowContact: true,
-            ShowWelcome: false, ShowAnnouncement: true, ShowDownloads: false));
+            ShowWelcome: false, ShowAnnouncement: true, ShowDownloads: false, ShowImageAds: false));
         var loaded = _service.Load();
         Assert.Equal(saved, loaded);
         Assert.False(loaded.ShowContinueWatching);
@@ -52,6 +54,7 @@ public sealed class CustomerPageSettingsServiceTests : IDisposable
         Assert.False(loaded.ShowApps);
         Assert.False(loaded.ShowWelcome);
         Assert.False(loaded.ShowDownloads);
+        Assert.False(loaded.ShowImageAds);
     }
 
     public void Dispose()
