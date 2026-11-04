@@ -238,7 +238,10 @@ function navigateCatalog(page,push=true){
 function goCatalogBack(){
  if(!catalogStack.length)return;
  if(catalogPage.type==='player'){
-  flushProgress();player.pause();player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;
+  playbackGeneration++;
+  flushProgress();
+  if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
+  player.pause();player.onerror=null;player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;
  }
  catalogPage=catalogStack.pop();renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});
 }
@@ -638,7 +641,7 @@ async function loadBrandProfile(){
 }
 document.querySelector('#catalogBack').addEventListener('click',goCatalogBack);
 document.querySelector('#catalogHome').addEventListener('click',goCatalogHome);
-function goCatalogHome(){if(catalogPage.type==='player'){flushProgress();player.pause();player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;}catalogStack=[];catalogPage={type:'home',title:'الرئيسية'};renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});}
+function goCatalogHome(){if(catalogPage.type==='player'){playbackGeneration++;flushProgress();if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}player.pause();player.onerror=null;player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;}catalogStack=[];catalogPage={type:'home',title:'الرئيسية'};renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});}
 function showCustomerView(view){
  const home=view==='home',homeView=document.querySelector('#homeView'),contactView=document.querySelector('#contactView');
  homeView.hidden=!home;contactView.hidden=home;
