@@ -265,7 +265,7 @@ public static class BackupService
             }
 
             var applicationRoot = Path.GetDirectoryName(Path.GetFullPath(databasePath))!;
-            foreach (var configName in new[] { "profile.json", "announcement.json" })
+            foreach (var configName in new[] { "profile.json", "announcement.json", "customer-page-settings.json" })
             {
                 var sourceConfig = Path.Combine(applicationRoot, configName);
                 if (File.Exists(sourceConfig))
