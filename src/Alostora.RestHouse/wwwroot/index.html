@@ -684,7 +684,7 @@ function showCustomerView(view){
  document.querySelector('#contactNav').setAttribute('aria-pressed',String(!home));
  window.scrollTo({top:0,behavior:'smooth'});
 }
-document.querySelector('#homeNav').addEventListener('click',()=>{activeMediaKind='all';document.querySelectorAll('.media-tab').forEach(x=>x.classList.toggle('active',x.dataset.kind==='all'));showCustomerView('home');document.querySelector('#catalogView').hidden=false;document.querySelector('#catalogToolbar').hidden=false;document.querySelector('#welcomePanel').hidden=false;document.querySelector('#message').hidden=false;renderMediaLibraries();goCatalogHome();});
+document.querySelector('#homeNav').addEventListener('click',()=>{activeMediaKind='all';document.querySelectorAll('.media-tab').forEach(x=>x.classList.toggle('active',x.dataset.kind==='all'));showCustomerView('home');document.querySelector('#catalogView').hidden=false;document.querySelector('#catalogToolbar').hidden=false;document.querySelector('#welcomePanel').hidden=false;document.querySelector('#message').hidden=false;renderMediaLibraries();goCatalogHome();applyCustomerSettings();});
 document.querySelector('#contactNav').addEventListener('click',()=>{goCatalogHome();document.querySelector('#sharedAudioPlayer')?.pause();showCustomerView('contact');});
 document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener('click',()=>{
  activeMediaKind=button.dataset.kind||'all';
@@ -696,7 +696,7 @@ document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener(
  document.querySelector('#catalogToolbar').hidden=mediaOnly;
  document.querySelector('#welcomePanel').hidden=mediaOnly;
  document.querySelector('#message').hidden=mediaOnly;
- if(mediaOnly){document.querySelector('#mediaLibrary').hidden=false;renderMediaLibraries();}
+ applyCustomerSettings();if(mediaOnly){document.querySelector('#mediaLibrary').hidden=false;renderMediaLibraries();}
  else{document.querySelector('#catalogView').hidden=false;document.querySelector('#catalogToolbar').hidden=false;document.querySelector('#welcomePanel').hidden=false;renderMediaLibraries();}
 }));
 for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();load();
