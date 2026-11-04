@@ -735,19 +735,10 @@ public partial class App : Application
     catch(FileNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
     catch(Exception ex) { return Results.BadRequest(new{error=ex.Message}); }
    });
-   _server.MapDelete("/api/admin/library/{id}",(HttpContext c,string id,LibraryService librarySvc,VideoMetadataService metadata,WatchProgressService progress)=>
+   _server.MapDelete("/api/admin/library/{id}",(HttpContext c,string id)=>
    {
     if(!IsAdmin(c)) return Results.NotFound();
-    if(string.IsNullOrWhiteSpace(id)||id.Length!=24||!id.All(Uri.IsHexDigit)) return Results.BadRequest(new{error="معرّف الفيديو غير صالح"});
-    try
-    {
-     librarySvc.DeleteFile(id);
-     metadata.Delete(id);
-     progress.DeleteVideo(id);
-     return Results.Ok(new{deleted=true,message="تم حذف ملف الفيديو من القرص وتنظيف بياناته وسجل مشاهدته. إذا كان مربوطاً بحلقة فستظهر كحلقة مفقودة ويمكن إعادة ربطها."});
-    }
-    catch(FileNotFoundException) { return Results.NotFound(new{error="ملف الفيديو غير موجود أو حُذف مسبقاً"}); }
-    catch(Exception ex) { return Results.Problem("تعذر حذف ملف الفيديو: "+ex.Message); }
+    return Results.Conflict(new{error="حذف ملفات الفيديو الأصلية معطّل حفاظاً على مكتبتك. استخدم «إزالة من المكتبة فقط» لإخفائها دون حذفها من القرص."});
    });
    _server.MapGet("/api/progress/{viewerId}",(string viewerId,WatchProgressService db)=>viewerId.Length<=80?Results.Ok(db.Get(viewerId)):Results.BadRequest());
    _server.MapGet("/api/admin/watch-history",(HttpContext c,WatchProgressService db)=>IsAdmin(c)?Results.Ok(db.GetRecentPlayback(200)):Results.NotFound());
