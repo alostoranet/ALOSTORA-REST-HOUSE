@@ -86,7 +86,7 @@ main{max-width:1320px;padding:26px 28px 18px}
 .catalog-card h3{font-size:15px;line-height:1.45;margin:1px 0 0}
 .catalog-card small{font-size:12px;line-height:1.55}
 @media(max-width:600px){.catalog-grid,.catalog-rail{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.catalog-card{padding:8px}.catalog-card h3{font-size:14px}}
-.announcement-banner{max-width:1200px;margin:14px auto 0;padding:12px 18px;border-radius:10px;background:#273f59;border-right:4px solid #d5a84e;color:#fff}.announcement-banner[hidden]{display:none!important}.announcement-banner strong{display:block;margin-bottom:4px;color:#f6d58b}.announcement-banner p{margin:0;line-height:1.7;white-space:pre-wrap}
+.announcement-banner{max-width:1320px;margin:14px auto 0;padding:12px 18px;border-radius:11px;background:linear-gradient(100deg,#263f59,#1b3149);border-right:4px solid #d5a84e;color:#fff;display:flex;align-items:center;gap:16px;overflow:hidden;box-shadow:0 8px 22px #0003}.announcement-banner[hidden]{display:none!important}.announcement-banner strong{flex:0 0 auto;margin:0;color:#f6d58b;white-space:nowrap}.announcement-banner p{flex:1 1 auto;min-width:0;margin:0;line-height:1.8;white-space:nowrap;direction:rtl;width:max-content;max-width:none;animation:announcement-marquee 28s linear infinite}.announcement-banner:hover p{animation-play-state:paused}@keyframes announcement-marquee{from{transform:translateX(100%)}to{transform:translateX(-100%)}}@media(max-width:600px){.announcement-banner{margin:10px 12px;padding:10px 12px;gap:10px}.announcement-banner strong{font-size:12px}.announcement-banner p{font-size:13px}}
 
 </style></head><body>
 <header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
@@ -128,16 +128,46 @@ main{max-width:1320px;padding:26px 28px 18px}
 </section><div id="appToast" class="app-toast" role="status" aria-live="polite"></div></main>
 <footer class="developer-credit">تصميم وبرمجة: محمد النظاري</footer>
 <script>
+const defaultCustomerSettings={showCatalog:true,showContinueWatching:true,showAudio:true,showBooks:true,showApps:true,showContact:true,showWelcome:true,showAnnouncement:true};
+let customerSettings={...defaultCustomerSettings};
+async function loadCustomerSettings(){
+ try{
+  const response=await fetch('/api/customer-settings',{cache:'no-store'});
+  if(response.ok)customerSettings={...defaultCustomerSettings,...await response.json()};
+ }catch{customerSettings={...defaultCustomerSettings};}
+ applyCustomerSettings();
+}
+function applyCustomerSettings(){
+ const enabled={Audio:customerSettings.showAudio!==false,Books:customerSettings.showBooks!==false,Apps:customerSettings.showApps!==false};
+ document.querySelectorAll('.media-tab').forEach(button=>{
+  const kind=button.dataset.kind||'all';
+  button.hidden=kind==='all'?!customerSettings.showCatalog&&!enabled.Audio&&!enabled.Books&&!enabled.Apps:!enabled[kind];
+ });
+ document.querySelector('#contactNav').hidden=customerSettings.showContact===false;
+ if(customerSettings.showContact===false&&!document.querySelector('#contactView').hidden)showCustomerView('home');
+ const mediaOnly=activeMediaKind!=='all';
+ if(mediaOnly&&!enabled[activeMediaKind])activeMediaKind='all';
+ document.querySelector('#catalogView').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all';
+ document.querySelector('#catalogToolbar').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all';
+ document.querySelector('#welcomePanel').hidden=customerSettings.showWelcome===false||activeMediaKind!=='all';
+ document.querySelector('#continueSection').hidden=customerSettings.showContinueWatching===false||activeMediaKind!=='all';
+ document.querySelector('#message').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all';
+ document.querySelector('#mediaLibrary').hidden=activeMediaKind==='all'&&!mediaItems.some(x=>enabled[x.kind]);
+ document.querySelector('#announcementBanner').hidden=customerSettings.showAnnouncement===false||document.querySelector('#announcementBanner').dataset.active!=='true';
+}
 async function loadAnnouncement(){
  try{
   const response=await fetch('/api/announcement',{cache:'no-store'});
   if(!response.ok)return;
   const item=await response.json();
   const banner=document.querySelector('#announcementBanner');
-  if(!item.isActive||!item.message){banner.hidden=true;return;}
+  if(!item.isActive||!item.message){banner.dataset.active='false';banner.hidden=true;return;}
   document.querySelector('#announcementTitle').textContent=item.title|| (item.kind==='ad'?'إعلان':'تنبيه من الإدارة');
-  document.querySelector('#announcementMessage').textContent=item.message;
-  banner.hidden=false;
+  const message=document.querySelector('#announcementMessage');
+  message.textContent=item.message;
+  message.style.animationDuration=Math.max(18,Math.min(65,item.message.length*.55))+'s';
+  banner.dataset.active='true';
+  banner.hidden=customerSettings.showAnnouncement===false;
  }catch{}
 }
 function createViewerId(){try{if(window.crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();if(window.crypto&&crypto.getRandomValues){const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}}catch{}return 'viewer-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);}
@@ -148,7 +178,8 @@ let activeVideo=null,loadedVideoId=null,items=[],seriesItems=[],categories=[],me
 
 function renderMediaLibraries(){
  const section=document.querySelector('#mediaLibrary'),grid=document.querySelector('#mediaGrid'),hint=document.querySelector('#mediaPlayerHint');
- const rows=mediaItems.filter(x=>activeMediaKind==='all'||x.kind===activeMediaKind);
+ const enabledKinds={Audio:customerSettings.showAudio!==false,Books:customerSettings.showBooks!==false,Apps:customerSettings.showApps!==false};
+ const rows=mediaItems.filter(x=>(activeMediaKind==='all'||x.kind===activeMediaKind)&&enabledKinds[x.kind]!==false);
  const titles={all:'الصوتيات والكتب والتطبيقات',Audio:'مكتبة الصوتيات',Books:'مكتبة الكتب',Apps:'مكتبة التطبيقات'};
  document.querySelector('#mediaLibraryTitle').textContent=titles[activeMediaKind]||titles.all;
  section.hidden=activeMediaKind==='all'&&rows.length===0;
@@ -611,6 +642,8 @@ function showAppToast(message,kind='success'){
  appToastTimer=setTimeout(()=>toast.classList.remove('visible'),4500);
 }
 async function load(){try{
+ await loadCustomerSettings();
+ await loadAnnouncement();
  const [libraryResponse,seriesResponse,categoryResponse]=await Promise.all([fetch('/api/library'),fetch('/api/series'),fetch('/api/catalog-categories')]);
  if(!libraryResponse.ok||!seriesResponse.ok||!categoryResponse.ok){
   const failed=[['الأفلام',libraryResponse],['المسلسلات',seriesResponse],['الأقسام',categoryResponse]].filter(([,r])=>!r.ok).map(([name,r])=>name+' ('+r.status+')');
@@ -666,5 +699,5 @@ document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener(
  if(mediaOnly){document.querySelector('#mediaLibrary').hidden=false;renderMediaLibraries();}
  else{document.querySelector('#catalogView').hidden=false;document.querySelector('#catalogToolbar').hidden=false;document.querySelector('#welcomePanel').hidden=false;renderMediaLibraries();}
 }));
-for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();loadAnnouncement();load();
+for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();load();
 </script></body></html>
