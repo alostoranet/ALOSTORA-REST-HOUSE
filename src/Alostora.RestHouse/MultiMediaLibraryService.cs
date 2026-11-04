@@ -215,7 +215,7 @@ public sealed class MultiMediaLibraryService
             var rootItems = items.Where(item =>
             {
                 var path = Resolve(item.RelativePath, roots);
-                return path is not null && IsWithin(path, root.Path);
+                return item.Kind == root.Kind && path is not null && IsWithin(path, root.Path);
             }).ToArray();
             long? total = null, free = null;
             try
