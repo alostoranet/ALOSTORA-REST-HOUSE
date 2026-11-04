@@ -1273,6 +1273,7 @@ public partial class MainWindow : Window
     private async void VideosGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (VideosGrid.SelectedItem is not AdminVideo v) return;
+        _pendingVideoPosterPath = null;
         IdBox.Text = v.Id;
         TitleBox.Text = v.Title ?? "";
         DescriptionBox.Text = v.Description ?? "";
@@ -2240,6 +2241,11 @@ public partial class MainWindow : Window
 
     private async void LookupMetadata_Click(object sender, RoutedEventArgs e)
     {
+        if (string.IsNullOrWhiteSpace(IdBox.Text))
+        {
+            MetadataLookupStatusText.Text = "اختر ملف فيديو من المكتبة أولاً حتى تُحفظ البيانات له.";
+            return;
+        }
         var query = TitleBox.Text.Trim();
         if (query.Length < 2)
         {
