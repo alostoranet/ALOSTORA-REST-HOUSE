@@ -27,26 +27,55 @@ public partial class MainWindow : Window
         public string KindLabel => Kind switch { "Audio" => "الصوتيات", "Books" => "الكتب", "Apps" => "التطبيقات", _ => Kind };
         public string SizeLabel => SizeBytes < 1024 * 1024 ? $"{SizeBytes / 1024.0:0.#} KB" : $"{SizeBytes / (1024.0 * 1024.0):0.##} MB";
     }
+    private sealed record MultiMediaRootAdminItem(string Id, string Kind, string Path, bool IsDefault)
+    {
+        public string KindLabel => Kind switch { "Audio" => "الصوتيات", "Books" => "الكتب", "Apps" => "التطبيقات", _ => Kind };
+        public string RootTypeLabel => IsDefault ? "أساسي" : "خارجي";
+    }
+    private sealed record MediaStorageSummaryAdmin(int RootCount, int IndexedFiles, long IndexedBytes, long? DriveTotalBytes, long? DriveFreeBytes);
+
     private readonly string _root;
     private string _library;
     private string _posters;
     private string? _ffmpegPath;
     private string? _pendingSeriesPosterPath;
+    private string? _pendingVideoPosterPath;
     private string? _pendingCategoryPosterPath;
-    private readonly HttpClient _http = new() { BaseAddress = new Uri("http://127.0.0.1:8097") };
+    private readonly HttpClient _http = new();
+    private readonly int _port;
+    private string? _dashboardKindFilter;
+    private int _dashboardSeriesCount;
+    private int _dashboardMediaCount;
+    private int _dashboardExternalRootCount;
+    private Window? _activeEditorWindow;
+    private Expander? _activeEditorExpander;
+    private object? _activeEditorContent;
     private readonly ObservableCollection<AdminVideo> _videos = new();
+    private readonly ObservableCollection<PlaybackPopularRow> _popularPlaybackRows = new();
+    private readonly ObservableCollection<PlaybackRecentRow> _recentPlaybackRows = new();
+
     private ICollectionView? _videosView;
     private string? _selectedVideoFolderPath;
     private readonly ObservableCollection<EpisodeCandidate> _episodeCandidates = new();
     private CategoryAdmin[] _categories = Array.Empty<CategoryAdmin>();
     private bool _suppressCustomerMessagePopup;
+    private readonly HashSet<long> _knownCustomerMessageIds = new();
+    private bool _customerMessagesInitialized;
     private bool _suppressVideoSeriesPickerEvent;
     private readonly DispatcherTimer _messageRefreshTimer = new() { Interval = TimeSpan.FromSeconds(30) };
 
     public MainWindow(string root, string library, string posters, string? ffmpegPath)
+        : this(root, library, posters, ffmpegPath, 8097)
+    {
+    }
+
+    public MainWindow(string root, string library, string posters, string? ffmpegPath, int port)
     {
         InitializeComponent();
         _root = root;
+        _port = port;
+        _http.BaseAddress = new Uri($"http://127.0.0.1:{_port}");
+        PortBox.Text = _port.ToString();
         _library = library;
         _posters = posters;
         _ffmpegPath = ffmpegPath;
@@ -54,12 +83,16 @@ public partial class MainWindow : Window
         LibraryBox.Text = library;
         MediaFolderBox.Text = library;
         PostersFolderBox.Text = posters;
-        AddressBox.Text = $"رابط المشاهدة: http://{GetLanAddress()}:8097";
+        AddressBox.Text = $"رابط المشاهدة: http://{GetLanAddress()}:{_port}";
+        ViewingUrlText.Text = $"http://{GetLanAddress()}:{_port}";
+        LiveUrlText.Text = $"http://{GetLanAddress()}:{_port}/live";
         _videosView = CollectionViewSource.GetDefaultView(_videos);
         _videosView.Filter = FilterVideosByFolder;
         VideosGrid.ItemsSource = _videosView;
+        DashboardPopularGrid.ItemsSource = _popularPlaybackRows;
+        DashboardRecentGrid.ItemsSource = _recentPlaybackRows;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); };
+        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await LoadAnnouncementAsync(); await LoadCustomerAdsAsync(); await LoadCustomerPageSettingsAsync(); await LoadDownloadSpeedLimitAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); await RefreshMediaLibraryRootsAsync(); };
         _messageRefreshTimer.Tick += async (_, _) => await LoadCustomerMessagesAsync();
         _messageRefreshTimer.Start();
         Closed += (_, _) => _messageRefreshTimer.Stop();
@@ -68,6 +101,7 @@ public partial class MainWindow : Window
     private async void RefreshMultiMediaLibrary_Click(object sender, RoutedEventArgs e)
     {
         await RefreshMultiMediaLibraryAsync();
+        await RefreshMediaLibraryRootsAsync();
     }
 
     private async System.Threading.Tasks.Task RefreshMultiMediaLibraryAsync()
@@ -77,6 +111,8 @@ public partial class MainWindow : Window
             var items = await _http.GetFromJsonAsync<MultiMediaAdminItem[]>("/api/media-libraries")
                 ?? Array.Empty<MultiMediaAdminItem>();
             MultiMediaGrid.ItemsSource = items;
+            _dashboardMediaCount = items.Length;
+            UpdateDashboardStats();
             MultiMediaLibraryStatusText.Text = $"عدد الملفات المسجلة: {items.Length}. الملفات تبقى في مجلداتها الأصلية.";
         }
         catch (Exception ex)
@@ -84,6 +120,122 @@ public partial class MainWindow : Window
             if (MultiMediaLibraryStatusText is not null)
                 MultiMediaLibraryStatusText.Text = "تعذر تحميل المكتبات الإضافية: " + ex.Message;
         }
+    }
+
+    private async void AddAudioLibraryRoot_Click(object sender, RoutedEventArgs e) => await AddMediaLibraryRootAsync("Audio");
+    private async void AddBooksLibraryRoot_Click(object sender, RoutedEventArgs e) => await AddMediaLibraryRootAsync("Books");
+    private async void AddAppsLibraryRoot_Click(object sender, RoutedEventArgs e) => await AddMediaLibraryRootAsync("Apps");
+
+    private async System.Threading.Tasks.Task AddMediaLibraryRootAsync(string kind)
+    {
+        var initial = kind switch
+        {
+            "Audio" => Environment.GetFolderPath(Environment.SpecialFolder.MyMusic),
+            "Books" => Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            _ => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads")
+        };
+        var dialog = new OpenFolderDialog
+        {
+            Title = kind switch { "Audio" => "اختر مجلداً يحتوي ملفات الصوتيات", "Books" => "اختر مجلداً يحتوي الكتب والمستندات", _ => "اختر مجلداً يحتوي تطبيقات أندرويد" },
+            InitialDirectory = Directory.Exists(initial) ? initial : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            var response = await _http.PostAsJsonAsync("/api/admin/media-libraries/roots",
+                new { kind, folderPath = Path.GetFullPath(dialog.FolderName) });
+            if (!response.IsSuccessStatusCode)
+            {
+                MultiMediaLibraryStatusText.Text = "تعذر ربط المجلد: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            MultiMediaLibraryStatusText.Text = "تم ربط المجلد. جارٍ فحص الملفات...";
+            await ScanMultiMediaLibraryAsync(kind);
+            await RefreshMediaLibraryRootsAsync();
+        }
+        catch (Exception ex)
+        {
+            MultiMediaLibraryStatusText.Text = "تعذر ربط المجلد: " + ex.Message;
+        }
+    }
+
+    private async void RemoveMediaLibraryRoot_Click(object sender, RoutedEventArgs e)
+    {
+        if (MediaLibraryRootsGrid.SelectedItem is not MultiMediaRootAdminItem selected)
+        {
+            MultiMediaLibraryStatusText.Text = "حدد مجلداً خارجياً من القائمة أولاً.";
+            return;
+        }
+        if (selected.IsDefault)
+        {
+            MultiMediaLibraryStatusText.Text = "لا يمكن إزالة المجلد الأساسي. يمكنك إزالة المجلدات الخارجية فقط.";
+            return;
+        }
+        var confirm = MessageBox.Show(
+            "سيتم فك ربط هذا المسار من فهرس الاستراحة فقط. لن يتم حذف أي ملف من القرص. هل تريد المتابعة؟",
+            "تأكيد إزالة مسار المكتبة", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes) return;
+        try
+        {
+            var response = await _http.DeleteAsync("/api/admin/media-libraries/roots/" + Uri.EscapeDataString(selected.Id));
+            if (!response.IsSuccessStatusCode)
+            {
+                MultiMediaLibraryStatusText.Text = "تعذرت إزالة المسار: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            await RefreshMediaLibraryRootsAsync();
+            await RefreshMultiMediaLibraryAsync();
+            MultiMediaLibraryStatusText.Text = "تم فك ربط المسار من الفهرس. الملفات الأصلية لم تتغير.";
+        }
+        catch (Exception ex)
+        {
+            MultiMediaLibraryStatusText.Text = "تعذرت إزالة المسار: " + ex.Message;
+        }
+    }
+
+    private async void RefreshMediaLibraryRoots_Click(object sender, RoutedEventArgs e) => await RefreshMediaLibraryRootsAsync();
+
+    private async System.Threading.Tasks.Task RefreshMediaLibraryRootsAsync()
+    {
+        try
+        {
+            var roots = await _http.GetFromJsonAsync<MultiMediaRootAdminItem[]>("/api/admin/media-libraries/roots")
+                ?? Array.Empty<MultiMediaRootAdminItem>();
+            MediaLibraryRootsGrid.ItemsSource = roots;
+        }
+        catch (Exception ex)
+        {
+            MultiMediaLibraryStatusText.Text = "تعذر تحميل مسارات المكتبات: " + ex.Message;
+        }
+    }
+
+    private async void RefreshStorageSummary_Click(object sender, RoutedEventArgs e) => await RefreshStorageSummaryAsync(true);
+
+    private async System.Threading.Tasks.Task RefreshStorageSummaryAsync(bool showStatus)
+    {
+        try
+        {
+            var summary = await _http.GetFromJsonAsync<MediaStorageSummaryAdmin>("/api/admin/storage-summary");
+            if (summary is null) return;
+            var indexed = FormatStorageBytes(summary.IndexedBytes);
+            var total = summary.DriveTotalBytes.HasValue ? FormatStorageBytes(summary.DriveTotalBytes.Value) : "غير متاح";
+            var free = summary.DriveFreeBytes.HasValue ? FormatStorageBytes(summary.DriveFreeBytes.Value) : "غير متاح";
+            StorageSummaryText.Text = $"المجلدات المرتبطة: {summary.RootCount} | الملفات المفهرسة: {summary.IndexedFiles:N0} | حجم المحتوى المفهرس: {indexed} | إجمالي الأقراص المرتبطة: {total} | المساحة الحرة: {free}.";
+            if (showStatus) MultiMediaLibraryStatusText.Text = "تم تحديث ملخص التخزين.";
+        }
+        catch (Exception ex)
+        {
+            if (showStatus) MultiMediaLibraryStatusText.Text = "تعذر حساب مساحة التخزين: " + ex.Message;
+        }
+    }
+
+    private static string FormatStorageBytes(long bytes)
+    {
+        string[] units = ["بايت", "KB", "MB", "GB", "TB"];
+        double value = bytes;
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1) { value /= 1024; unit++; }
+        return $"{value:0.##} {units[unit]}";
     }
 
     private async void ScanAudioLibrary_Click(object sender, RoutedEventArgs e) => await ScanMultiMediaLibraryAsync("Audio");
@@ -114,6 +266,7 @@ public partial class MainWindow : Window
     private bool FilterVideosByFolder(object item)
     {
         if (item is not AdminVideo video) return false;
+        if (!string.IsNullOrWhiteSpace(_dashboardKindFilter) && !string.Equals(video.Kind, _dashboardKindFilter, StringComparison.OrdinalIgnoreCase)) return false;
         if (string.IsNullOrWhiteSpace(_selectedVideoFolderPath)) return true;
         if (string.IsNullOrWhiteSpace(video.FolderPath)) return false;
         var selected = _selectedVideoFolderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
@@ -131,6 +284,8 @@ public partial class MainWindow : Window
             var previousPath = _selectedVideoFolderPath;
             var folders = await _http.GetFromJsonAsync<LibraryFolderInfo[]>("/api/admin/library/folders")
                 ?? Array.Empty<LibraryFolderInfo>();
+            _dashboardExternalRootCount = folders.Count(x => x.ParentPath is null && !x.IsManaged);
+            UpdateDashboardStats();
             VideoFoldersTree.Items.Clear();
             var all = new TreeViewItem { Header = $"كل المجلدات ({folders.Length})", Tag = null, IsExpanded = true };
             var nodes = new Dictionary<string, TreeViewItem>(StringComparer.OrdinalIgnoreCase);
@@ -140,7 +295,8 @@ public partial class MainWindow : Window
                 var node = new TreeViewItem
                 {
                     Header = folder.Name + (folder.IsManaged ? "" : " (خارجي)"),
-                    Tag = folder.FullPath
+                    Tag = folder.FullPath,
+                    ToolTip = folder.FullPath
                 };
                 if (!string.IsNullOrWhiteSpace(folder.ParentPath) && nodes.TryGetValue(folder.ParentPath, out var parent))
                     parent.Items.Add(node);
@@ -174,6 +330,8 @@ public partial class MainWindow : Window
             _selectedVideoFolderPath = selected.Tag as string;
         else
             _selectedVideoFolderPath = null;
+        if (!string.IsNullOrWhiteSpace(_selectedVideoFolderPath))
+            StatusText.Text = "المجلد المحدد: " + _selectedVideoFolderPath;
         _videosView?.Refresh();
     }
 
@@ -470,13 +628,127 @@ public partial class MainWindow : Window
         }
     }
 
+
+    private void OpenDedicatedEditor(Expander editor, string title)
+    {
+        if (_activeEditorWindow is not null || editor.Content is null) return;
+        _activeEditorExpander = editor;
+        _activeEditorContent = editor.Content;
+        editor.Content = null;
+        var window = new Window
+        {
+            Title = title,
+            Owner = this,
+            Width = 720,
+            Height = 700,
+            MinWidth = 560,
+            MinHeight = 480,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            FlowDirection = FlowDirection.RightToLeft,
+            Background = System.Windows.Media.Brushes.White,
+            Content = new ScrollViewer { Content = _activeEditorContent, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }
+        };
+        _activeEditorWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (window.Content is ScrollViewer editorScrollViewer) editorScrollViewer.Content = null;
+            window.Content = null;
+            var closedEditor = _activeEditorExpander;
+            if (closedEditor is not null)
+            {
+                closedEditor.Content = _activeEditorContent;
+                closedEditor.IsExpanded = false;
+                if (closedEditor == CategoryEditorExpander) CategoriesGrid.SelectedIndex = -1;
+                else if (closedEditor == SeriesEditorExpander) SeriesPicker.SelectedIndex = -1;
+                else if (closedEditor == EpisodeEditorExpander) EpisodesGrid.SelectedIndex = -1;
+            }
+            _activeEditorWindow = null;
+            _activeEditorExpander = null;
+            _activeEditorContent = null;
+        };
+        window.ShowDialog();
+    }
+
+    private void CloseDedicatedEditor() => _activeEditorWindow?.Close();
+
+    private void PortBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (ViewingUrlText is null || PortBox is null || LiveUrlText is null) return;
+        if (int.TryParse(PortBox.Text.Trim(), out var port) && port is >= 1024 and <= 65535)
+        {
+            ViewingUrlText.Text = $"http://{GetLanAddress()}:{port} (يُطبّق بعد الحفظ وإعادة التشغيل)";
+            LiveUrlText.Text = $"http://{GetLanAddress()}:{port}/live (يُطبّق بعد الحفظ وإعادة التشغيل)";
+        }
+        else
+        {
+            ViewingUrlText.Text = "أدخل منفذاً صحيحاً بين 1024 و65535.";
+            LiveUrlText.Text = "أدخل منفذاً صحيحاً بين 1024 و65535.";
+        }
+    }
+
+    private void SavePort_Click(object sender, RoutedEventArgs e)
+    {
+        if (!int.TryParse(PortBox.Text.Trim(), out var port) || port is < 1024 or > 65535)
+        {
+            MessageBox.Show("أدخل منفذاً صحيحاً بين 1024 و65535.", "إعداد المنفذ", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        try
+        {
+            AppSettings.SavePort(_root, port);
+            ViewingUrlText.Text = $"http://{GetLanAddress()}:{port}";
+            LiveUrlText.Text = $"http://{GetLanAddress()}:{port}/live";
+            AddressBox.Text = $"رابط المشاهدة (بعد إعادة التشغيل): http://{GetLanAddress()}:{port}";
+            MessageBox.Show($"تم حفظ المنفذ {port}. أغلق البرنامج وافتحه مجدداً لتطبيقه على السيرفر.", "إعداد المنفذ", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("تعذر حفظ المنفذ: " + ex.Message, "إعداد المنفذ", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void CopyAddress_Click(object sender, RoutedEventArgs e)
+    {
+        var url = $"http://{GetLanAddress()}:{_port}";
+        Clipboard.SetText(url);
+        MessageBox.Show("تم نسخ رابط المشاهدة: " + url, "نسخ الرابط", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void CopyLiveAddress_Click(object sender, RoutedEventArgs e)
+    {
+        var url = $"http://{GetLanAddress()}:{_port}/live";
+        Clipboard.SetText(url);
+        MessageBox.Show("تم نسخ رابط البث المباشر المستقل: " + url, "نسخ رابط البث", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void OpenSeasonEditor_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(SeriesIdBox.Text))
+        {
+            SeriesStatusText.Text = "احفظ المسلسل أولاً قبل إضافة موسم أو جزء.";
+            return;
+        }
+        OpenDedicatedEditor(SeasonEditorExpander, "إضافة موسم أو جزء");
+    }
+
+    private void OpenEpisodeEditor_Click(object sender, RoutedEventArgs e)
+    {
+        if (SeasonsGrid.SelectedItem is not SeasonAdmin)
+        {
+            SeriesStatusText.Text = "اختر الموسم أولاً قبل إضافة حلقة.";
+            return;
+        }
+        UpdateEpisodeInEditorButton.Visibility = Visibility.Collapsed;
+        OpenDedicatedEditor(EpisodeEditorExpander, "إضافة حلقة للموسم المحدد");
+    }
+
     private async void EnableFirewall_Click(object sender, RoutedEventArgs e)
     {
-        const string ruleName = "ALOSTORA REST HOUSE TCP 8097";
+        var ruleName = $"ALOSTORA REST HOUSE TCP {_port}";
         var startInfo = new ProcessStartInfo
         {
             FileName = "powershell.exe",
-            Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='Stop'; try { Get-NetFirewallRule -DisplayName '" + ruleName + "' -ErrorAction SilentlyContinue | Remove-NetFirewallRule; New-NetFirewallRule -DisplayName '" + ruleName + "' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8097 -Profile Private | Out-Null; exit 0 } catch { Write-Error $_; exit 1 }\"",
+            Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='Stop'; try { Get-NetFirewallRule -DisplayName '" + ruleName + "' -ErrorAction SilentlyContinue | Remove-NetFirewallRule; New-NetFirewallRule -DisplayName '" + ruleName + "' -Direction Inbound -Action Allow -Protocol TCP -LocalPort " + _port + " -Profile Private | Out-Null; exit 0 } catch { Write-Error $_; exit 1 }\"",
             UseShellExecute = true,
             Verb = "runas",
             WindowStyle = ProcessWindowStyle.Hidden
@@ -492,7 +764,7 @@ public partial class MainWindow : Window
             }
             await process.WaitForExitAsync();
             if (process.ExitCode == 0)
-                MessageBox.Show("تم السماح باتصالات TCP على المنفذ 8097 ضمن ملف تعريف الشبكة الخاصة. تأكد أن شبكة Windows مضبوطة على «خاصة».", "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"تم السماح باتصالات TCP على المنفذ {_port} ضمن ملف تعريف الشبكة الخاصة. تأكد أن شبكة Windows مضبوطة على «خاصة».", "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Information);
             else
                 MessageBox.Show("لم يتمكن Windows من إضافة قاعدة جدار الحماية. شغّل البرنامج بصلاحية مسؤول وحاول مجدداً.", "إعداد الشبكة", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
@@ -657,6 +929,50 @@ public partial class MainWindow : Window
         catch (Exception ex) { StatusText.Text = "تعذر إنشاء المجلد: " + ex.Message; }
     }
 
+    private async void RemoveExternalLibraryFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (VideoFoldersTree.SelectedItem is not TreeViewItem selected ||
+            selected.Tag is not string folderPath || string.IsNullOrWhiteSpace(folderPath))
+        {
+            StatusText.Text = "حدد مسار تخزين خارجي من شجرة المجلدات أولاً.";
+            return;
+        }
+
+        try
+        {
+            var folders = await _http.GetFromJsonAsync<LibraryFolderInfo[]>("/api/admin/library/folders")
+                ?? Array.Empty<LibraryFolderInfo>();
+            var root = folders.FirstOrDefault(x =>
+                string.Equals(x.FullPath, folderPath, StringComparison.OrdinalIgnoreCase));
+            if (root is null || root.ParentPath is not null || root.IsManaged)
+            {
+                StatusText.Text = "يمكن إزالة مسار تخزين خارجي مسجل فقط. لا يمكن إزالة مجلد فرعي من المكتبة الرئيسية.";
+                return;
+            }
+
+            if (MessageBox.Show(
+                "سيتم فك تسجيل مسار التخزين الخارجي من مكتبة المشاهدة فقط. ستختفي فيديوهاته من الفهرس، لكن جميع الملفات الأصلية وبياناتها ستبقى محفوظة على القرص. ويمكنك إضافة المسار مجدداً لاحقاً.\n\nهل تريد المتابعة؟",
+                "إزالة مسار التخزين من المكتبة",
+                MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+
+            var response = await _http.PostAsJsonAsync("/api/admin/library/unregister-folder", new { folderPath });
+            if (!response.IsSuccessStatusCode)
+            {
+                StatusText.Text = "تعذر إزالة المسار: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+
+            _selectedVideoFolderPath = null;
+            await LoadVideosAsync();
+            StatusText.Text = "تم فك تسجيل المسار من المكتبة. لم يتم حذف أي ملف فيديو من الجهاز.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "تعذر إزالة مسار التخزين: " + ex.Message;
+        }
+    }
+
     private void OpenLibraryFolder_Click(object sender, RoutedEventArgs e)
     {
         var path = _selectedVideoFolderPath ?? _library;
@@ -757,27 +1073,9 @@ public partial class MainWindow : Window
         catch (Exception ex) { StatusText.Text = "تعذرت إزالة الملفات: " + ex.Message; }
     }
 
-    private async void DeleteVideo_Click(object sender, RoutedEventArgs e)
+    private void DeleteVideo_Click(object sender, RoutedEventArgs e)
     {
-        var selected = GetSelectedVideos();
-        if (selected.Length == 0) { StatusText.Text = "حدد ملفاً واحداً أو عدة ملفات أولاً."; return; }
-        var confirm = MessageBox.Show(
-            $"تحذير: سيتم حذف {selected.Length} ملف فيديو نهائياً من القرص ولا يمكن التراجع عن ذلك.\n\nسيتم حذف بياناتها وسجلات مشاهدتها أيضاً. إذا كانت مرتبطة بحلقات فستبقى الحلقات مسجلة كملفات مفقودة ويمكن إعادة ربطها لاحقاً.\n\nهل أنت متأكد؟",
-            "تأكيد الحذف النهائي للملفات المحددة", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-        if (confirm != MessageBoxResult.Yes) return;
-        try
-        {
-            StatusText.Text = $"جارٍ حذف {selected.Length} ملفاً من الجهاز...";
-            var response = await _http.PostAsJsonAsync("/api/admin/library/bulk-delete", new { ids = selected.Select(x => x.Id).ToArray() });
-            if (!response.IsSuccessStatusCode) { StatusText.Text = "تعذر حذف الملفات: " + await response.Content.ReadAsStringAsync(); return; }
-            VideosGrid.UnselectAll();
-            IdBox.Clear(); TitleBox.Clear(); DescriptionBox.Clear(); YearBox.Clear(); GenreBox.Clear();
-            DirectorBox.Clear(); CastBox.Clear(); RatingBox.Clear(); RuntimeBox.Clear(); ReleaseDateBox.Clear(); TagsBox.Clear();
-            await LoadVideosAsync();
-            await LoadMissingEpisodesAsync();
-            StatusText.Text = $"تم حذف {selected.Length} ملفاً نهائياً من القرص وتحديث المكتبة.";
-        }
-        catch (Exception ex) { StatusText.Text = "تعذر حذف الملفات: " + ex.Message; }
+        StatusText.Text = "الحذف النهائي لملفات الفيديو معطّل حفاظاً على ملفاتك الأصلية. استخدم «إزالة المحدد من المكتبة» لإخفائها دون حذفها من القرص.";
     }
 
     private async System.Threading.Tasks.Task LoadCategoriesAsync()
@@ -786,6 +1084,7 @@ public partial class MainWindow : Window
         {
             var rows = await _http.GetFromJsonAsync<CategoryAdmin[]>("/api/admin/catalog-categories") ?? Array.Empty<CategoryAdmin>();
             _categories = rows;
+            UpdateDashboardStats();
             var parents = rows.Where(x => x.ParentId is null && x.ContentKind == "Group").ToArray();
             var parentNames = parents.ToDictionary(x => x.CategoryId, x => x.Title, StringComparer.OrdinalIgnoreCase);
             foreach (var row in rows)
@@ -886,6 +1185,7 @@ public partial class MainWindow : Window
         CategoryPosterStatusText.Text = "الغلاف اختياري. القسم الرئيسي سيظهر في الصفحة الأولى بعد النشر.";
         CategoryStatusText.Text = "قسم رئيسي جديد: اكتب الاسم ثم احفظ. لإضافة قسم تحته استخدم «قسم فرعي جديد».";
         UpdateCategoryParentState();
+        OpenDedicatedEditor(CategoryEditorExpander, "إضافة قسم رئيسي");
     }
 
     private void NewSubCategory_Click(object sender, RoutedEventArgs e)
@@ -905,6 +1205,7 @@ public partial class MainWindow : Window
         CategoryPosterStatusText.Text = "غلاف القسم الفرعي اختياري ويمكن رفعه بعد حفظ القسم.";
         CategoryStatusText.Text = "قسم فرعي جديد: اختر القسم الرئيسي الذي يتبعه، ثم حدد هل يحتوي أفلاماً أم مسلسلات أم محتوى آخر.";
         UpdateCategoryParentState();
+        OpenDedicatedEditor(CategoryEditorExpander, "إضافة قسم فرعي");
         CategoryParentPicker.Focus();
     }
 
@@ -930,6 +1231,7 @@ public partial class MainWindow : Window
         CategoryPosterPathBox.Text = row.PosterPath ?? "";
         CategoryPublishBox.IsChecked = row.IsPublished;
         CategoryPosterStatusText.Text = string.IsNullOrWhiteSpace(row.PosterPath) ? "لا يوجد غلاف. يمكنك نشر القسم بدونه أو رفع غلاف اختياري." : "تم حفظ غلاف هذا القسم.";
+        OpenDedicatedEditor(CategoryEditorExpander, "تعديل بيانات القسم");
     }
 
     private async void SaveCategory_Click(object sender, RoutedEventArgs e)
@@ -959,6 +1261,7 @@ public partial class MainWindow : Window
             var location = parentTitle is null ? "" : $" داخل القسم الرئيسي «{parentTitle}»";
             var action = isNew ? "تمت إضافة" : "تم تحديث";
             CategoryStatusText.Text = $"{action} {typeName} «{title}»{location}. الحالة: {(CategoryPublishBox.IsChecked == true ? "منشور" : "مسودة")}.";
+        CloseDedicatedEditor();
         }
         catch (Exception ex) { CategoryStatusText.Text = "تعذر حفظ القسم: " + ex.Message; }
     }
@@ -1065,6 +1368,8 @@ public partial class MainWindow : Window
             MissingEpisodeVideoPicker.ItemsSource = _videos;
             await RefreshVideoFoldersTreeAsync();
             CountText.Text = $"عدد ملفات الفيديو: {_videos.Count}";
+            UpdateDashboardStats();
+            await LoadDashboardWatchHistoryAsync();
             var incomplete = _videos.Count(x => !x.MetadataSaved);
             StatusText.Text = incomplete == 0
                 ? $"سجل الفيديوهات جاهز: {_videos.Count} فيديو، وجميعها لها بيانات محفوظة."
@@ -1092,6 +1397,7 @@ public partial class MainWindow : Window
     private async void VideosGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (VideosGrid.SelectedItem is not AdminVideo v) return;
+        _pendingVideoPosterPath = null;
         IdBox.Text = v.Id;
         TitleBox.Text = v.Title ?? "";
         DescriptionBox.Text = v.Description ?? "";
@@ -1225,7 +1531,7 @@ public partial class MainWindow : Window
             year,
             genre = GenreBox.Text,
             kind = kindItem?.Tag?.ToString() ?? "Movie",
-            posterPath = (string?)null,
+            posterPath = _pendingVideoPosterPath,
             director = DirectorBox.Text,
             cast = CastBox.Text,
             rating,
@@ -1248,6 +1554,7 @@ public partial class MainWindow : Window
             var categoryName = selectedCategory?.Title ?? "غير مصنف";
             var publication = PublishBox.IsChecked == true ? "منشور للعميل" : "محفوظ كمسودة";
             StatusText.Text = $"{(isNewMetadata ? "تمت إضافة بيانات الفيديو" : "تم تحديث بيانات الفيديو")} «{videoTitle}» إلى سجل الفيديوهات. القسم: {categoryName}. الحالة: {publication}.";
+            _pendingVideoPosterPath = null;
             await LoadVideosAsync();
             VideosGrid.SelectedItem = _videos.FirstOrDefault(v => v.Id == IdBox.Text);
         }
@@ -1266,6 +1573,8 @@ public partial class MainWindow : Window
                 row.CategoryTitle = _categories.FirstOrDefault(x => x.CategoryId == row.CategoryId)?.Title ?? "غير مصنف";
                 row.PublishStatus = row.IsPublished ? "منشور" : "مسودة";
             }
+            _dashboardSeriesCount = rows.Length;
+            UpdateDashboardStats();
             SeriesPicker.ItemsSource = rows;
             var linkedSeriesId = VideoSeriesPicker.SelectedValue as string;
             VideoSeriesPicker.ItemsSource = rows;
@@ -1341,6 +1650,7 @@ public partial class MainWindow : Window
         _episodeCandidates.Clear();
         MissingEpisodesGrid.SelectedIndex = -1;
         SeriesStatusText.Text = "نموذج مسلسل جديد. أدخل بياناته واحفظه أولاً.";
+        OpenDedicatedEditor(SeriesEditorExpander, "إضافة مسلسل جديد");
     }
 
     private async void CreateSeriesFromVideo_Click(object sender, RoutedEventArgs e)
@@ -1402,6 +1712,7 @@ public partial class MainWindow : Window
         SeriesStructureBox.SelectedItem = SeriesStructureBox.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == s.OrganizationType);
         UpdateSeriesStructureLabels();
         await LoadSeasonsAsync(s.SeriesId);
+        OpenDedicatedEditor(SeriesEditorExpander, "تعديل بيانات المسلسل");
     }
 
     private async System.Threading.Tasks.Task LoadSeasonsAsync(string seriesId)
@@ -1503,6 +1814,39 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void LookupSeriesMetadata_Click(object sender, RoutedEventArgs e)
+    {
+        var query = SeriesTitleBox.Text.Trim();
+        if (query.Length < 2)
+        {
+            SeriesMetadataLookupStatusText.Text = "اكتب اسم المسلسل أولاً.";
+            return;
+        }
+        try
+        {
+            SeriesMetadataLookupStatusText.Text = "جارٍ البحث عن بيانات المسلسل والغلاف...";
+            var url = "/api/admin/metadata/lookup?query=" + Uri.EscapeDataString(query) + "&kind=Series";
+            var result = await _http.GetFromJsonAsync<MetadataLookupAdmin>(url);
+            if (result is null)
+            {
+                SeriesMetadataLookupStatusText.Text = "لم يتم العثور على بيانات مطابقة.";
+                return;
+            }
+            SeriesTitleBox.Text = result.Title ?? query;
+            SeriesDescriptionBox.Text = result.Description ?? "";
+            SeriesYearBox.Text = result.Year?.ToString() ?? "";
+            SeriesGenreBox.Text = result.Genre ?? "";
+            _pendingSeriesPosterPath = null;
+            SeriesPosterPathBox.Text = result.PosterPath ?? "";
+            SeriesMetadataLookupStatusText.Text = "تم جلب البيانات من " + (result.Provider ?? "TVmaze") +
+                (string.IsNullOrWhiteSpace(result.PosterPath) ? " دون غلاف متاح." : " وتم حفظ الغلاف محلياً. راجع البيانات ثم احفظ المسلسل.");
+        }
+        catch (Exception ex)
+        {
+            SeriesMetadataLookupStatusText.Text = "تعذر جلب بيانات المسلسل: " + ex.Message;
+        }
+    }
+
     private async void SaveSeries_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(SeriesTitleBox.Text)) { SeriesStatusText.Text = "اكتب اسم المسلسل أولاً."; return; }
@@ -1543,6 +1887,7 @@ public partial class MainWindow : Window
             if (SeriesPicker.SelectedItem is null) await LoadSeasonsAsync(id);
             await LoadVideosAsync();
             SeriesStatusText.Text = saveMessage;
+        CloseDedicatedEditor();
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر حفظ المسلسل: " + ex.Message; }
     }
@@ -1615,11 +1960,22 @@ public partial class MainWindow : Window
             var seasonFolder = string.IsNullOrWhiteSpace(SeasonFolderPathBox.Text) ? null : Path.GetFullPath(SeasonFolderPathBox.Text.Trim());
             if (seasonFolder is not null && !Directory.Exists(seasonFolder)) { SeriesStatusText.Text = "مجلد الموسم المحدد غير موجود."; return; }
             var response = await _http.PostAsJsonAsync("/api/admin/seasons", new { seriesId = SeriesIdBox.Text.Trim(), seasonNumber = number, title = SeasonTitleBox.Text, folderPath = seasonFolder });
-            if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "لم تتم إضافة الموسم. ربما رقم الموسم مكرر."; return; }
-            SeasonTitleBox.Clear(); SeasonFolderPathBox.Clear(); SeasonNumberBox.Text = (number + 1).ToString();
-            await LoadSeasonsAsync(SeriesIdBox.Text.Trim());
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = await response.Content.ReadAsStringAsync();
+                SeriesStatusText.Text = "لم تتم إضافة الموسم: " + detail;
+                return;
+            }
+            var seriesId = SeriesIdBox.Text.Trim();
+            SeasonTitleBox.Clear();
+            SeasonFolderPathBox.Clear();
+            SeasonNumberBox.Text = (number + 1).ToString();
+            await LoadSeasonsAsync(seriesId);
+            var addedSeason = (SeasonsGrid.ItemsSource as SeasonAdmin[])?.FirstOrDefault(x => x.SeasonNumber == number);
+            if (addedSeason is not null) SeasonsGrid.SelectedItem = addedSeason;
             await LoadVideosAsync();
-            SeriesStatusText.Text = "تمت إضافة الموسم بنجاح.";
+            SeriesStatusText.Text = $"تمت إضافة {( (SeriesStructureBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Parts" ? "الجزء" : "الموسم")} رقم {number} بنجاح. أصبح محدداً الآن ويمكنك إضافة الحلقات إليه.";
+            CloseDedicatedEditor();
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر إضافة الموسم: " + ex.Message; }
     }
@@ -1660,6 +2016,8 @@ public partial class MainWindow : Window
         EpisodeNumberBox.Text = episode.EpisodeNumber.ToString();
         EpisodeTitleBox.Text = episode.Title;
         SeriesStatusText.Text = $"تم تحديد الحلقة رقم {episode.EpisodeNumber}. عدّل الرقم أو الاسم ثم اضغط حفظ التعديل.";
+        UpdateEpisodeInEditorButton.Visibility = Visibility.Visible;
+        OpenDedicatedEditor(EpisodeEditorExpander, "تعديل بيانات الحلقة");
     }
 
     private async void UpdateEpisode_Click(object sender, RoutedEventArgs e)
@@ -1689,6 +2047,7 @@ public partial class MainWindow : Window
             }
             await LoadEpisodesAsync(episode.SeasonId);
             SeriesStatusText.Text = $"تم تحديث بيانات الحلقة رقم {number} دون تغيير ملف الفيديو.";
+            CloseDedicatedEditor();
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر تعديل الحلقة: " + ex.Message; }
     }
@@ -1897,6 +2256,7 @@ public partial class MainWindow : Window
             await LoadEpisodesAsync(season.SeasonId);
             await LoadMissingEpisodesAsync();
             SeriesStatusText.Text = $"تم ربط «{video.Title}» كالحلقة رقم {number} وتحديث قائمة ملفات الموسم.";
+            CloseDedicatedEditor();
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر إضافة الحلقة: " + ex.Message; }
     }
@@ -1990,12 +2350,509 @@ public partial class MainWindow : Window
         return "عنوان الشبكة غير معروف";
     }
 
+    private async void LoadCustomerPageSettings_Click(object sender, RoutedEventArgs e) => await LoadCustomerPageSettingsAsync();
+
+    private async System.Threading.Tasks.Task LoadCustomerPageSettingsAsync()
+    {
+        try
+        {
+            var settings = await _http.GetFromJsonAsync<CustomerPageSettingsAdmin>("/api/admin/customer-settings");
+            if (settings is null) return;
+            CustomerShowCatalogBox.IsChecked = settings.ShowCatalog;
+            CustomerShowContinueBox.IsChecked = settings.ShowContinueWatching;
+            CustomerShowAudioBox.IsChecked = settings.ShowAudio;
+            CustomerShowBooksBox.IsChecked = settings.ShowBooks;
+            CustomerShowAppsBox.IsChecked = settings.ShowApps;
+            CustomerShowContactBox.IsChecked = settings.ShowContact;
+            CustomerShowWelcomeBox.IsChecked = settings.ShowWelcome;
+            CustomerShowAnnouncementBox.IsChecked = settings.ShowAnnouncement;
+            CustomerShowDownloadsBox.IsChecked = settings.ShowDownloads;
+            CustomerShowImageAdsBox.IsChecked = settings.ShowImageAds;
+            CustomerPageSettingsStatusText.Text = "تم تحميل إعدادات ظهور أقسام صفحة العملاء.";
+        }
+        catch (Exception ex)
+        {
+            CustomerPageSettingsStatusText.Text = "تعذر تحميل إعدادات صفحة العملاء: " + ex.Message;
+        }
+    }
+
+    private async void SaveCustomerPageSettings_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var request = new
+            {
+                showCatalog = CustomerShowCatalogBox.IsChecked == true,
+                showContinueWatching = CustomerShowContinueBox.IsChecked == true,
+                showAudio = CustomerShowAudioBox.IsChecked == true,
+                showBooks = CustomerShowBooksBox.IsChecked == true,
+                showApps = CustomerShowAppsBox.IsChecked == true,
+                showContact = CustomerShowContactBox.IsChecked == true,
+                showWelcome = CustomerShowWelcomeBox.IsChecked == true,
+                showAnnouncement = CustomerShowAnnouncementBox.IsChecked == true,
+                showDownloads = CustomerShowDownloadsBox.IsChecked == true,
+                showImageAds = CustomerShowImageAdsBox.IsChecked == true
+            };
+            var response = await _http.PostAsJsonAsync("/api/admin/customer-settings", request);
+            if (!response.IsSuccessStatusCode)
+            {
+                CustomerPageSettingsStatusText.Text = "تعذر حفظ الإعدادات: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            CustomerPageSettingsStatusText.Text = "تم حفظ الإعدادات. ستصل التغييرات إلى صفحات العملاء المفتوحة خلال دقيقة أو عند تحديث الصفحة.";
+        }
+        catch (Exception ex)
+        {
+            CustomerPageSettingsStatusText.Text = "تعذر حفظ إعدادات صفحة العملاء: " + ex.Message;
+        }
+    }
+
+    private async System.Threading.Tasks.Task LoadDownloadSpeedLimitAsync()
+    {
+        try
+        {
+            var settings = await _http.GetFromJsonAsync<DownloadSpeedLimitSettings>("/api/admin/download-speed-limit");
+            if (settings is null) return;
+            DownloadSpeedLimitBox.Text = settings.LimitMbps.ToString();
+            DownloadSpeedLimitStatusText.Text = settings.LimitMbps == 0
+                ? "التنزيلات دون حد للسرعة."
+                : $"الحد الإجمالي الحالي لجميع التنزيلات: {settings.LimitMbps} ميجابت/ثانية.";
+        }
+        catch (Exception ex)
+        {
+            DownloadSpeedLimitStatusText.Text = "تعذر تحميل حد السرعة: " + ex.Message;
+        }
+    }
+
+    private async void SaveDownloadSpeedLimit_Click(object sender, RoutedEventArgs e)
+    {
+        if (!int.TryParse(DownloadSpeedLimitBox.Text.Trim(), out var limit) || limit is < 0 or > 1000)
+        {
+            DownloadSpeedLimitStatusText.Text = "أدخل رقماً من 0 إلى 1000. الصفر يعني دون حد.";
+            return;
+        }
+        try
+        {
+            var response = await _http.PostAsJsonAsync("/api/admin/download-speed-limit", new DownloadSpeedLimitSettings(limit));
+            if (!response.IsSuccessStatusCode)
+            {
+                DownloadSpeedLimitStatusText.Text = "تعذر حفظ حد السرعة: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            DownloadSpeedLimitStatusText.Text = limit == 0
+                ? "تم إلغاء حد السرعة؛ التنزيلات تعمل بأقصى سرعة متاحة."
+                : $"تم تطبيق حد إجمالي قدره {limit} ميجابت/ثانية على جميع التنزيلات.";
+        }
+        catch (Exception ex)
+        {
+            DownloadSpeedLimitStatusText.Text = "تعذر حفظ حد السرعة: " + ex.Message;
+        }
+    }
+
+    private async void LoadAnnouncement_Click(object sender, RoutedEventArgs e) => await LoadAnnouncementAsync();
+
+    private async System.Threading.Tasks.Task LoadAnnouncementAsync()
+    {
+        try
+        {
+            var item = await _http.GetFromJsonAsync<AnnouncementAdmin>("/api/admin/announcement");
+            if (item is null) return;
+            AnnouncementTitleBox.Text = item.Title ?? "";
+            AnnouncementMessageBox.Text = item.Message ?? "";
+            AnnouncementActiveBox.IsChecked = item.IsActive;
+            AnnouncementAdRadio.IsChecked = item.Kind == "ad";
+            AnnouncementNoticeRadio.IsChecked = item.Kind != "ad";
+            AnnouncementStatusText.Text = item.IsActive ? "الإعلان منشور للعملاء." : "الإعلان محفوظ لكنه غير ظاهر للعملاء.";
+        }
+        catch (Exception ex) { AnnouncementStatusText.Text = "تعذر تحميل الإعلان: " + ex.Message; }
+    }
+
+    private async void SaveAnnouncement_Click(object sender, RoutedEventArgs e)
+    {
+        var request = new
+        {
+            title = AnnouncementTitleBox.Text.Trim(),
+            message = AnnouncementMessageBox.Text.Trim(),
+            isActive = AnnouncementActiveBox.IsChecked == true,
+            kind = AnnouncementAdRadio.IsChecked == true ? "ad" : "notice",
+            updatedUtc = DateTime.UtcNow
+        };
+        if (request.isActive && string.IsNullOrWhiteSpace(request.message))
+        {
+            AnnouncementStatusText.Text = "اكتب نص الإعلان قبل نشره.";
+            return;
+        }
+        try
+        {
+            var response = await _http.PostAsJsonAsync("/api/admin/announcement", request);
+            if (!response.IsSuccessStatusCode)
+            {
+                AnnouncementStatusText.Text = "تعذر حفظ الإعلان: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            AnnouncementStatusText.Text = request.isActive ? "تم حفظ الإعلان ونشره للعملاء." : "تم حفظ الإعلان وإيقاف ظهوره.";
+        }
+        catch (Exception ex) { AnnouncementStatusText.Text = "تعذر حفظ الإعلان: " + ex.Message; }
+    }
+
+    private async void LoadCustomerAds_Click(object sender, RoutedEventArgs e) => await LoadCustomerAdsAsync();
+
+    private async System.Threading.Tasks.Task LoadCustomerAdsAsync(string? selectId = null)
+    {
+        try
+        {
+            var rows = await _http.GetFromJsonAsync<CustomerAdItem[]>("/api/admin/customer-ads") ?? Array.Empty<CustomerAdItem>();
+            CustomerAdsGrid.ItemsSource = rows;
+            var selected = rows.FirstOrDefault(x => x.Id == (selectId ?? (CustomerAdsGrid.SelectedItem as CustomerAdItem)?.Id));
+            if (selected is not null) CustomerAdsGrid.SelectedItem = selected;
+            CustomerAdsStatusText.Text = $"الإعلانات المصورة المسجلة: {rows.Length} من 50. الصور تحفظ محلياً داخل مجلد أغلفة الاستراحة.";
+        }
+        catch (Exception ex) { CustomerAdsStatusText.Text = "تعذر تحميل الإعلانات المصورة: " + ex.Message; }
+    }
+
+    private void CustomerAdsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (CustomerAdsGrid.SelectedItem is not CustomerAdItem item) return;
+        CustomerAdTitleBox.Text = item.Title;
+        CustomerAdLinkBox.Text = item.LinkUrl;
+        CustomerAdDurationBox.Text = item.DurationSeconds.ToString();
+        CustomerAdActiveBox.IsChecked = item.IsActive;
+    }
+
+    private async void AddCustomerAd_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختر صورة الإعلان",
+            Filter = "صور الإعلانات|*.jpg;*.jpeg;*.png;*.webp",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        if (!int.TryParse(CustomerAdDurationBox.Text.Trim(), out var duration) || duration is < 5 or > 120)
+        {
+            CustomerAdsStatusText.Text = "حدد مدة عرض بين 5 و120 ثانية أولاً.";
+            return;
+        }
+        try
+        {
+            var bytes = await File.ReadAllBytesAsync(dialog.FileName);
+            if (bytes.LongLength > CustomerAdService.MaximumImageBytes)
+            {
+                CustomerAdsStatusText.Text = "حجم الصورة يتجاوز 5 ميجابايت.";
+                return;
+            }
+            using var form = new MultipartFormDataContent();
+            var image = new ByteArrayContent(bytes);
+            var contentType = Path.GetExtension(dialog.FileName).ToLowerInvariant() switch
+            {
+                ".png" => "image/png",
+                ".webp" => "image/webp",
+                _ => "image/jpeg"
+            };
+            image.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            form.Add(image, "image", Path.GetFileName(dialog.FileName));
+            form.Add(new StringContent(CustomerAdTitleBox.Text.Trim()), "title");
+            form.Add(new StringContent(CustomerAdLinkBox.Text.Trim()), "linkUrl");
+            form.Add(new StringContent(duration.ToString()), "durationSeconds");
+            var response = await _http.PostAsync("/api/admin/customer-ads", form);
+            if (!response.IsSuccessStatusCode)
+            {
+                CustomerAdsStatusText.Text = "تعذرت إضافة الإعلان: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            var result = await response.Content.ReadFromJsonAsync<CustomerAdUploadResult>();
+            CustomerAdsStatusText.Text = "تمت إضافة الصورة إلى معرض الإعلانات.";
+            await LoadCustomerAdsAsync(result?.Ad?.Id);
+        }
+        catch (Exception ex) { CustomerAdsStatusText.Text = "تعذرت إضافة صورة الإعلان: " + ex.Message; }
+    }
+
+    private async void SaveCustomerAd_Click(object sender, RoutedEventArgs e)
+    {
+        if (CustomerAdsGrid.SelectedItem is not CustomerAdItem selected)
+        {
+            CustomerAdsStatusText.Text = "حدد إعلاناً من القائمة أولاً.";
+            return;
+        }
+        if (!int.TryParse(CustomerAdDurationBox.Text.Trim(), out var duration) || duration is < 5 or > 120)
+        {
+            CustomerAdsStatusText.Text = "مدة العرض يجب أن تكون بين 5 و120 ثانية.";
+            return;
+        }
+        try
+        {
+            var request = new CustomerAdUpdateRequest(CustomerAdTitleBox.Text.Trim(), CustomerAdLinkBox.Text.Trim(), duration, CustomerAdActiveBox.IsChecked == true);
+            var response = await _http.PostAsJsonAsync("/api/admin/customer-ads/" + selected.Id, request);
+            if (!response.IsSuccessStatusCode)
+            {
+                CustomerAdsStatusText.Text = "تعذر حفظ الإعلان: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            await LoadCustomerAdsAsync(selected.Id);
+            CustomerAdsStatusText.Text = "تم حفظ إعدادات الإعلان.";
+        }
+        catch (Exception ex) { CustomerAdsStatusText.Text = "تعذر حفظ الإعلان: " + ex.Message; }
+    }
+
+    private async System.Threading.Tasks.Task MoveCustomerAdAsync(string direction)
+    {
+        if (CustomerAdsGrid.SelectedItem is not CustomerAdItem selected)
+        {
+            CustomerAdsStatusText.Text = "حدد إعلاناً أولاً.";
+            return;
+        }
+        try
+        {
+            var response = await _http.PostAsJsonAsync("/api/admin/customer-ads/" + selected.Id + "/move", new CustomerAdMoveRequest(direction));
+            if (!response.IsSuccessStatusCode)
+            {
+                CustomerAdsStatusText.Text = "تعذر تغيير الترتيب: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            await LoadCustomerAdsAsync(selected.Id);
+            CustomerAdsStatusText.Text = "تم تحديث ترتيب الإعلانات.";
+        }
+        catch (Exception ex) { CustomerAdsStatusText.Text = "تعذر تغيير الترتيب: " + ex.Message; }
+    }
+
+    private async void MoveCustomerAdUp_Click(object sender, RoutedEventArgs e) => await MoveCustomerAdAsync("up");
+    private async void MoveCustomerAdDown_Click(object sender, RoutedEventArgs e) => await MoveCustomerAdAsync("down");
+
+    private async void DeleteCustomerAd_Click(object sender, RoutedEventArgs e)
+    {
+        if (CustomerAdsGrid.SelectedItem is not CustomerAdItem selected)
+        {
+            CustomerAdsStatusText.Text = "حدد إعلاناً أولاً.";
+            return;
+        }
+        if (MessageBox.Show("سيتم حذف صورة هذا الإعلان من مجلد الإعلانات المصورة داخل البرنامج فقط. لن يتم حذف ملف الصورة الأصلي الذي اخترته من مكانه. هل تريد المتابعة؟",
+            "حذف صورة الإعلان", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        try
+        {
+            var response = await _http.DeleteAsync("/api/admin/customer-ads/" + selected.Id);
+            if (!response.IsSuccessStatusCode)
+            {
+                CustomerAdsStatusText.Text = "تعذر حذف الإعلان: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            await LoadCustomerAdsAsync();
+            CustomerAdsStatusText.Text = "تم حذف صورة الإعلان من معرض الاستراحة.";
+        }
+        catch (Exception ex) { CustomerAdsStatusText.Text = "تعذر حذف الإعلان: " + ex.Message; }
+    }
+
+    private sealed class CustomerAdUploadResult
+    {
+        public CustomerAdItem? Ad { get; set; }
+    }
+
+    private async void LookupMetadata_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(IdBox.Text))
+        {
+            MetadataLookupStatusText.Text = "اختر ملف فيديو من المكتبة أولاً حتى تُحفظ البيانات له.";
+            return;
+        }
+        var query = TitleBox.Text.Trim();
+        if (query.Length < 2)
+        {
+            MetadataLookupStatusText.Text = "اكتب اسم الفيلم أو المسلسل أولاً.";
+            return;
+        }
+        try
+        {
+            MetadataLookupStatusText.Text = "جارٍ البحث عن البيانات والغلاف...";
+            var kind = (KindBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Movie";
+            var url = "/api/admin/metadata/lookup?query=" + Uri.EscapeDataString(query) + "&kind=" + Uri.EscapeDataString(kind);
+            var result = await _http.GetFromJsonAsync<MetadataLookupAdmin>(url);
+            if (result is null)
+            {
+                MetadataLookupStatusText.Text = "لم يتم العثور على بيانات مطابقة.";
+                return;
+            }
+            TitleBox.Text = result.Title ?? query;
+            DescriptionBox.Text = result.Description ?? "";
+            YearBox.Text = result.Year?.ToString() ?? "";
+            GenreBox.Text = result.Genre ?? "";
+            DirectorBox.Text = result.Director ?? "";
+            RatingBox.Text = result.Rating?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
+            RuntimeBox.Text = result.RuntimeMinutes?.ToString() ?? "";
+            ReleaseDateBox.Text = result.ReleaseDate ?? "";
+            _pendingVideoPosterPath = result.PosterPath;
+            PosterStatusText.Text = string.IsNullOrWhiteSpace(_pendingVideoPosterPath)
+                ? "تم جلب البيانات، ولم يتوفر غلاف قابل للحفظ."
+                : "تم تنزيل الغلاف وحفظه محلياً: " + _pendingVideoPosterPath;
+            MetadataLookupStatusText.Text = "تم جلب البيانات من " + (result.Provider ?? "المصدر") + ". راجعها ثم اضغط حفظ بيانات الفيديو.";
+        }
+        catch (Exception ex)
+        {
+            MetadataLookupStatusText.Text = "تعذر جلب البيانات: " + ex.Message;
+        }
+    }
+
+    private async void RefreshWatchHistory_Click(object sender, RoutedEventArgs e)
+    {
+        await LoadDashboardWatchHistoryAsync();
+    }
+
+    private async System.Threading.Tasks.Task LoadDashboardWatchHistoryAsync()
+    {
+        try
+        {
+            var summary = await _http.GetFromJsonAsync<WatchCountsAdmin>("/api/admin/watch-counts") ?? new WatchCountsAdmin();
+            var history = await _http.GetFromJsonAsync<WatchPlaybackAdmin[]>("/api/admin/watch-history")
+                ?? Array.Empty<WatchPlaybackAdmin>();
+            var titles = _videos.ToDictionary(v => v.Id, v => v.Title ?? v.FileName ?? v.Id);
+            _popularPlaybackRows.Clear();
+            foreach (var item in summary.ViewCounts
+                .Select(pair => new PlaybackPopularRow
+                {
+                    VideoId = pair.Key,
+                    Title = titles.TryGetValue(pair.Key, out var title) ? title : "فيديو غير موجود في المكتبة",
+                    PlayCount = pair.Value
+                })
+                .OrderByDescending(x => x.PlayCount)
+                .ThenBy(x => x.Title, StringComparer.OrdinalIgnoreCase)
+                .Take(10))
+                _popularPlaybackRows.Add(item);
+
+            _recentPlaybackRows.Clear();
+            foreach (var item in history.Take(20))
+            {
+                var title = titles.TryGetValue(item.VideoId, out var found) ? found : "فيديو غير موجود في المكتبة";
+                var localTime = DateTime.TryParse(item.StartedUtc, out var started)
+                    ? started.ToLocalTime().ToString("yyyy/MM/dd HH:mm")
+                    : item.StartedUtc;
+                _recentPlaybackRows.Add(new PlaybackRecentRow { Title = title, StartedLocal = localTime });
+            }
+
+            var total = summary.Total;
+            DashboardWatchHistoryStatus.Text = total == 0
+                ? "لا توجد مشاهدات مسجلة بعد. ستظهر البيانات عند تشغيل العملاء للفيديوهات."
+                : $"إجمالي مرات التشغيل منذ بدء التسجيل: {total:N0}. ترتيب الأكثر مشاهدة محسوب من كامل السجل، وآخر المشاهدات من أحدث 200 عملية.";
+        }
+        catch (Exception ex)
+        {
+            DashboardWatchHistoryStatus.Text = "تعذر تحميل سجل المشاهدة: " + ex.Message;
+            _popularPlaybackRows.Clear();
+            _recentPlaybackRows.Clear();
+        }
+    }
+
+    private void UpdateDashboardStats()
+    {
+        if (DashboardVideosCount is null) return;
+        DashboardVideosCount.Text = _videos.Count.ToString("N0");
+        DashboardSeriesCount.Text = _dashboardSeriesCount.ToString("N0");
+        DashboardCategoriesCount.Text = _categories.Count(x => x.ParentId is not null || x.ContentKind == "Group").ToString("N0");
+        DashboardIncompleteCount.Text = _videos.Count(x => !x.MetadataSaved).ToString("N0");
+        DashboardStorageRootsCount.Text = _dashboardExternalRootCount.ToString("N0");
+        DashboardPublishedCount.Text = _videos.Count(x => x.IsPublished).ToString("N0");
+        DashboardMediaCount.Text = _dashboardMediaCount.ToString("N0");
+    }
+
+    private void DashboardCard_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement element)
+            return;
+
+        var parts = element.Tag?.ToString()?.Split(':');
+        if (parts is null || parts.Length is < 2 or > 3 ||
+            !int.TryParse(parts[0], out var tabIndex) ||
+            !int.TryParse(parts[1], out var subTabIndex) ||
+            tabIndex < 1 || tabIndex >= MainNavigationTabs.Items.Count)
+            return;
+
+        MainNavigationTabs.SelectedIndex = tabIndex;
+        if (tabIndex == 1)
+        {
+            _dashboardKindFilter = null;
+            _selectedVideoFolderPath = null;
+            _videosView?.Refresh();
+            VideosGrid.SelectedIndex = -1;
+            if (subTabIndex >= 0 && subTabIndex < LibraryTabs.Items.Count)
+                LibraryTabs.SelectedIndex = subTabIndex;
+        }
+        else if (tabIndex == 5 && subTabIndex >= 0 && subTabIndex < SettingsTabs.Items.Count)
+        {
+            SettingsTabs.SelectedIndex = subTabIndex;
+        }
+
+        e.Handled = true;
+    }
+
+    private void ShowNewCustomerMessageToast(CustomerMessageAdmin message, int count)
+    {
+        var toast = new Window
+        {
+            Title = "رسالة جديدة من عميل",
+            Width = 370,
+            Height = 142,
+            WindowStyle = WindowStyle.None,
+            ResizeMode = ResizeMode.NoResize,
+            ShowInTaskbar = false,
+            Topmost = true,
+            Owner = this,
+            WindowStartupLocation = WindowStartupLocation.Manual,
+            Left = SystemParameters.WorkArea.Right - 390,
+            Top = SystemParameters.WorkArea.Top + 18,
+            FlowDirection = FlowDirection.RightToLeft,
+            Background = System.Windows.Media.Brushes.Transparent,
+            AllowsTransparency = true
+        };
+
+        var panel = new StackPanel { Margin = new Thickness(16) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = count > 1 ? $"وصلت {count} رسائل جديدة من العملاء" : "وصلت رسالة جديدة من عميل",
+            FontSize = 16,
+            FontWeight = FontWeights.Bold,
+            Foreground = System.Windows.Media.Brushes.White
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"{message.Category} — {message.Title}",
+            FontSize = 13,
+            Foreground = System.Windows.Media.Brushes.White,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 7, 0, 0)
+        });
+        var card = new Border
+        {
+            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(20, 45, 74)),
+            BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(201, 54, 64)),
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(12),
+            Child = panel,
+            Cursor = System.Windows.Input.Cursors.Hand
+        };
+        card.MouseLeftButtonUp += (_, _) =>
+        {
+            MainNavigationTabs.SelectedIndex = 4;
+            toast.Close();
+            ShowCustomerMessagePopup(message);
+        };
+        toast.Content = card;
+        toast.Show();
+
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
+        timer.Tick += (_, _) => { timer.Stop(); if (toast.IsVisible) toast.Close(); };
+        timer.Start();
+    }
+
     private async System.Threading.Tasks.Task LoadCustomerMessagesAsync()
     {
         try
         {
             var selectedId = (CustomerMessagesGrid.SelectedItem as CustomerMessageAdmin)?.Id;
             var rows = await _http.GetFromJsonAsync<CustomerMessageAdmin[]>("/api/admin/messages") ?? Array.Empty<CustomerMessageAdmin>();
+            var newlyArrived = _customerMessagesInitialized
+                ? rows.Where(x => x.Status == "جديد" && !_knownCustomerMessageIds.Contains(x.Id))
+                    .OrderBy(x => x.Id).ToArray()
+                : Array.Empty<CustomerMessageAdmin>();
+            foreach (var row in rows) _knownCustomerMessageIds.Add(row.Id);
+            _customerMessagesInitialized = true;
+
             _suppressCustomerMessagePopup = true;
             CustomerMessagesGrid.ItemsSource = rows;
             LogoReportsGrid.ItemsSource = rows.Where(x => string.Equals(x.Category, "بلاغ شعار أو علامة تجارية", StringComparison.OrdinalIgnoreCase)).ToArray();
@@ -2003,7 +2860,10 @@ public partial class MainWindow : Window
                 CustomerMessagesGrid.SelectedItem = rows.FirstOrDefault(x => x.Id == selectedId);
             _suppressCustomerMessagePopup = false;
             var fresh = rows.Count(x => x.Status == "جديد");
+            ContactTab.Header = fresh > 0 ? $"✉️ التواصل ({fresh})" : "✉️ التواصل";
             CustomerMessageStatusText.Text = $"إجمالي الرسائل: {rows.Length} — رسائل جديدة: {fresh}. اضغط على الرسالة لفتح تفاصيلها.";
+            if (newlyArrived.Length > 0)
+                ShowNewCustomerMessageToast(newlyArrived[^1], newlyArrived.Length);
         }
         catch (Exception ex)
         {
@@ -2300,6 +3160,69 @@ public partial class MainWindow : Window
         public string DisplayTitle { get; set; } = "";
         public string ContentKindLabel { get; set; } = "";
     }
+    private sealed class PlaybackPopularRow
+    {
+        public string VideoId { get; set; } = "";
+        public string Title { get; set; } = "";
+        public int PlayCount { get; set; }
+    }
+
+    private sealed class PlaybackRecentRow
+    {
+        public string Title { get; set; } = "";
+        public string StartedLocal { get; set; } = "";
+    }
+
+    private sealed class WatchPlaybackAdmin
+    {
+        public string VideoId { get; set; } = "";
+        public string ViewerId { get; set; } = "";
+        public string StartedUtc { get; set; } = "";
+    }
+    
+    private sealed class WatchCountsAdmin
+    {
+        public int Total { get; set; }
+        public Dictionary<string, int> ViewCounts { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private sealed class CustomerPageSettingsAdmin
+    {
+        public bool ShowCatalog { get; set; } = true;
+        public bool ShowContinueWatching { get; set; } = true;
+        public bool ShowAudio { get; set; } = true;
+        public bool ShowBooks { get; set; } = true;
+        public bool ShowApps { get; set; } = true;
+        public bool ShowContact { get; set; } = true;
+        public bool ShowWelcome { get; set; } = true;
+        public bool ShowAnnouncement { get; set; } = true;
+        public bool ShowDownloads { get; set; } = true;
+        public bool ShowImageAds { get; set; } = true;
+    }
+
+    private sealed class AnnouncementAdmin
+    {
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public bool IsActive { get; set; }
+        public string Kind { get; set; } = "notice";
+    }
+
+    private sealed class MetadataLookupAdmin
+    {
+        public string? Title { get; set; }
+        public string? Description { get; set; }
+        public int? Year { get; set; }
+        public string? Genre { get; set; }
+        public string? Kind { get; set; }
+        public string? PosterPath { get; set; }
+        public string? Director { get; set; }
+        public double? Rating { get; set; }
+        public int? RuntimeMinutes { get; set; }
+        public string? ReleaseDate { get; set; }
+        public string? Provider { get; set; }
+    }
+
     private sealed class AdminVideo
     {
         public string Id { get; set; } = "";
@@ -2364,12 +3287,12 @@ public sealed class FolderVideoSelectionWindow : Window
             FullPath = x.FullPath,
             FileName = x.FileName,
             SizeText = FormatSize(x.SizeBytes),
-            Selected = true
+            Selected = false
         }));
 
         var root = new DockPanel { Margin = new Thickness(16) };
         var header = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
-        header.Children.Add(new TextBlock { Text = "تم تحديد جميع الفيديوهات تلقائياً. ألغِ تحديد ما لا تريد إضافته.", FontSize = 19, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(20,45,74)) });
+        header.Children.Add(new TextBlock { Text = "حدد الفيديوهات التي تريد إضافتها فقط، ويمكنك استخدام تحديد الكل أو إلغاء التحديد.", FontSize = 19, FontWeight = FontWeights.Bold, Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(20,45,74)) });
         header.Children.Add(new TextBlock { Text = folderPath, TextWrapping = TextWrapping.Wrap, Foreground = System.Windows.Media.Brushes.DimGray, Margin = new Thickness(0,6,0,8) });
         var selectionButtons = new StackPanel { Orientation = Orientation.Horizontal };
         var allButton = new Button { Content = "تحديد الكل", Padding = new Thickness(12,6,12,6), Margin = new Thickness(0,0,6,0) };

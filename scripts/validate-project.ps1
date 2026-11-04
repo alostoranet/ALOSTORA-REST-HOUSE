@@ -19,22 +19,31 @@ if ($missing.Count -gt 0) {
 }
 Write-Host ("PASS: all {0} XAML event handlers are implemented." -f $events.Count)
 
-# The management window and embedded server must use the same loopback endpoint.
-if ($code -notmatch 'http://127\.0\.0\.1:8097' -or $app -notmatch 'ListenAnyIP\(8097\)') {
-    throw "Management client/server port configuration is inconsistent."
+# The management client and embedded server must share the persisted configurable LAN port.
+$settingsPath = Join-Path $root "src/Alostora.RestHouse/AppSettings.cs"
+$settings = Get-Content $settingsPath -Raw
+if ($code -notmatch '127\.0\.0\.1:\{_port\}' -or
+    $app -notmatch 'ListenAnyIP\(settings\.Port\)' -or
+    $settings -notmatch 'int Port = 8097' -or
+    $settings -notmatch 'SavePort\(' -or
+    $code -notmatch 'SavePort\(_root, port\)') {
+    throw "Management client/server configurable port persistence is inconsistent."
 }
 if ($app -notmatch 'ListenAnyIP\(8443,listen=>listen\.UseHttps' -or $app -notmatch 'ALOSTORA_HTTPS_CERT_PATH') {
     throw "Remote administration must use the optional dedicated HTTPS listener."
 }
-Write-Host "PASS: management client and embedded server port configuration match."
+Write-Host "PASS: management client and embedded server share the persisted configurable LAN port."
 
 # Check that key management routes used by the UI exist in the embedded API.
 $requiredRoutes = @(
     '/api/admin/catalog-categories',
     '/api/admin/library/folders',
+    '/api/admin/library/unregister-folder',
     '/api/admin/profile',
     '/api/admin/profile/logo',
     '/api/profile',
+    '/api/customer-settings',
+    '/api/admin/customer-settings',
     '/api/admin/series',
     '/api/admin/seasons',
     '/api/admin/register-selected-files',
@@ -46,6 +55,9 @@ $requiredRoutes = @(
     '/api/admin/seasons/{seasonId:long}/episodes',
     '/api/admin/episodes/{episodeId:long}',
     '/api/admin/missing-episodes',
+    '/api/media-libraries',
+    '/api/admin/media-libraries/scan',
+    '/api/media-library/',
     '/api/library'
 )
 foreach ($route in $requiredRoutes) {
@@ -77,6 +89,65 @@ if ($html -notmatch 'id="homeNav"' -or
     throw "Customer navigation must separate the home catalog from the contact form."
 }
 Write-Host "PASS: customer home and contact form have separate navigation states."
+
+# Audio, books, and Android apps are first-class local-network customer libraries.
+if ($html -notmatch 'data-kind="Audio"' -or
+    $html -notmatch 'data-kind="Books"' -or
+    $html -notmatch 'data-kind="Apps"' -or
+    $html -notmatch 'id="mediaLibrary"' -or
+    $html -notmatch 'id="mediaGrid"' -or
+    $html -notmatch 'function renderMediaLibraries\(' -or
+    $html -notmatch "fetch\('/api/media-libraries'\)" -or
+    $html -notmatch 'sharedAudioPlayer' -or
+    $xaml -notmatch 'Header="🎧 الصوتيات والكتب والتطبيقات"') {
+    throw "Audio, books, and Android apps must be available to customers and manageable from the admin panel."
+}
+$multiMediaTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/MultiMediaLibraryServiceTests.cs"
+if (-not (Test-Path $multiMediaTestsPath)) { throw "Multimedia library regression tests are missing." }
+Write-Host "PASS: customer audio, books, and apps libraries are wired to the local media API and admin controls."
+
+# Every customer-facing section can be toggled from the Windows management application.
+$customerSettingsTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/CustomerPageSettingsServiceTests.cs"
+if (-not (Test-Path $customerSettingsTestsPath) -or
+    $xaml -notmatch 'Header="🖥️ واجهة العميل"' -or
+    $xaml -notmatch 'Header="📢 الإعلانات"' -or
+    $xaml -notmatch 'x:Name="SettingsTabs"' -or
+    $xaml -notmatch 'Tag="5:1"' -or
+    $xaml -notmatch 'Tag="5:3"' -or
+    $xaml -notmatch 'CustomerShowCatalogBox' -or
+    $xaml -notmatch 'CustomerShowContinueBox' -or
+    $xaml -notmatch 'CustomerShowAudioBox' -or
+    $xaml -notmatch 'CustomerShowBooksBox' -or
+    $xaml -notmatch 'CustomerShowAppsBox' -or
+    $xaml -notmatch 'CustomerShowContactBox' -or
+    $xaml -notmatch 'CustomerShowWelcomeBox' -or
+    $xaml -notmatch 'CustomerShowAnnouncementBox' -or
+    $code -notmatch 'SaveCustomerPageSettings_Click' -or
+    $code -notmatch 'LoadCustomerPageSettingsAsync' -or
+    $app -notmatch 'MapGet\("\/api\/customer-settings"' -or
+    $app -notmatch 'MapPost\("\/api\/admin\/customer-settings"' -or
+    $html -notmatch 'function applyCustomerSettings\(' -or
+    $html -notmatch 'class="header-search"' -or
+    $html -notmatch 'id="search"' -or
+    $html -notmatch 'customerSettings\.showApps' -or
+    $html -notmatch 'customerSettings\.showBooks' -or
+    $html -notmatch 'customerSettings\.showAudio') {
+    throw "Customer page section visibility controls are incomplete."
+}
+if ($html -notmatch 'announcement-marquee' -or
+    $html -notmatch 'animationDuration' -or
+    $xaml -notmatch 'الشريط الإعلاني المتحرك للعملاء') {
+    throw "The customer announcement must be a styled scrolling banner managed by the admin."
+}
+Write-Host "PASS: customer page sections are admin-controlled and the announcement is a scrolling banner."
+
+# Dashboard statistics include all registered local media, not only videos.
+if ($xaml -notmatch 'x:Name="DashboardMediaCount"' -or
+    $code -notmatch '_dashboardMediaCount\s*=\s*items\.Length' -or
+    $code -notmatch 'DashboardMediaCount\.Text\s*=\s*_dashboardMediaCount') {
+    throw "The admin dashboard must count audio, books, and apps alongside videos."
+}
+Write-Host "PASS: admin dashboard counts all registered local media libraries."
 
 # The catalog must navigate through distinct customer pages, not stacked detail panels.
 if ($html -notmatch 'id="catalogView"' -or
@@ -152,6 +223,22 @@ foreach ($testName in @("CreatesAndListsNestedManagedFolders", "RejectsPathTrave
     if (-not $libraryFolderTests.Contains($testName)) { throw ("Missing library folder regression test: " + $testName) }
 }
 Write-Host "PASS: nested folder management, path traversal protection, and non-destructive copy controls are wired."
+
+if ($libraryService -notmatch 'public int UnregisterFolder' -or
+    $libraryService -notmatch 'RegisteredExternalFolders' -or
+    $code -notmatch 'RemoveExternalLibraryFolder_Click' -or
+    $xaml -notmatch 'Click="RemoveExternalLibraryFolder_Click"' -or
+    $xaml -notmatch 'Header="🎧 الصوتيات والكتب والتطبيقات"' -or
+    $xaml -match 'Header="🎧 الصوتيات والكتب والتطبيقات"[^>]*Visibility="Collapsed"' -or
+    $xaml -match 'Click="DeleteVideo_Click"' -or
+    $app -notmatch 'حذف ملفات الفيديو الأصلية معطّل') {
+    throw "External storage removal must preserve original files, audio/books/apps administration must remain visible, and permanent deletion must be disabled."
+}
+foreach ($testName in @("UnregistersSelectedExternalFolderWithoutDeletingOriginalVideos", "CannotUnregisterTheManagedLibraryRoot")) {
+    if (-not $libraryFolderTests.Contains($testName)) { throw ("Missing safe storage removal regression test: " + $testName) }
+}
+Write-Host "PASS: external storage paths can be unregistered without deleting source videos; destructive deletion is disabled."
+
 
 # Public catalog and media routes must enforce publication on the server, not only in browser JavaScript.
 $publicAccessPath = Join-Path $root "src/Alostora.RestHouse/PublicCatalogAccessService.cs"
@@ -251,6 +338,16 @@ if ($xaml -notmatch 'مساعد توافق صيغ الفيديو \(FFmpeg\) — 
 }
 Write-Host "PASS: FFmpeg is documented as an optional non-destructive playback helper."
 
+# Backup documentation must distinguish application data from original media files.
+$backupPath = Join-Path $root "src/Alostora.RestHouse/BackupService.cs"
+$backup = Get-Content $backupPath -Raw
+if ($backup -notmatch 'customer-page-settings.json' -or
+    $backup -notmatch 'Original media files \(videos, audio, books, and apps\) are not included' -or
+    $xaml -notmatch 'النسخة الاحتياطية لا تحتوي ملفات الوسائط الأصلية') {
+    throw "Backup scope must clearly state that original media files require a separate copy."
+}
+Write-Host "PASS: backup preserves customer visibility settings and clearly excludes original media files."
+
 
 # Regression checks for hierarchical category selection, logo reports, and view counts.
 if ($xaml -notmatch 'VideoMainCategoryPicker' -or $xaml -notmatch 'SeriesMainCategoryPicker' -or
@@ -300,3 +397,89 @@ foreach ($testName in @("SeriesCanUsePartsAndStoreVideosDirectlyUnderTheSeries",
     if (-not $seriesTests.Contains($testName)) { throw ("Missing series placement regression test: " + $testName) }
 }
 Write-Host "PASS: standalone series, seasons, parts, direct video links, and category inheritance are wired and regression-tested."
+
+# Additional audio, book and application libraries support independently registered folders.
+$multiMedia = Get-Content (Join-Path $root "src/Alostora.RestHouse/MultiMediaLibraryService.cs") -Raw
+$mediaTests = Get-Content (Join-Path $root "tests/Alostora.RestHouse.Tests/MultiMediaLibraryServiceTests.cs") -Raw
+if ($app -notmatch '/api/admin/media-libraries/roots' -or
+    $app -notmatch '/api/admin/storage-summary' -or
+    $xaml -notmatch 'MediaLibraryRootsGrid' -or
+    $xaml -notmatch 'StorageSummaryText' -or
+    $code -notmatch 'AddMediaLibraryRootAsync' -or
+    $code -notmatch 'RemoveMediaLibraryRoot_Click' -or
+    $multiMedia -notmatch 'AddRoot\(' -or
+    $multiMedia -notmatch 'GetStorageSummary\(' -or
+    $mediaTests -notmatch 'SupportsMultipleIndependentRootsForEachMediaKind' -or
+    $mediaTests -notmatch 'RemovingExternalRootUnlinksItWithoutDeletingOriginalFiles' -or
+    $mediaTests -notmatch 'RejectsOverlappingRootsToAvoidDuplicateCatalogEntries') {
+    throw "Multiple media source folders, safe unlinking, and storage reporting are incomplete."
+}
+Write-Host "PASS: audio, books and apps support multiple source folders, safe unlinking, and storage reporting."
+# Customer download center supports tracked downloads and HTTP byte-range resumption.
+$downloadService = Get-Content (Join-Path $root "src/Alostora.RestHouse/DownloadProgressService.cs") -Raw
+$downloadTests = Get-Content (Join-Path $root "tests/Alostora.RestHouse.Tests/DownloadProgressServiceTests.cs") -Raw
+if ($app -notmatch '/api/downloads/\{clientId\}' -or
+    $app -notmatch '/api/media-library/\{id\}/download' -or
+    $app -notmatch 'Accept-Ranges' -or
+    $html -notmatch 'id="downloadCenter"' -or
+    $html -notmatch 'function renderDownloads\(' -or
+    $html -notmatch 'showDownloads' -or
+    $app -notmatch '/api/downloads/\{clientId\}/\{downloadId\}' -or
+    $xaml -notmatch 'CustomerShowDownloadsBox' -or
+    $downloadService -notmatch 'Interrupt\(' -or
+    $downloadTests -notmatch 'TracksProgressAndCompletesDownload' -or
+    $downloadTests -notmatch 'ResumeStartsFromRequestedRangeAndKeepsClientHistoriesSeparate') {
+    throw "Customer download progress, visibility controls, or resumable range support are incomplete."
+}
+Write-Host "PASS: customer downloads expose progress, resume-friendly byte ranges, and admin visibility control."
+# Optional aggregate download bandwidth limit is managed by the rest-house admin app.
+$speedService = Get-Content (Join-Path $root "src/Alostora.RestHouse/DownloadSpeedLimitService.cs") -Raw
+$speedTests = Get-Content (Join-Path $root "tests/Alostora.RestHouse.Tests/DownloadSpeedLimitServiceTests.cs") -Raw
+if ($app -notmatch '/api/admin/download-speed-limit' -or
+    $app -notmatch 'speedLimit.WaitAsync' -or
+    $xaml -notmatch 'DownloadSpeedLimitBox' -or
+    $code -notmatch 'SaveDownloadSpeedLimit_Click' -or
+    $speedService -notmatch 'WaitAsync\(' -or
+    $speedTests -notmatch 'DefaultsToUnlimitedAndPersistsConfiguredLimit' -or
+    $backup -notmatch 'download-speed-settings.json') {
+    throw "Optional download speed limit, admin controls, or backup coverage are incomplete."
+}
+Write-Host "PASS: aggregate download speed limit is optional, admin-controlled, and backed up."
+# Customer image-ad gallery is local, admin-managed, and independently visible.
+$customerAdsService = Get-Content (Join-Path $root "src/Alostora.RestHouse/CustomerAdService.cs") -Raw
+$customerAdsTests = Get-Content (Join-Path $root "tests/Alostora.RestHouse.Tests/CustomerAdServiceTests.cs") -Raw
+if ($app -notmatch '/api/customer-ads' -or
+    $app -notmatch '/api/admin/customer-ads' -or
+    $xaml -notmatch 'CustomerAdsGrid' -or
+    $xaml -notmatch 'CustomerShowImageAdsBox' -or
+    $code -notmatch 'AddCustomerAd_Click' -or
+    $html -notmatch 'id="customerAds"' -or
+    $html -notmatch 'function renderCustomerAd\(' -or
+    $customerAdsService -notmatch 'MaximumImageBytes' -or
+    $customerAdsTests -notmatch 'RejectsUnsupportedOrMismatchedImagesAndUnsafeLinks' -or
+    $backup -notmatch 'customer-ads.json') {
+    throw "Customer image-ad gallery, admin controls, or backup support are incomplete."
+}
+Write-Host "PASS: customer image ads support safe local upload, carousel display, admin control, and backup."
+# Independent live broadcast player and shareable local stream URL.
+$livePage = Get-Content (Join-Path $root "src/Alostora.RestHouse/wwwroot/live.html") -Raw
+if ($app -notmatch 'MapGet\("/live"' -or
+    $xaml -notmatch 'CopyLiveAddress_Click' -or
+    $code -notmatch 'private void CopyLiveAddress_Click' -or
+    $livePage -notmatch 'id="liveVideo"' -or
+    $livePage -notmatch 'id="copyLiveLink"' -or
+    $livePage -notmatch 'Hls.isSupported' -or
+    $livePage -notmatch "https:") {
+    throw "Standalone live player route, link-copy control, or HLS playback wiring is incomplete."
+}
+if (-not (Test-Path (Join-Path $root "src/Alostora.RestHouse/wwwroot/hls.min.js")) -or
+    -not (Test-Path (Join-Path $root "src/Alostora.RestHouse/wwwroot/HLSJS-LICENSE.txt")) -or
+    -not $livePage.Contains(".get('src')") -or
+    -not $livePage.Contains("searchParams.set('src',") -or
+    -not $livePage.Contains("new URL(")) {
+    throw "Standalone live player is missing its local HLS library, license, or share-link handling."
+}
+Write-Host "PASS: standalone LAN live player supports shareable source links and HLS/browser playback."
+
+
+

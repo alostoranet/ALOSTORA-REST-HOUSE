@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10243b">
+<title>البث المباشر | استراحة الأسطورة</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#1a3553,#091321 68%);color:#f5f7fb;font-family:Tahoma,Arial,sans-serif}
+header{padding:20px 5%;border-bottom:2px solid #c93640;background:#142d4a}header a{color:#fff;text-decoration:none;font-weight:bold}header p{margin:8px 0 0;color:#c9d8e7;font-size:13px}
+main{width:min(100% - 28px,1050px);margin:28px auto}.panel{background:#14263b;border:1px solid #29435e;border-radius:16px;padding:18px;box-shadow:0 18px 45px #0004}
+h1{font-size:clamp(21px,4vw,30px);margin:0 0 8px}.sub{color:#b9c9d9;margin:0 0 18px;line-height:1.8}
+.player-wrap{position:relative;aspect-ratio:16/9;background:#02070d;border-radius:12px;overflow:hidden;border:1px solid #344b63}
+video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
+.status{min-height:28px;margin:12px 0;color:#d4e3f1;font-size:14px;line-height:1.7}
+label{display:block;margin:12px 0 7px;font-size:14px;font-weight:bold}
+input{width:100%;padding:13px;border:1px solid #49627b;border-radius:9px;background:#0b1929;color:#fff;direction:ltr;text-align:left;font-size:14px}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+button{border:0;border-radius:9px;padding:11px 17px;font-weight:bold;cursor:pointer;background:#c93640;color:#fff}
+button.secondary{background:#29445f;color:#f3f7fb}
+.note{color:#9fb2c6;font-size:12px;line-height:1.8;margin:14px 0 0}
+@media(max-width:600px){main{margin:14px auto}.panel{padding:12px}.actions button{flex:1}.player-wrap{aspect-ratio:16/9}}
+</style>
+</head>
+<body>
+<header><a href="/">ALOSTORA REST HOUSE</a><p>مشغل بث مباشر مستقل — يعمل من داخل الشبكة المحلية</p></header>
+<main><section class="panel">
+<h1>البث المباشر</h1><p class="sub">افتح رابط البث في هذه الصفحة مباشرة، دون الدخول إلى مكتبة الأفلام والمسلسلات.</p>
+<div class="player-wrap"><video id="liveVideo" controls playsinline autoplay preload="none"></video></div>
+<p id="liveStatus" class="status" role="status" aria-live="polite">أدخل رابط البث المباشر ثم اضغط تشغيل.</p>
+<label for="streamUrl">رابط البث (HLS / M3U8 أو رابط فيديو مباشر)</label>
+<input id="streamUrl" type="url" inputmode="url" autocomplete="url" placeholder="http://192.168.1.10:8080/live/stream.m3u8" maxlength="2048">
+<div class="actions">
+<button id="playLive" type="button">تشغيل البث</button>
+<button id="copyLiveLink" class="secondary" type="button">نسخ رابط هذه القناة</button>
+<button id="stopLive" class="secondary" type="button">إيقاف</button>
+</div>
+<p class="note">ملاحظة: يجب أن يكون مصدر البث متاحاً من أجهزة الشبكة، وأن يسمح خادم البث بطلبات المتصفح (CORS) عند اختلاف عنوان المصدر عن عنوان الاستراحة. لا يقوم هذا المشغل بتمرير البث عبر الإنترنت أو تخزينه.</p>
+</section></main>
+<script src="/hls.min.js"></script>
+<script>
+(()=>{
+ const video=document.getElementById('liveVideo'),input=document.getElementById('streamUrl'),status=document.getElementById('liveStatus');
+ let hls=null,currentSource='';
+ const setStatus=(message)=>status.textContent=message;
+ function validate(raw){
+  if(!raw||raw.length>2048)throw new Error('أدخل رابط بث صحيحاً.');
+  let url;try{url=new URL(raw);}catch{throw new Error('صيغة رابط البث غير صحيحة.');}
+  if(!['http:','https:'].includes(url.protocol)||url.username||url.password)throw new Error('يسمح بروابط HTTP وHTTPS فقط، دون اسم مستخدم أو كلمة مرور داخل الرابط.');
+  return url.href;
+ }
+ function stop(){
+  if(hls){hls.destroy();hls=null;}
+  video.pause();video.removeAttribute('src');video.load();currentSource='';
+ }
+ async function play(source){
+  let url;try{url=validate(source);}catch(error){setStatus(error.message);return;}
+  stop();currentSource=url;input.value=url;
+  const isHls=/\.m3u8(?:$|[?#])/i.test(new URL(url).pathname+new URL(url).search);
+  if(isHls&&window.Hls&&Hls.isSupported()){
+   hls=new Hls({enableWorker:true});
+   hls.on(Hls.Events.ERROR,(_,data)=>{
+    if(data&&data.fatal)setStatus('تعذر تشغيل البث: '+(data.details||data.type||'خطأ في مصدر البث')+'. تحقق من الرابط واتصال المصدر.');
+   });
+   hls.on(Hls.Events.MANIFEST_PARSED,()=>{setStatus('تم الاتصال بالبث. اضغط تشغيل إذا لم يبدأ تلقائياً.');video.play().catch(()=>{});});
+   hls.loadSource(url);hls.attachMedia(video);
+  }else if(isHls&&video.canPlayType('application/vnd.apple.mpegurl')){
+   video.src=url;video.load();setStatus('تم تجهيز بث HLS. اضغط تشغيل.');video.play().catch(()=>{});
+  }else{
+   video.src=url;video.load();setStatus('تم إرسال الرابط إلى مشغل المتصفح. إذا لم يعمل، تحقق من صيغة البث ودعم المتصفح.');video.play().catch(()=>{});
+  }
+ }
+ document.getElementById('playLive').addEventListener('click',()=>play(input.value.trim()));
+ document.getElementById('stopLive').addEventListener('click',()=>{stop();setStatus('تم إيقاف البث.');});
+ document.getElementById('copyLiveLink').addEventListener('click',async()=>{
+  if(!currentSource){setStatus('شغّل القناة أولاً حتى يتم إنشاء رابط مباشر لها.');return;}
+  const share=new URL('/live',location.origin);share.searchParams.set('src',currentSource);
+  try{await navigator.clipboard.writeText(share.href);setStatus('تم نسخ رابط البث المستقل.');}
+  catch{input.value=share.href;input.select();setStatus('تعذر النسخ التلقائي؛ تم تحديد الرابط لنسخه يدوياً.');}
+ });
+ const initial=new URLSearchParams(location.search).get('src');
+ if(initial){input.value=initial;play(initial);}
+ video.addEventListener('waiting',()=>setStatus('جاري تحميل البث...'));
+ video.addEventListener('playing',()=>setStatus('البث يعمل الآن.'));
+ video.addEventListener('error',()=>{if(currentSource)setStatus('تعذر تشغيل المصدر. قد يكون الرابط غير متاح أو لا يسمح بطلبات المتصفح.');});
+})();
+</script>
+</body></html>

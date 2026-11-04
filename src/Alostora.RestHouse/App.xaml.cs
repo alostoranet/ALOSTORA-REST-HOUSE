@@ -17,9 +17,11 @@ public sealed record BulkLibraryRequest(List<string> Ids);
 public sealed record CustomerMessageStatusRequest(string Status);
 public sealed record UpdateSeasonFolderRequest(string? FolderPath);
 public sealed record ScanFolderRequest(string FolderPath);
+public sealed record AddMediaLibraryRootRequest(string Kind, string FolderPath);
 public sealed record RegisterSelectedFilesRequest(string FolderPath, List<string> FilePaths);
 public sealed record RegisterFilesRequest(List<string> FilePaths);
 public sealed record CreateLibraryFolderRequest(string? ParentPath, string Name);
+public sealed record UnregisterLibraryFolderRequest(string FolderPath);
 public sealed record DetectedEpisodeLink(string VideoId, int EpisodeNumber, string? Title, bool Selected);
 public sealed record LinkDetectedEpisodesRequest(List<DetectedEpisodeLink> Episodes);
 public sealed record RelinkEpisodeRequest(string VideoId);
@@ -32,17 +34,19 @@ public partial class App : Application
  private static readonly HttpClient SupabaseAuthHttpClient = new();
  private async void OnStartup(object sender, StartupEventArgs e)
  {
+  var configuredPort = 8097;
   try {
    var root=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"AlostoraRestHouse");
    Directory.CreateDirectory(root);
    var settings=AppSettings.Load(root);
+   configuredPort = settings.Port;
    var library=settings.LibraryPath;
    var posters=settings.PostersPath;
    Directory.CreateDirectory(library);
    Directory.CreateDirectory(posters);
    // Do not open a second management window against a server owned by another
    // process: closing the server-owning process would otherwise leave this window orphaned.
-   if(await IsExistingRestHouseServerAsync())
+   if(await IsExistingRestHouseServerAsync(settings.Port))
    {
     MessageBox.Show("استراحة الأسطورة تعمل بالفعل. استخدم نافذة التطبيق المفتوحة بدلاً من تشغيل نسخة ثانية.",
      "استراحة الأسطورة",MessageBoxButton.OK,MessageBoxImage.Information);
@@ -56,7 +60,7 @@ public partial class App : Application
    var adminHttpsEnabled=!string.IsNullOrWhiteSpace(adminCertificatePath)&&File.Exists(adminCertificatePath);
    builder.WebHost.ConfigureKestrel(options =>
    {
-    options.ListenAnyIP(8097);
+    options.ListenAnyIP(settings.Port);
     if(adminHttpsEnabled) options.ListenAnyIP(8443,listen=>listen.UseHttps(adminCertificatePath!,adminCertificatePassword));
    });
    var supabaseUrl=(Environment.GetEnvironmentVariable("ALOSTORA_SUPABASE_URL")??"https://erxbnboohjiylzbafqho.supabase.co").TrimEnd('/');
@@ -67,10 +71,16 @@ public partial class App : Application
    builder.Services.AddSingleton(new WatchProgressService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new VideoMetadataService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new MultiMediaLibraryService(library,Path.Combine(root,"resthouse.db")));
+   builder.Services.AddSingleton<DownloadProgressService>();
+   builder.Services.AddSingleton(new DownloadSpeedLimitService(root));
    builder.Services.AddSingleton(new SeriesCatalogService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new CatalogCategoryService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new CustomerMessageService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new RestHouseProfileService(root));
+   builder.Services.AddSingleton(new AnnouncementService(root));
+   builder.Services.AddSingleton(new CustomerAdService(root,posters));
+   builder.Services.AddSingleton(new CustomerPageSettingsService(root));
+   builder.Services.AddSingleton<MetadataLookupService>();
    builder.Services.AddSingleton(new PublicCatalogAccessService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddHostedService(provider => new ScheduledBackupService(root,posters,provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ScheduledBackupService>>()));
    _server=builder.Build();
@@ -97,6 +107,7 @@ public partial class App : Application
     await next();
    });
    _server.UseDefaultFiles(); _server.UseStaticFiles();
+   _server.MapGet("/live",(HttpContext c)=>Results.Redirect("/live.html"+c.Request.QueryString));
    static bool IsLocal(HttpContext c)
    {
     var address = c.Connection.RemoteIpAddress;
@@ -203,6 +214,107 @@ public partial class App : Application
    });
    _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
    _server.MapGet("/api/profile",(RestHouseProfileService profile)=>Results.Ok(profile.Load()));
+   _server.MapGet("/api/customer-settings",(CustomerPageSettingsService settings)=>Results.Ok(settings.Load()));
+   _server.MapGet("/api/admin/customer-settings",(HttpContext c,CustomerPageSettingsService settings)=>
+    IsAdmin(c)?Results.Ok(settings.Load()):Results.NotFound());
+   _server.MapPost("/api/admin/customer-settings",(HttpContext c,CustomerPageSettings request,CustomerPageSettingsService settings)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(request is null)return Results.BadRequest(new{error="إعدادات واجهة العميل غير صالحة."});
+    return Results.Ok(new{saved=true,settings=settings.Save(request)});
+   });
+   _server.MapGet("/api/admin/download-speed-limit",(HttpContext c,DownloadSpeedLimitService speedLimit)=>
+    IsAdmin(c)?Results.Ok(speedLimit.GetSettings()):Results.NotFound());
+   _server.MapPost("/api/admin/download-speed-limit",(HttpContext c,DownloadSpeedLimitSettings request,DownloadSpeedLimitService speedLimit)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(request is null||request.LimitMbps is < 0 or > 1000)
+     return Results.BadRequest(new{error="أدخل حداً بين 0 و1000 ميجابت/ثانية. الصفر يعني دون حد."});
+    try{return Results.Ok(new{saved=true,settings=speedLimit.Save(request)});}
+    catch(IOException){return Results.Problem("تعذر حفظ إعداد سرعة التنزيل.",statusCode:500);}
+   });
+   _server.MapGet("/api/customer-ads",(CustomerAdService ads)=>Results.Ok(ads.List(activeOnly:true)));
+   _server.MapGet("/api/customer-ads/{id}/image",(string id,CustomerAdService ads)=>
+   {
+    if(!Guid.TryParseExact(id,"N",out _ )||!ads.TryGetImage(id,out var path,out var contentType))return Results.NotFound();
+    return Results.File(path,contentType,enableRangeProcessing:true);
+   });
+   _server.MapGet("/api/admin/customer-ads",(HttpContext c,CustomerAdService ads)=>
+    IsAdmin(c)?Results.Ok(ads.List()):Results.NotFound());
+   _server.MapPost("/api/admin/customer-ads",async (HttpContext c,CustomerAdService ads)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(c.Request.ContentLength is > 6*1024*1024)return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+    if(!c.Request.HasFormContentType)return Results.BadRequest(new{error="أرسل صورة الإعلان بصيغة نموذج ملفات."});
+    try
+    {
+     var form=await c.Request.ReadFormAsync(c.RequestAborted);
+     var file=form.Files.GetFile("image");
+     if(file is null||file.Length<=0||file.Length>CustomerAdService.MaximumImageBytes)
+      return Results.BadRequest(new{error="اختر صورة لا يتجاوز حجمها 5 ميجابايت."});
+     await using var stream=file.OpenReadStream();
+     var duration=int.TryParse(form["durationSeconds"].ToString(),out var parsed)?parsed:10;
+     var item=ads.Add(stream,file.FileName,form["title"].ToString(),form["linkUrl"].ToString(),duration);
+     return Results.Ok(new{saved=true,ad=item});
+    }
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+    catch(IOException){return Results.Problem("تعذر حفظ صورة الإعلان محلياً.",statusCode:500);}
+   });
+   _server.MapPost("/api/admin/customer-ads/{id}",(HttpContext c,string id,CustomerAdUpdateRequest request,CustomerAdService ads)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(!Guid.TryParseExact(id,"N",out _ )||request is null)return Results.BadRequest(new{error="بيانات الإعلان غير صالحة."});
+    try{return Results.Ok(new{saved=true,ad=ads.Update(id,request)});}
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+    catch(KeyNotFoundException){return Results.NotFound();}
+    catch(IOException){return Results.Problem("تعذر حفظ إعدادات الإعلان.",statusCode:500);}
+   });
+   _server.MapPost("/api/admin/customer-ads/{id}/move",(HttpContext c,string id,CustomerAdMoveRequest request,CustomerAdService ads)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(!Guid.TryParseExact(id,"N",out _ )||request is null)return Results.BadRequest();
+    try{return ads.Move(id,request.Direction)?Results.Ok(new{moved=true}):Results.NotFound();}
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+   });
+   _server.MapDelete("/api/admin/customer-ads/{id}",(HttpContext c,string id,CustomerAdService ads)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(!Guid.TryParseExact(id,"N",out _))return Results.BadRequest();
+    try{return ads.Remove(id)?Results.Ok(new{removed=true}):Results.NotFound();}
+    catch(IOException){return Results.Problem("تعذر حذف صورة الإعلان من مجلد إعلانات الاستراحة.",statusCode:500);}
+   });
+   _server.MapGet("/api/announcement",(AnnouncementService announcements)=>
+   {
+    var item=announcements.Load();
+    return Results.Ok(new{item.Title,item.Message,item.IsActive,item.Kind,item.UpdatedUtc});
+   });
+   _server.MapGet("/api/admin/announcement",(HttpContext c,AnnouncementService announcements)=>
+    IsAdmin(c)?Results.Ok(announcements.Load()):Results.NotFound());
+   _server.MapPost("/api/admin/announcement",(HttpContext c,RestHouseAnnouncement request,AnnouncementService announcements)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(request is null||request.Title?.Length>120||request.Message?.Length>1000||
+       (request.Kind is not ("ad" or "notice"))||
+       (request.IsActive&&string.IsNullOrWhiteSpace(request.Message)))
+     return Results.BadRequest(new{error="تحقق من العنوان والرسالة ونوع الإعلان."});
+    try{return Results.Ok(new{saved=true,announcement=announcements.Save(request)});}
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+   });
+   _server.MapGet("/api/admin/metadata/lookup",async (HttpContext c,string query,string? kind,MetadataLookupService lookup)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    try
+    {
+     var result=await lookup.SearchAsync(query,kind??"Movie",c.RequestAborted);
+     if(result is null)return Results.NotFound(new{error="لم نعثر على بيانات مطابقة. جرّب كتابة الاسم الأصلي."});
+     var posterPath=await lookup.DownloadPosterAsync(result.PosterUrl,posters,c.RequestAborted);
+     return Results.Ok(new{result.Title,result.Description,result.Year,result.Genre,result.Kind,
+      PosterPath=posterPath,result.Director,result.Rating,result.RuntimeMinutes,result.ReleaseDate,result.Provider});
+    }
+    catch(OperationCanceledException){return Results.StatusCode(499);}
+    catch(HttpRequestException){return Results.Problem("تعذر الاتصال بمصدر البيانات. تأكد من توفر الإنترنت على جهاز الإدارة ثم أعد المحاولة.",statusCode:503);}
+    catch(Exception ex){return Results.Problem("تعذر جلب بيانات الفيديو: "+ex.Message,statusCode:502);}
+   });
    _server.MapPost("/api/messages",(CreateCustomerMessageRequest request,CustomerMessageService messages)=>{
     var allowed=new[]{"طلب مسلسل","الإبلاغ عن مشكلة","اقتراح","بلاغ شعار أو علامة تجارية","أخرى"};
     if(request is null||!allowed.Contains(request.Category)||string.IsNullOrWhiteSpace(request.Title)||request.Title.Trim().Length<3||request.Title.Length>120||string.IsNullOrWhiteSpace(request.Details)||request.Details.Trim().Length<8||request.Details.Length>2500||(request.Contact?.Length??0)>100||(request.ViewerId?.Length??0)>100)
@@ -313,6 +425,33 @@ public partial class App : Application
     if(kind is not null && kind is not ("Audio" or "Books" or "Apps")) return Results.BadRequest(new{error="نوع المكتبة غير صالح"});
     return Results.Ok(media.List(kind));
    });
+   _server.MapGet("/api/admin/media-libraries/roots",(HttpContext c,string? kind,MultiMediaLibraryService media)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(kind is not null && kind is not ("Audio" or "Books" or "Apps"))return Results.BadRequest(new{error="نوع المكتبة غير صالح"});
+    return Results.Ok(media.ListRoots(kind));
+   });
+   _server.MapPost("/api/admin/media-libraries/roots",(HttpContext c,AddMediaLibraryRootRequest request,MultiMediaLibraryService media)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(request is null || request.Kind is not ("Audio" or "Books" or "Apps") || string.IsNullOrWhiteSpace(request.FolderPath))
+     return Results.BadRequest(new{error="حدد نوع المكتبة ومسار المجلد"});
+    try{return Results.Ok(media.AddRoot(request.Kind,request.FolderPath));}
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+    catch(DirectoryNotFoundException){return Results.BadRequest(new{error="المجلد المحدد غير موجود أو غير متاح"});}
+    catch(IOException){return Results.Problem("تعذر تسجيل المجلد المحدد.",statusCode:500);}
+   });
+   _server.MapDelete("/api/admin/media-libraries/roots/{id}",(HttpContext c,string id,MultiMediaLibraryService media)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(string.IsNullOrWhiteSpace(id)||id.Length>64)return Results.BadRequest(new{error="معرّف المجلد غير صالح"});
+    return media.RemoveRoot(id)?Results.Ok(new{removed=true,filesPreserved=true}):Results.BadRequest(new{error="لا يمكن إزالة مجلد المكتبة الأساسي أو أن المجلد غير مسجل"});
+   });
+   _server.MapGet("/api/admin/storage-summary",(HttpContext c,MultiMediaLibraryService media)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    return Results.Ok(media.GetStorageSummary());
+   });
    _server.MapPost("/api/admin/media-libraries/scan",(HttpContext c,ScanMediaLibraryRequest request,MultiMediaLibraryService media)=>
    {
     if(!IsAdmin(c))return Results.NotFound();
@@ -320,6 +459,109 @@ public partial class App : Application
     try{return Results.Ok(new{scanned=true,kind=request.Kind,count=media.Scan(request.Kind),items=media.List(request.Kind)});}
     catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
     catch(IOException){return Results.Problem("تعذر فحص مجلد المكتبة. تحقق من صلاحيات الوصول إلى الملفات.",statusCode:500);}
+   });
+   _server.MapGet("/api/downloads/{clientId}",(string clientId,DownloadProgressService downloads)=>
+   {
+    if(string.IsNullOrWhiteSpace(clientId)||clientId.Length>80||!Regex.IsMatch(clientId,@"^[a-zA-Z0-9_-]+$"))return Results.BadRequest(new{error="معرّف العميل غير صالح"});
+    return Results.Ok(downloads.List(clientId));
+   });
+   _server.MapDelete("/api/downloads/{clientId}/{downloadId}",(string clientId,string downloadId,DownloadProgressService downloads)=>
+   {
+    if(string.IsNullOrWhiteSpace(clientId)||clientId.Length>80||!Regex.IsMatch(clientId,@"^[a-zA-Z0-9_-]+$")||string.IsNullOrWhiteSpace(downloadId)||downloadId.Length>80||!Regex.IsMatch(downloadId,@"^[a-zA-Z0-9_-]+$"))return Results.BadRequest(new{error="معرّف التنزيل غير صالح"});
+    return downloads.Remove(clientId,downloadId)?Results.Ok(new{removed=true}):Results.NotFound();
+   });
+   _server.MapGet("/api/media-library/{id}/download",async (HttpContext context,string id,string clientId,string downloadId,MultiMediaLibraryService media,DownloadProgressService downloads,DownloadSpeedLimitService speedLimit)=>
+   {
+    if(string.IsNullOrWhiteSpace(clientId)||clientId.Length>80||!Regex.IsMatch(clientId,@"^[a-zA-Z0-9_-]+$")||string.IsNullOrWhiteSpace(downloadId)||downloadId.Length>80||!Regex.IsMatch(downloadId,@"^[a-zA-Z0-9_-]+$"))
+     return Results.BadRequest(new{error="معرّف التنزيل غير صالح"});
+    var path=media.ResolveById(id);
+    if(path is null)return Results.NotFound();
+    var info=new FileInfo(path);
+    if(!info.Exists||info.Length<=0)return Results.NotFound();
+    long start=0,end=info.Length-1;
+    var entityTag=$"\"{info.Length:x}-{info.LastWriteTimeUtc.Ticks:x}\"";
+    var lastModified=info.LastWriteTimeUtc.ToString("R");
+    var range=context.Request.Headers["Range"].ToString();
+    var ifRange=context.Request.Headers["If-Range"].ToString();
+    if(!string.IsNullOrWhiteSpace(ifRange)&&!string.Equals(ifRange,entityTag,StringComparison.Ordinal)&&!string.Equals(ifRange,lastModified,StringComparison.Ordinal))range="";
+    var partial=false;
+    if(!string.IsNullOrWhiteSpace(range))
+    {
+     if(!range.StartsWith("bytes=",StringComparison.OrdinalIgnoreCase)||range.Contains(','))
+     {
+      context.Response.Headers["Content-Range"]=$"bytes */{info.Length}";
+      return Results.StatusCode(StatusCodes.Status416RangeNotSatisfiable);
+     }
+     var parts=range[6..].Split('-',2);
+     if(parts.Length!=2)
+     {
+      context.Response.Headers["Content-Range"]=$"bytes */{info.Length}";
+      return Results.StatusCode(StatusCodes.Status416RangeNotSatisfiable);
+     }
+     if(parts[0].Length==0)
+     {
+      if(!long.TryParse(parts[1],out var suffix)||suffix<=0)
+      {
+       context.Response.Headers["Content-Range"]=$"bytes */{info.Length}";
+       return Results.StatusCode(StatusCodes.Status416RangeNotSatisfiable);
+      }
+      start=Math.Max(0,info.Length-suffix);
+     }
+     else if(!long.TryParse(parts[0],out start)||start<0||start>=info.Length)
+     {
+      context.Response.Headers["Content-Range"]=$"bytes */{info.Length}";
+      return Results.StatusCode(StatusCodes.Status416RangeNotSatisfiable);
+     }
+     if(parts[1].Length>0&&(!long.TryParse(parts[1],out end)||end<start))
+     {
+      context.Response.Headers["Content-Range"]=$"bytes */{info.Length}";
+      return Results.StatusCode(StatusCodes.Status416RangeNotSatisfiable);
+     }
+     end=Math.Min(end,info.Length-1);
+     partial=true;
+    }
+    var length=end-start+1;
+    var extension=Path.GetExtension(path).ToLowerInvariant();
+    var contentType=extension switch
+    {
+     ".mp3"=>"audio/mpeg",".m4a"=>"audio/mp4",".aac"=>"audio/aac",".ogg"=>"audio/ogg",
+     ".opus"=>"audio/opus",".wav"=>"audio/wav",".flac"=>"audio/flac",
+     ".pdf"=>"application/pdf",".epub"=>"application/epub+zip",".txt"=>"text/plain",
+     ".cbz"=>"application/vnd.comicbook+zip",".cbr"=>"application/vnd.comicbook-rar",
+     ".apk" or ".xapk" or ".apks"=>"application/vnd.android.package-archive",
+     _=>"application/octet-stream"
+    };
+    context.Response.StatusCode=partial?StatusCodes.Status206PartialContent:StatusCodes.Status200OK;
+    context.Response.ContentType=contentType;
+    context.Response.ContentLength=length;
+    context.Response.Headers["Accept-Ranges"]="bytes";
+    context.Response.Headers["Content-Disposition"]=new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment"){FileNameStar=info.Name}.ToString();
+    context.Response.Headers["Last-Modified"]=lastModified;
+    context.Response.Headers["ETag"]=entityTag;
+    if(partial)context.Response.Headers["Content-Range"]=$"bytes {start}-{end}/{info.Length}";
+    downloads.Begin(clientId,downloadId,id,info.Name,info.Length,start);
+    try
+    {
+     await using var stream=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read,64*1024,FileOptions.Asynchronous|FileOptions.SequentialScan);
+     stream.Seek(start,SeekOrigin.Begin);
+     var buffer=new byte[64*1024];
+     long sent=0;
+     while(sent<length)
+     {
+      var wanted=(int)Math.Min(buffer.Length,length-sent);
+      var read=await stream.ReadAsync(buffer.AsMemory(0,wanted),context.RequestAborted);
+      if(read<=0)break;
+      await speedLimit.WaitAsync(read,context.RequestAborted);
+      await context.Response.Body.WriteAsync(buffer.AsMemory(0,read),context.RequestAborted);
+      sent+=read;
+      downloads.Report(clientId,downloadId,start+sent);
+     }
+     if(sent==length)downloads.Complete(clientId,downloadId);
+     else downloads.Interrupt(clientId,downloadId);
+    }
+    catch(OperationCanceledException){downloads.Interrupt(clientId,downloadId);}
+    catch(IOException){downloads.Interrupt(clientId,downloadId);throw;}
+    return Results.Empty;
    });
    _server.MapGet("/api/media-library/{id}",(string id,MultiMediaLibraryService media)=>
    {
@@ -519,6 +761,20 @@ public partial class App : Application
     try { var count=files.RegisterSelectedFiles(request.FolderPath,request.FilePaths); return Results.Ok(new{registered=true,videoCount=count}); }
     catch(Exception ex) { return Results.BadRequest(new{error=ex.Message}); }
    });
+   _server.MapPost("/api/admin/library/unregister-folder",(HttpContext c,UnregisterLibraryFolderRequest request,LibraryService files)=>
+   {
+    if(!IsAdmin(c)) return Results.NotFound();
+    if(request is null||string.IsNullOrWhiteSpace(request.FolderPath)||request.FolderPath.Length>2000)
+     return Results.BadRequest(new{error="مسار التخزين غير صالح"});
+    try
+    {
+     var count=files.UnregisterFolder(request.FolderPath);
+     return Results.Ok(new{unregistered=true,videoCount=count,message="تم فك تسجيل مسار التخزين من المكتبة فقط. لم يتم حذف أي ملف من القرص أو بيانات الفيديو."});
+    }
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+    catch(InvalidOperationException ex){return Results.BadRequest(new{error=ex.Message});}
+    catch(KeyNotFoundException ex){return Results.NotFound(new{error=ex.Message});}
+   });
    _server.MapPost("/api/admin/scan-folder",(HttpContext c,ScanFolderRequest request,LibraryService files)=>{
     if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.FolderPath)||(request.FolderPath.Length>1000)||!Directory.Exists(request.FolderPath)) return Results.BadRequest(new{error="حدد مجلداً موجوداً ويمكن الوصول إليه"});
@@ -671,14 +927,10 @@ public partial class App : Application
     foreach(var id in ids) librarySvc.RemoveFromLibrary(id);
     return Results.Ok(new{removed=ids.Length,message="تمت إزالة الملفات المحددة من المكتبة فقط، دون حذف الملفات الأصلية"});
    });
-   _server.MapPost("/api/admin/library/bulk-delete",(HttpContext c,BulkLibraryRequest request,LibraryService librarySvc,VideoMetadataService metadata,WatchProgressService progress)=>
+   _server.MapPost("/api/admin/library/bulk-delete",(HttpContext c,BulkLibraryRequest request)=>
    {
     if(!IsAdmin(c)) return Results.NotFound();
-    if(request.Ids is null||request.Ids.Count<1||request.Ids.Count>5000||request.Ids.Any(id=>string.IsNullOrWhiteSpace(id)||id.Length!=24||!id.All(Uri.IsHexDigit))) return Results.BadRequest(new{error="قائمة الملفات المحددة غير صالحة"});
-    var ids=request.Ids.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-    if(ids.Any(id=>librarySvc.Resolve(id) is null)) return Results.NotFound(new{error="بعض الملفات المحددة لم تعد موجودة في المكتبة"});
-    foreach(var id in ids) { librarySvc.DeleteFile(id); metadata.Delete(id); progress.DeleteVideo(id); }
-    return Results.Ok(new{deleted=ids.Length,message="تم حذف الملفات المحددة نهائياً وتنظيف بياناتها"});
+    return Results.Conflict(new{error="حذف ملفات الفيديو الأصلية معطّل حفاظاً على مكتبتك. استخدم «إزالة المحدد من المكتبة» لإخفائها دون حذفها من القرص."});
    });
    _server.MapPost("/api/admin/library/{id}/remove",(HttpContext c,string id,LibraryService librarySvc)=>
    {
@@ -688,21 +940,15 @@ public partial class App : Application
     catch(FileNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
     catch(Exception ex) { return Results.BadRequest(new{error=ex.Message}); }
    });
-   _server.MapDelete("/api/admin/library/{id}",(HttpContext c,string id,LibraryService librarySvc,VideoMetadataService metadata,WatchProgressService progress)=>
+   _server.MapDelete("/api/admin/library/{id}",(HttpContext c,string id)=>
    {
     if(!IsAdmin(c)) return Results.NotFound();
-    if(string.IsNullOrWhiteSpace(id)||id.Length!=24||!id.All(Uri.IsHexDigit)) return Results.BadRequest(new{error="معرّف الفيديو غير صالح"});
-    try
-    {
-     librarySvc.DeleteFile(id);
-     metadata.Delete(id);
-     progress.DeleteVideo(id);
-     return Results.Ok(new{deleted=true,message="تم حذف ملف الفيديو من القرص وتنظيف بياناته وسجل مشاهدته. إذا كان مربوطاً بحلقة فستظهر كحلقة مفقودة ويمكن إعادة ربطها."});
-    }
-    catch(FileNotFoundException) { return Results.NotFound(new{error="ملف الفيديو غير موجود أو حُذف مسبقاً"}); }
-    catch(Exception ex) { return Results.Problem("تعذر حذف ملف الفيديو: "+ex.Message); }
+    return Results.Conflict(new{error="حذف ملفات الفيديو الأصلية معطّل حفاظاً على مكتبتك. استخدم «إزالة من المكتبة فقط» لإخفائها دون حذفها من القرص."});
    });
    _server.MapGet("/api/progress/{viewerId}",(string viewerId,WatchProgressService db)=>viewerId.Length<=80?Results.Ok(db.Get(viewerId)):Results.BadRequest());
+   _server.MapGet("/api/admin/watch-history",(HttpContext c,WatchProgressService db)=>IsAdmin(c)?Results.Ok(db.GetRecentPlayback(200)):Results.NotFound());
+   _server.MapGet("/api/admin/watch-counts",(HttpContext c,WatchProgressService db)=>IsAdmin(c)?Results.Ok(new{total=db.GetTotalPlaybackCount(),viewCounts=db.GetViewCounts()}):Results.NotFound());
+   _server.MapPost("/api/watch-events",(WatchPlaybackRequest request,WatchProgressService db,LibraryService svc,PublicCatalogAccessService publicCatalog)=>{if(string.IsNullOrWhiteSpace(request.ViewerId)||request.ViewerId.Length>80||string.IsNullOrWhiteSpace(request.PlaybackId)||request.PlaybackId.Length>80||string.IsNullOrWhiteSpace(request.VideoId)||svc.Resolve(request.VideoId) is null||!publicCatalog.IsVideoPublished(request.VideoId))return Results.BadRequest();db.RecordPlayback(request);return Results.Ok(new{recorded=true});});
    _server.MapPost("/api/progress",(WatchProgressRequest request,WatchProgressService db,LibraryService svc,PublicCatalogAccessService publicCatalog)=>{if(string.IsNullOrWhiteSpace(request.ViewerId)||request.ViewerId.Length>80||string.IsNullOrWhiteSpace(request.VideoId)||svc.Resolve(request.VideoId) is null||!publicCatalog.IsVideoPublished(request.VideoId)||!double.IsFinite(request.PositionSeconds)||!double.IsFinite(request.DurationSeconds)||request.PositionSeconds<0||request.DurationSeconds<=0||request.PositionSeconds>request.DurationSeconds+5||request.PositionSeconds>864000||request.DurationSeconds>864000)return Results.BadRequest();db.Save(request);return Results.Ok(new{saved=true});});
    _server.MapGet("/api/subtitles/{id}",(string id,LibraryService svc,PublicCatalogAccessService publicCatalog)=>svc.Resolve(id) is null||!publicCatalog.IsVideoPublished(id)?Results.NotFound():Results.Ok(svc.ListSubtitles(id)));
    _server.MapGet("/api/subtitles/{id}/{fileName}",(string id,string fileName,LibraryService svc,PublicCatalogAccessService publicCatalog)=>{
@@ -717,7 +963,7 @@ public partial class App : Application
     return content is null?Results.NotFound():Results.Text(content,"text/vtt; charset=utf-8");
    });
    _server.MapGet("/media/{id}",(string id,LibraryService svc,PublicCatalogAccessService publicCatalog)=>{var item=svc.Resolve(id);return item is null||!publicCatalog.IsVideoPublished(id)?Results.NotFound():Results.File(item.FullPath,item.ContentType,enableRangeProcessing:true);});
-   await _server.StartAsync(); new MainWindow(root,library,posters,settings.FfmpegPath).Show();
+   await _server.StartAsync(); new MainWindow(root,library,posters,settings.FfmpegPath,settings.Port).Show();
   } catch(Exception ex){
    var details=ex.ToString();
    var logPath=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"AlostoraRestHouse","startup-error.txt");
@@ -725,17 +971,17 @@ public partial class App : Application
    var inner=ex.GetBaseException();
    var message=inner.Message;
    if(inner is System.Net.Sockets.SocketException socket && socket.SocketErrorCode==System.Net.Sockets.SocketError.AddressAlreadyInUse)
-    message="المنفذ 8097 مستخدم حالياً من برنامج آخر. أغلق البرنامج الذي يستخدمه ثم أعد تشغيل استراحة الأسطورة. لم يتم تغيير المنفذ حتى لا تتعطل روابط المشاهدة داخل الشبكة.";
+    message=$"المنفذ {configuredPort} مستخدم حالياً من برنامج آخر. أغلق البرنامج الذي يستخدمه أو اختر منفذاً آخر من إعدادات الاستراحة.";
    MessageBox.Show("تعذر تشغيل السيرفر:\n"+message+"\n\nتم حفظ تفاصيل الخطأ في:\n"+logPath,"استراحة الأسطورة",MessageBoxButton.OK,MessageBoxImage.Error);
    Shutdown(1);
   }
  }
- private static async Task<bool> IsExistingRestHouseServerAsync()
+ private static async Task<bool> IsExistingRestHouseServerAsync(int port)
  {
   try
   {
    using var client=new HttpClient{Timeout=TimeSpan.FromSeconds(2)};
-   using var response=await client.GetAsync("http://127.0.0.1:8097/api/health");
+   using var response=await client.GetAsync($"http://127.0.0.1:{port}/api/health");
    if(!response.IsSuccessStatusCode)return false;
    await using var stream=await response.Content.ReadAsStreamAsync();
    using var document=await JsonDocument.ParseAsync(stream);
