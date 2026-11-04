@@ -53,6 +53,9 @@ $requiredRoutes = @(
     '/api/admin/seasons/{seasonId:long}/episodes',
     '/api/admin/episodes/{episodeId:long}',
     '/api/admin/missing-episodes',
+    '/api/media-libraries',
+    '/api/admin/media-libraries/scan',
+    '/api/media-library/',
     '/api/library'
 )
 foreach ($route in $requiredRoutes) {
@@ -84,6 +87,22 @@ if ($html -notmatch 'id="homeNav"' -or
     throw "Customer navigation must separate the home catalog from the contact form."
 }
 Write-Host "PASS: customer home and contact form have separate navigation states."
+
+# Audio, books, and Android apps are first-class local-network customer libraries.
+if ($html -notmatch 'data-kind="Audio"' -or
+    $html -notmatch 'data-kind="Books"' -or
+    $html -notmatch 'data-kind="Apps"' -or
+    $html -notmatch 'id="mediaLibrary"' -or
+    $html -notmatch 'id="mediaGrid"' -or
+    $html -notmatch 'function renderMediaLibraries\(' -or
+    $html -notmatch "fetch\('/api/media-libraries'\)" -or
+    $html -notmatch 'sharedAudioPlayer' -or
+    $xaml -notmatch 'Header="🎧 الصوتيات والكتب والتطبيقات"') {
+    throw "Audio, books, and Android apps must be available to customers and manageable from the admin panel."
+}
+$multiMediaTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/MultiMediaLibraryServiceTests.cs"
+if (-not (Test-Path $multiMediaTestsPath)) { throw "Multimedia library regression tests are missing." }
+Write-Host "PASS: customer audio, books, and apps libraries are wired to the local media API and admin controls."
 
 # The catalog must navigate through distinct customer pages, not stacked detail panels.
 if ($html -notmatch 'id="catalogView"' -or
@@ -164,10 +183,11 @@ if ($libraryService -notmatch 'public int UnregisterFolder' -or
     $libraryService -notmatch 'RegisteredExternalFolders' -or
     $code -notmatch 'RemoveExternalLibraryFolder_Click' -or
     $xaml -notmatch 'Click="RemoveExternalLibraryFolder_Click"' -or
-    $xaml -notmatch 'Header="المكتبات غير المستخدمة" Visibility="Collapsed"' -or
+    $xaml -notmatch 'Header="🎧 الصوتيات والكتب والتطبيقات"' -or
+    $xaml -match 'Visibility="Collapsed"[^>]*Header="🎧 الصوتيات والكتب والتطبيقات"' -or
     $xaml -match 'Click="DeleteVideo_Click"' -or
     $app -notmatch 'حذف ملفات الفيديو الأصلية معطّل') {
-    throw "External storage removal must preserve original files, non-video sections must remain hidden, and permanent deletion must be disabled."
+    throw "External storage removal must preserve original files, audio/books/apps administration must remain visible, and permanent deletion must be disabled."
 }
 foreach ($testName in @("UnregistersSelectedExternalFolderWithoutDeletingOriginalVideos", "CannotUnregisterTheManagedLibraryRoot")) {
     if (-not $libraryFolderTests.Contains($testName)) { throw ("Missing safe storage removal regression test: " + $testName) }
