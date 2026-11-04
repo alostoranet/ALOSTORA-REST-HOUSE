@@ -94,6 +94,62 @@ public sealed class MultiMediaLibraryServiceTests : IDisposable
         Assert.Null(library.ResolveById(item.Id));
     }
 
+    [Fact]
+    public void SupportsMultipleIndependentRootsForEachMediaKind()
+    {
+        var mediaRoot = Path.Combine(_root, "media");
+        var library = new MultiMediaLibraryService(mediaRoot, _databasePath);
+        var externalAudio = Path.Combine(_root, "drive-d", "Music");
+        var externalBooks = Path.Combine(_root, "drive-e", "Books");
+        Directory.CreateDirectory(externalAudio);
+        Directory.CreateDirectory(externalBooks);
+        File.WriteAllBytes(Path.Combine(externalAudio, "concert.flac"), [1, 2, 3, 4]);
+        File.WriteAllBytes(Path.Combine(externalBooks, "manual.epub"), [5, 6, 7]);
+
+        var audioRoot = library.AddRoot("Audio", externalAudio);
+        var booksRoot = library.AddRoot("Books", externalBooks);
+
+        Assert.False(audioRoot.IsDefault);
+        Assert.False(booksRoot.IsDefault);
+        Assert.Equal(1, library.Scan("Audio"));
+        Assert.Equal(1, library.Scan("Books"));
+        Assert.Contains(library.List("Audio"), x => x.Title == "concert" && x.SizeBytes == 4);
+        Assert.Contains(library.List("Books"), x => x.Title == "manual" && x.SizeBytes == 3);
+        Assert.Contains(library.ListRoots("Audio"), x => x.Id == audioRoot.Id && x.Path == externalAudio);
+        Assert.Equal(2, library.GetStorageSummary().IndexedFiles);
+    }
+
+    [Fact]
+    public void RemovingExternalRootUnlinksItWithoutDeletingOriginalFiles()
+    {
+        var mediaRoot = Path.Combine(_root, "media");
+        var library = new MultiMediaLibraryService(mediaRoot, _databasePath);
+        var external = Path.Combine(_root, "external-audio");
+        Directory.CreateDirectory(external);
+        var song = Path.Combine(external, "song.mp3");
+        File.WriteAllBytes(song, [1, 2, 3]);
+        var root = library.AddRoot("Audio", external);
+        library.Scan("Audio");
+
+        Assert.True(library.RemoveRoot(root.Id));
+        Assert.True(File.Exists(song));
+        Assert.DoesNotContain(library.List("Audio"), x => x.FileName == "song.mp3");
+        Assert.False(library.RemoveRoot(library.ListRoots("Audio").Single(x => x.IsDefault).Id));
+    }
+
+    [Fact]
+    public void RejectsOverlappingRootsToAvoidDuplicateCatalogEntries()
+    {
+        var mediaRoot = Path.Combine(_root, "media");
+        var library = new MultiMediaLibraryService(mediaRoot, _databasePath);
+        var external = Path.Combine(_root, "external");
+        var nested = Path.Combine(external, "nested");
+        Directory.CreateDirectory(nested);
+
+        library.AddRoot("Audio", external);
+        Assert.Throws<ArgumentException>(() => library.AddRoot("Audio", nested));
+    }
+
     public void Dispose()
     {
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
