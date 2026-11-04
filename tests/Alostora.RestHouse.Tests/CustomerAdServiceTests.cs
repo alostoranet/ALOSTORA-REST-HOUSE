@@ -25,6 +25,7 @@ public sealed class CustomerAdServiceTests : IDisposable
         Assert.Equal(2, service.List(activeOnly: true).Count);
         Assert.True(service.SetVisibility(first.Id, false));
         Assert.Single(service.List(activeOnly: true));
+        Assert.False(service.TryGetImage(first.Id, out _, out _));
         Assert.True(service.TryGetImage(second.Id, out var path, out var contentType));
         Assert.True(File.Exists(path));
         Assert.Equal("image/png", contentType);
