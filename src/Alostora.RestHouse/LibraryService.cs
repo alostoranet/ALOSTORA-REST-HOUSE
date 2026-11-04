@@ -66,6 +66,10 @@ public sealed class LibraryService : IDisposable
                     FolderPath TEXT PRIMARY KEY COLLATE NOCASE,
                     AddedUtc TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS RegisteredExternalFolders(
+                    FolderPath TEXT PRIMARY KEY COLLATE NOCASE,
+                    AddedUtc TEXT NOT NULL
+                );
                 CREATE TABLE IF NOT EXISTS ExternalLibraryFiles(
                     FullPath TEXT PRIMARY KEY COLLATE NOCASE,
                     VideoId TEXT NOT NULL UNIQUE,
@@ -115,7 +119,7 @@ public sealed class LibraryService : IDisposable
 
     public IReadOnlyList<LibraryFolderInfo> ListFolders()
     {
-        var roots = new[] { _root }.Concat(GetScanRoots())
+        var roots = new[] { _root }.Concat(GetScanRoots()).Concat(GetRegisteredExternalFolders())
             .Where(Directory.Exists)
             .Select(Path.GetFullPath)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -483,6 +487,15 @@ public sealed class LibraryService : IDisposable
                 removeRoot.Parameters.AddWithValue("$path", root);
                 removeRoot.ExecuteNonQuery();
             }
+            if (!IsInsideRoot(root))
+            {
+                using var registerRoot = connection.CreateCommand();
+                registerRoot.Transaction = transaction;
+                registerRoot.CommandText = "INSERT INTO RegisteredExternalFolders(FolderPath,AddedUtc) VALUES($path,$utc) ON CONFLICT(FolderPath) DO UPDATE SET AddedUtc=excluded.AddedUtc";
+                registerRoot.Parameters.AddWithValue("$path", root);
+                registerRoot.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
+                registerRoot.ExecuteNonQuery();
+            }
 
             var previouslySelected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             using (var selectedCommand = connection.CreateCommand())
@@ -669,7 +682,7 @@ public sealed class LibraryService : IDisposable
             using (var check = connection.CreateCommand())
             {
                 check.Transaction = transaction;
-                check.CommandText = "SELECT 1 FROM LibraryScanRoots WHERE FolderPath=$path";
+                check.CommandText = "SELECT 1 FROM LibraryScanRoots WHERE FolderPath=$path UNION SELECT 1 FROM RegisteredExternalFolders WHERE FolderPath=$path";
                 check.Parameters.AddWithValue("$path", full);
                 if (check.ExecuteScalar() is null)
                     throw new KeyNotFoundException("مسار التخزين الخارجي غير مسجل في المكتبة.");
@@ -684,11 +697,16 @@ public sealed class LibraryService : IDisposable
                 removedFiles = Convert.ToInt32(count.ExecuteScalar());
             }
 
-            foreach (var table in new[] { "LibraryScanRoots", "ExternalLibraryFiles", "SelectedLibraryFiles" })
+            foreach (var (table, column) in new[]
+            {
+                ("LibraryScanRoots", "FolderPath"),
+                ("RegisteredExternalFolders", "FolderPath"),
+                ("ExternalLibraryFiles", "FullPath"),
+                ("SelectedLibraryFiles", "FullPath")
+            })
             {
                 using var command = connection.CreateCommand();
                 command.Transaction = transaction;
-                var column = table == "LibraryScanRoots" ? "FolderPath" : "FullPath";
                 command.CommandText = $"DELETE FROM {table} WHERE {column}=$path OR substr({column},1,length($prefix))=$prefix";
                 command.Parameters.AddWithValue("$path", full);
                 command.Parameters.AddWithValue("$prefix", prefix);
@@ -725,6 +743,23 @@ public sealed class LibraryService : IDisposable
         connection.Open();
         using var command = connection.CreateCommand();
         command.CommandText = "SELECT FolderPath FROM LibraryScanRoots";
+        using var reader = command.ExecuteReader();
+        var result = new List<string>();
+        while (reader.Read())
+        {
+            var path = reader.GetString(0);
+            if (Directory.Exists(path) && !IsInsideRoot(path))
+                result.Add(path);
+        }
+        return result.ToArray();
+    }
+
+    private string[] GetRegisteredExternalFolders()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT FolderPath FROM RegisteredExternalFolders";
         using var reader = command.ExecuteReader();
         var result = new List<string>();
         while (reader.Read())
