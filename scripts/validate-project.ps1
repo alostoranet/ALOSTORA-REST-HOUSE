@@ -19,19 +19,26 @@ if ($missing.Count -gt 0) {
 }
 Write-Host ("PASS: all {0} XAML event handlers are implemented." -f $events.Count)
 
-# The management window and embedded server must use the same loopback endpoint.
-if ($code -notmatch 'http://127\.0\.0\.1:8097' -or $app -notmatch 'ListenAnyIP\(8097\)') {
-    throw "Management client/server port configuration is inconsistent."
+# The management client and embedded server must share the persisted configurable LAN port.
+$settingsPath = Join-Path $root "src/Alostora.RestHouse/AppSettings.cs"
+$settings = Get-Content $settingsPath -Raw
+if ($code -notmatch '127\.0\.0\.1:\{_port\}' -or
+    $app -notmatch 'ListenAnyIP\(settings\.Port\)' -or
+    $settings -notmatch 'int Port = 8097' -or
+    $settings -notmatch 'SavePort\(' -or
+    $code -notmatch 'SavePort\(_root, port\)') {
+    throw "Management client/server configurable port persistence is inconsistent."
 }
 if ($app -notmatch 'ListenAnyIP\(8443,listen=>listen\.UseHttps' -or $app -notmatch 'ALOSTORA_HTTPS_CERT_PATH') {
     throw "Remote administration must use the optional dedicated HTTPS listener."
 }
-Write-Host "PASS: management client and embedded server port configuration match."
+Write-Host "PASS: management client and embedded server share the persisted configurable LAN port."
 
 # Check that key management routes used by the UI exist in the embedded API.
 $requiredRoutes = @(
     '/api/admin/catalog-categories',
     '/api/admin/library/folders',
+    '/api/admin/library/unregister-folder',
     '/api/admin/profile',
     '/api/admin/profile/logo',
     '/api/profile',
@@ -46,6 +53,9 @@ $requiredRoutes = @(
     '/api/admin/seasons/{seasonId:long}/episodes',
     '/api/admin/episodes/{episodeId:long}',
     '/api/admin/missing-episodes',
+    '/api/media-libraries',
+    '/api/admin/media-libraries/scan',
+    '/api/media-library/',
     '/api/library'
 )
 foreach ($route in $requiredRoutes) {
@@ -77,6 +87,30 @@ if ($html -notmatch 'id="homeNav"' -or
     throw "Customer navigation must separate the home catalog from the contact form."
 }
 Write-Host "PASS: customer home and contact form have separate navigation states."
+
+# Audio, books, and Android apps are first-class local-network customer libraries.
+if ($html -notmatch 'data-kind="Audio"' -or
+    $html -notmatch 'data-kind="Books"' -or
+    $html -notmatch 'data-kind="Apps"' -or
+    $html -notmatch 'id="mediaLibrary"' -or
+    $html -notmatch 'id="mediaGrid"' -or
+    $html -notmatch 'function renderMediaLibraries\(' -or
+    $html -notmatch "fetch\('/api/media-libraries'\)" -or
+    $html -notmatch 'sharedAudioPlayer' -or
+    $xaml -notmatch 'Header="🎧 الصوتيات والكتب والتطبيقات"') {
+    throw "Audio, books, and Android apps must be available to customers and manageable from the admin panel."
+}
+$multiMediaTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/MultiMediaLibraryServiceTests.cs"
+if (-not (Test-Path $multiMediaTestsPath)) { throw "Multimedia library regression tests are missing." }
+Write-Host "PASS: customer audio, books, and apps libraries are wired to the local media API and admin controls."
+
+# Dashboard statistics include all registered local media, not only videos.
+if ($xaml -notmatch 'x:Name="DashboardMediaCount"' -or
+    $code -notmatch '_dashboardMediaCount\s*=\s*items\.Length' -or
+    $code -notmatch 'DashboardMediaCount\.Text\s*=\s*_dashboardMediaCount') {
+    throw "The admin dashboard must count audio, books, and apps alongside videos."
+}
+Write-Host "PASS: admin dashboard counts all registered local media libraries."
 
 # The catalog must navigate through distinct customer pages, not stacked detail panels.
 if ($html -notmatch 'id="catalogView"' -or
@@ -152,6 +186,22 @@ foreach ($testName in @("CreatesAndListsNestedManagedFolders", "RejectsPathTrave
     if (-not $libraryFolderTests.Contains($testName)) { throw ("Missing library folder regression test: " + $testName) }
 }
 Write-Host "PASS: nested folder management, path traversal protection, and non-destructive copy controls are wired."
+
+if ($libraryService -notmatch 'public int UnregisterFolder' -or
+    $libraryService -notmatch 'RegisteredExternalFolders' -or
+    $code -notmatch 'RemoveExternalLibraryFolder_Click' -or
+    $xaml -notmatch 'Click="RemoveExternalLibraryFolder_Click"' -or
+    $xaml -notmatch 'Header="🎧 الصوتيات والكتب والتطبيقات"' -or
+    $xaml -match 'Header="🎧 الصوتيات والكتب والتطبيقات"[^>]*Visibility="Collapsed"' -or
+    $xaml -match 'Click="DeleteVideo_Click"' -or
+    $app -notmatch 'حذف ملفات الفيديو الأصلية معطّل') {
+    throw "External storage removal must preserve original files, audio/books/apps administration must remain visible, and permanent deletion must be disabled."
+}
+foreach ($testName in @("UnregistersSelectedExternalFolderWithoutDeletingOriginalVideos", "CannotUnregisterTheManagedLibraryRoot")) {
+    if (-not $libraryFolderTests.Contains($testName)) { throw ("Missing safe storage removal regression test: " + $testName) }
+}
+Write-Host "PASS: external storage paths can be unregistered without deleting source videos; destructive deletion is disabled."
+
 
 # Public catalog and media routes must enforce publication on the server, not only in browser JavaScript.
 $publicAccessPath = Join-Path $root "src/Alostora.RestHouse/PublicCatalogAccessService.cs"
@@ -250,6 +300,15 @@ if ($xaml -notmatch 'مساعد توافق صيغ الفيديو \(FFmpeg\) — 
     throw "The FFmpeg purpose and optional status must be explained in the advanced settings."
 }
 Write-Host "PASS: FFmpeg is documented as an optional non-destructive playback helper."
+
+# Backup documentation must distinguish application data from original media files.
+$backupPath = Join-Path $root "src/Alostora.RestHouse/BackupService.cs"
+$backup = Get-Content $backupPath -Raw
+if ($backup -notmatch 'Original media files \(videos, audio, books, and apps\) are not included' -or
+    $xaml -notmatch 'النسخة الاحتياطية لا تحتوي ملفات الوسائط الأصلية') {
+    throw "Backup scope must clearly state that original media files require a separate copy."
+}
+Write-Host "PASS: backup manifest and admin UI clearly disclose that original media files are excluded."
 
 
 # Regression checks for hierarchical category selection, logo reports, and view counts.
