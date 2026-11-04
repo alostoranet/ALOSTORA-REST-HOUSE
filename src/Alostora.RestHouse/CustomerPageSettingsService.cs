@@ -11,7 +11,8 @@ public sealed record CustomerPageSettings(
     bool ShowApps = true,
     bool ShowContact = true,
     bool ShowWelcome = true,
-    bool ShowAnnouncement = true);
+    bool ShowAnnouncement = true,
+    bool ShowDownloads = true);
 
 public sealed class CustomerPageSettingsService
 {
