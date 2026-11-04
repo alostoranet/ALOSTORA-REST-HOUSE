@@ -2,7 +2,7 @@ name: Build Windows application
 
 on:
   push:
-    branches: [main]
+    branches: [main, work/no-live-full-audit-20261104]
   pull_request:
     branches: [main]
   workflow_dispatch:
