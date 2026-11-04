@@ -85,7 +85,6 @@ public partial class MainWindow : Window
         PostersFolderBox.Text = posters;
         AddressBox.Text = $"رابط المشاهدة: http://{GetLanAddress()}:{_port}";
         ViewingUrlText.Text = $"http://{GetLanAddress()}:{_port}";
-        LiveUrlText.Text = $"http://{GetLanAddress()}:{_port}/live";
         _videosView = CollectionViewSource.GetDefaultView(_videos);
         _videosView.Filter = FilterVideosByFolder;
         VideosGrid.ItemsSource = _videosView;
@@ -673,16 +672,14 @@ public partial class MainWindow : Window
 
     private void PortBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        if (ViewingUrlText is null || PortBox is null || LiveUrlText is null) return;
+        if (ViewingUrlText is null || PortBox is null) return;
         if (int.TryParse(PortBox.Text.Trim(), out var port) && port is >= 1024 and <= 65535)
         {
             ViewingUrlText.Text = $"http://{GetLanAddress()}:{port} (يُطبّق بعد الحفظ وإعادة التشغيل)";
-            LiveUrlText.Text = $"http://{GetLanAddress()}:{port}/live (يُطبّق بعد الحفظ وإعادة التشغيل)";
         }
         else
         {
             ViewingUrlText.Text = "أدخل منفذاً صحيحاً بين 1024 و65535.";
-            LiveUrlText.Text = "أدخل منفذاً صحيحاً بين 1024 و65535.";
         }
     }
 
@@ -697,7 +694,6 @@ public partial class MainWindow : Window
         {
             AppSettings.SavePort(_root, port);
             ViewingUrlText.Text = $"http://{GetLanAddress()}:{port}";
-            LiveUrlText.Text = $"http://{GetLanAddress()}:{port}/live";
             AddressBox.Text = $"رابط المشاهدة (بعد إعادة التشغيل): http://{GetLanAddress()}:{port}";
             MessageBox.Show($"تم حفظ المنفذ {port}. أغلق البرنامج وافتحه مجدداً لتطبيقه على السيرفر.", "إعداد المنفذ", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -712,13 +708,6 @@ public partial class MainWindow : Window
         var url = $"http://{GetLanAddress()}:{_port}";
         Clipboard.SetText(url);
         MessageBox.Show("تم نسخ رابط المشاهدة: " + url, "نسخ الرابط", MessageBoxButton.OK, MessageBoxImage.Information);
-    }
-
-    private void CopyLiveAddress_Click(object sender, RoutedEventArgs e)
-    {
-        var url = $"http://{GetLanAddress()}:{_port}/live";
-        Clipboard.SetText(url);
-        MessageBox.Show("تم نسخ رابط البث المباشر المستقل: " + url, "نسخ رابط البث", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void OpenSeasonEditor_Click(object sender, RoutedEventArgs e)
