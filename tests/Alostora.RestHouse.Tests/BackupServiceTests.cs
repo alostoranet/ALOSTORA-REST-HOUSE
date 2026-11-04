@@ -40,6 +40,7 @@ public sealed class BackupServiceTests : IDisposable
             Assert.Contains(zip.Entries, x => x.FullName == "profile.json");
             Assert.Contains(zip.Entries, x => x.FullName == "announcement.json");
             Assert.Contains(zip.Entries, x => x.FullName == "customer-page-settings.json");
+            Assert.Contains(zip.Entries, x => x.FullName == "download-speed-settings.json");
             var manifest = zip.GetEntry("backup-info.txt");
             Assert.NotNull(manifest);
             using var reader = new StreamReader(manifest!.Open());
