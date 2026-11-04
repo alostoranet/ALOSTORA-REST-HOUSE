@@ -1029,25 +1029,6 @@ public sealed class LibraryService : IDisposable
         lock (_sync) { _videos = null; _resolved = null; }
     }
 
-    public void DeleteFile(string id)
-    {
-        var video = Resolve(id) ?? throw new FileNotFoundException("ملف الفيديو غير موجود في المكتبة.");
-        File.Delete(video.FullPath);
-        using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
-        using var transaction = connection.BeginTransaction();
-        using (var command = connection.CreateCommand())
-        {
-            command.Transaction = transaction;
-            command.CommandText = "DELETE FROM LibraryFileIds WHERE VideoId=$id; DELETE FROM ExternalLibraryFiles WHERE VideoId=$id; DELETE FROM ExcludedLibraryFiles WHERE VideoId=$id; DELETE FROM SelectedLibraryFiles WHERE FullPath=$path;";
-            command.Parameters.AddWithValue("$id", id);
-            command.Parameters.AddWithValue("$path", video.FullPath);
-            command.ExecuteNonQuery();
-        }
-        transaction.Commit();
-        Invalidate();
-    }
-
     public void RemoveFromLibrary(string id)
     {
         if (Resolve(id) is null)

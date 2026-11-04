@@ -19,26 +19,19 @@ if ($missing.Count -gt 0) {
 }
 Write-Host ("PASS: all {0} XAML event handlers are implemented." -f $events.Count)
 
-# The management client and embedded server must share the persisted configurable LAN port.
-$settingsPath = Join-Path $root "src/Alostora.RestHouse/AppSettings.cs"
-$settings = Get-Content $settingsPath -Raw
-if ($code -notmatch '127\.0\.0\.1:\{_port\}' -or
-    $app -notmatch 'ListenAnyIP\(settings\.Port\)' -or
-    $settings -notmatch 'int Port = 8097' -or
-    $settings -notmatch 'SavePort\(' -or
-    $code -notmatch 'SavePort\(_root, port\)') {
-    throw "Management client/server configurable port persistence is inconsistent."
+# The management window and embedded server must use the same loopback endpoint.
+if ($code -notmatch 'http://127\.0\.0\.1:8097' -or $app -notmatch 'ListenAnyIP\(8097\)') {
+    throw "Management client/server port configuration is inconsistent."
 }
 if ($app -notmatch 'ListenAnyIP\(8443,listen=>listen\.UseHttps' -or $app -notmatch 'ALOSTORA_HTTPS_CERT_PATH') {
     throw "Remote administration must use the optional dedicated HTTPS listener."
 }
-Write-Host "PASS: management client and embedded server share the persisted configurable LAN port."
+Write-Host "PASS: management client and embedded server port configuration match."
 
 # Check that key management routes used by the UI exist in the embedded API.
 $requiredRoutes = @(
     '/api/admin/catalog-categories',
     '/api/admin/library/folders',
-    '/api/admin/library/unregister-folder',
     '/api/admin/profile',
     '/api/admin/profile/logo',
     '/api/profile',
@@ -159,21 +152,6 @@ foreach ($testName in @("CreatesAndListsNestedManagedFolders", "RejectsPathTrave
     if (-not $libraryFolderTests.Contains($testName)) { throw ("Missing library folder regression test: " + $testName) }
 }
 Write-Host "PASS: nested folder management, path traversal protection, and non-destructive copy controls are wired."
-
-if ($libraryService -notmatch 'public int UnregisterFolder' -or
-    $libraryService -notmatch 'RegisteredExternalFolders' -or
-    $code -notmatch 'RemoveExternalLibraryFolder_Click' -or
-    $xaml -notmatch 'Click="RemoveExternalLibraryFolder_Click"' -or
-    $xaml -notmatch 'Header="المكتبات غير المستخدمة" Visibility="Collapsed"' -or
-    $xaml -match 'Click="DeleteVideo_Click"' -or
-    $app -notmatch 'حذف ملفات الفيديو الأصلية معطّل') {
-    throw "External storage removal must preserve original files, non-video sections must remain hidden, and permanent deletion must be disabled."
-}
-foreach ($testName in @("UnregistersSelectedExternalFolderWithoutDeletingOriginalVideos", "CannotUnregisterTheManagedLibraryRoot")) {
-    if (-not $libraryFolderTests.Contains($testName)) { throw ("Missing safe storage removal regression test: " + $testName) }
-}
-Write-Host "PASS: external storage paths can be unregistered without deleting source videos; destructive deletion is disabled."
-
 
 # Public catalog and media routes must enforce publication on the server, not only in browser JavaScript.
 $publicAccessPath = Join-Path $root "src/Alostora.RestHouse/PublicCatalogAccessService.cs"

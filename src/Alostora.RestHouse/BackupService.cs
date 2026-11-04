@@ -25,7 +25,6 @@ public static class BackupService
         var databaseReplaced = false;
         var postersMoved = false;
         var newPostersInstalled = false;
-        var replacedConfigFiles = new List<(string Destination, string? Rollback)>();
 
         try
         {
@@ -102,48 +101,12 @@ public static class BackupService
                 newPostersInstalled = true;
             }
 
-            // Restore local branding and customer announcements when they exist in the archive.
-            // Older archives without these files leave the current local settings untouched.
-            Directory.CreateDirectory(applicationRoot);
-            foreach (var configName in new[] { "profile.json", "announcement.json" })
-            {
-                var extractedConfig = Path.Combine(tempDirectory, configName);
-                if (!File.Exists(extractedConfig)) continue;
-                var destination = Path.Combine(applicationRoot, configName);
-                var stagedConfig = destination + ".restore.tmp";
-                var rollbackConfig = destination + ".pre-restore-" + Guid.NewGuid().ToString("N") + ".tmp";
-                File.Copy(extractedConfig, stagedConfig, overwrite: true);
-                if (File.Exists(destination)) File.Move(destination, rollbackConfig, overwrite: true);
-                try
-                {
-                    File.Move(stagedConfig, destination, overwrite: true);
-                    replacedConfigFiles.Add((destination, File.Exists(rollbackConfig) ? rollbackConfig : null));
-                }
-                catch
-                {
-                    if (File.Exists(rollbackConfig)) File.Move(rollbackConfig, destination, overwrite: true);
-                    throw;
-                }
-            }
-
             // Remove the rollback copy only after the restored database and posters are installed.
             try { if (File.Exists(rollbackDatabase)) File.Delete(rollbackDatabase); } catch { }
             try { if (Directory.Exists(oldPosters)) Directory.Delete(oldPosters, recursive: true); } catch { }
-            foreach (var config in replacedConfigFiles)
-                if (config.Rollback is not null) { try { if (File.Exists(config.Rollback)) File.Delete(config.Rollback); } catch { } }
         }
         catch
         {
-            foreach (var config in replacedConfigFiles.AsEnumerable().Reverse())
-            {
-                try
-                {
-                    if (File.Exists(config.Destination)) File.Delete(config.Destination);
-                    if (config.Rollback is not null && File.Exists(config.Rollback))
-                        File.Move(config.Rollback, config.Destination, overwrite: true);
-                }
-                catch { }
-            }
             SqliteConnection.ClearAllPools();
             if (databaseReplaced)
             {
@@ -162,8 +125,6 @@ public static class BackupService
         }
         finally
         {
-            foreach (var configName in new[] { "profile.json", "announcement.json" })
-                try { var staged = Path.Combine(applicationRoot, configName + ".restore.tmp"); if (File.Exists(staged)) File.Delete(staged); } catch { }
             try { if (File.Exists(stagedDatabase)) File.Delete(stagedDatabase); } catch { }
             try { if (Directory.Exists(stagedPosters)) Directory.Delete(stagedPosters, recursive: true); } catch { }
             try { if (Directory.Exists(tempDirectory)) Directory.Delete(tempDirectory, recursive: true); } catch { }
@@ -230,14 +191,12 @@ public static class BackupService
             {
                 DataSource = databasePath,
                 Mode = SqliteOpenMode.ReadWrite,
-                Cache = SqliteCacheMode.Shared,
-                Pooling = false
+                Cache = SqliteCacheMode.Shared
             };
             var destinationBuilder = new SqliteConnectionStringBuilder
             {
                 DataSource = backupDatabase,
-                Mode = SqliteOpenMode.ReadWriteCreate,
-                Pooling = false
+                Mode = SqliteOpenMode.ReadWriteCreate
             };
 
             using (var source = new SqliteConnection(sourceBuilder.ToString()))
@@ -247,9 +206,6 @@ public static class BackupService
                 destination.Open();
                 source.BackupDatabase(destination);
             }
-
-            // Release pooled SQLite handles before the temporary backup directory is removed.
-            SqliteConnection.ClearAllPools();
 
             if (Directory.Exists(postersDirectory))
             {
@@ -264,18 +220,10 @@ public static class BackupService
                 }
             }
 
-            var applicationRoot = Path.GetDirectoryName(Path.GetFullPath(databasePath))!;
-            foreach (var configName in new[] { "profile.json", "announcement.json" })
-            {
-                var sourceConfig = Path.Combine(applicationRoot, configName);
-                if (File.Exists(sourceConfig))
-                    File.Copy(sourceConfig, Path.Combine(tempDirectory, configName), overwrite: true);
-            }
-
             File.WriteAllText(
                 Path.Combine(tempDirectory, "backup-info.txt"),
                 "ALOSTORA REST HOUSE backup\nCreated UTC: " + DateTime.UtcNow.ToString("O") +
-                "\nContains: SQLite database, poster images, local branding, and customer announcement settings. Video files are not included.");
+                "\nContains: SQLite database and poster images. Video files are not included.");
 
             var archiveDirectory = Path.GetDirectoryName(Path.GetFullPath(archivePath));
             if (string.IsNullOrEmpty(archiveDirectory))
