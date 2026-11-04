@@ -10,7 +10,6 @@ public sealed record RestHouseMediaItem(
     long SizeBytes, string ModifiedUtc, string Url);
 
 public sealed record ScanMediaLibraryRequest(string Kind);
-public sealed record AddMediaLibraryRootRequest(string Kind, string FolderPath);
 public sealed record MediaLibraryRoot(string Id, string Kind, string Path, bool IsDefault);
 public sealed record MediaStorageRootSummary(
     string Id, string Kind, string Path, bool IsDefault, int IndexedFiles,
