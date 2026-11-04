@@ -38,6 +38,11 @@ public sealed class BackupServiceTests : IDisposable
         {
             Assert.Contains(zip.Entries, x => x.FullName == "profile.json");
             Assert.Contains(zip.Entries, x => x.FullName == "announcement.json");
+            var manifest = zip.GetEntry("backup-info.txt");
+            Assert.NotNull(manifest);
+            using var reader = new StreamReader(manifest!.Open());
+            var manifestText = reader.ReadToEnd();
+            Assert.Contains("Original media files (videos, audio, books, and apps) are not included", manifestText);
         }
 
         File.WriteAllText(Path.Combine(_root, "profile.json"), "{\"RestHouseName\":\"بعد النسخة\"}");
