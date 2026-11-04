@@ -1712,10 +1712,10 @@ public partial class MainWindow : Window
             SeriesDescriptionBox.Text = result.Description ?? "";
             SeriesYearBox.Text = result.Year?.ToString() ?? "";
             SeriesGenreBox.Text = result.Genre ?? "";
-            _pendingSeriesPosterPath = result.PosterPath;
-            SeriesPosterPathBox.Text = _pendingSeriesPosterPath ?? "";
+            _pendingSeriesPosterPath = null;
+            SeriesPosterPathBox.Text = result.PosterPath ?? "";
             SeriesMetadataLookupStatusText.Text = "تم جلب البيانات من " + (result.Provider ?? "TVmaze") +
-                (_pendingSeriesPosterPath is null ? " دون غلاف متاح." : " وتم حفظ الغلاف محلياً. راجع البيانات ثم احفظ المسلسل.");
+                (string.IsNullOrWhiteSpace(result.PosterPath) ? " دون غلاف متاح." : " وتم حفظ الغلاف محلياً. راجع البيانات ثم احفظ المسلسل.");
         }
         catch (Exception ex)
         {
