@@ -64,7 +64,7 @@ main{max-width:1320px;padding:26px 28px 18px}
 .catalog-page-head{position:sticky;top:0;z-index:5;background:rgba(12,23,39,.94);backdrop-filter:blur(12px);padding:12px 0;border-radius:0 0 10px 10px}
 @media(max-width:600px){.catalog-rail{gap:10px}.catalog-rail .catalog-card{flex-basis:155px}.catalog-section-title{font-size:18px}}
 </style></head><body>
-<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
+<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button id="liveNav" class="nav-button" type="button" aria-pressed="false">البث المباشر</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
 <main><section id="homeView">
 <section class="welcome-panel" id="welcomePanel">
 <div><span class="welcome-kicker">ALOSTORA MEDIA LIBRARY</span><h2>كل مكتبتك الترفيهية في مكان واحد</h2><p>تصفح الأقسام، اكتشف البرامج والمسلسلات والأفلام، وتابع المشاهدة من حيث توقفت.</p></div>
@@ -90,6 +90,7 @@ main{max-width:1320px;padding:26px 28px 18px}
 </section>
 <section id="continueSection"><h2>متابعة المشاهدة</h2><p id="continueEmpty">جارٍ تحميل سجل المشاهدة...</p><div id="continueGrid"></div></section>
 </section>
+<section id="liveView" class="contact-box" aria-labelledby="liveTitle" hidden><h2 id="liveTitle">البث المباشر</h2><p id="liveStreamMessage">جارٍ تحميل رابط البث...</p><video id="livePlayer" controls playsinline preload="none" hidden></video><iframe id="liveFrame" title="مشغل البث المباشر" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="display:none;width:100%;height:min(70vh,560px);border:0;border-radius:12px;background:#000"></iframe><p id="livePlaybackHint" class="meta">إذا لم يعمل البث داخل المشغل، يمكنك فتح الرابط مباشرة.</p><a id="liveOpenLink" class="action" href="#" target="_blank" rel="noopener" hidden>فتح رابط البث مباشرة</a></section>
 <section id="contactView" class="contact-box" aria-labelledby="contactTitle" hidden>
 <h2 id="contactTitle">تواصل مع إدارة الاستراحة</h2>
 <p>اختر نوع الرسالة، واكتب طلبك أو ملاحظتك، وستصل مباشرة إلى برنامج إدارة الاستراحة.</p>
@@ -493,17 +494,32 @@ async function loadBrandProfile(){
  }catch{}
 }
 document.querySelector('#catalogBack').addEventListener('click',goCatalogBack);
+async function loadLiveStream(){
+ const message=document.querySelector('#liveStreamMessage'),video=document.querySelector('#livePlayer'),frame=document.querySelector('#liveFrame'),link=document.querySelector('#liveOpenLink');
+ video.pause();video.hidden=true;video.removeAttribute('src');video.load();frame.style.display='none';frame.removeAttribute('src');link.hidden=true;message.textContent='جارٍ تحميل رابط البث...';
+ try{
+  const response=await fetch('/api/live-stream');if(!response.ok)throw new Error('تعذر تحميل إعداد البث.');
+  const data=await response.json();if(!data.url){message.textContent='لا يوجد بث مباشر متاح حالياً. يرجى مراجعة إدارة الاستراحة.';return;}
+  const url=data.url;message.textContent='تم العثور على رابط البث. اضغط تشغيل لبدء المشاهدة.';
+  link.href=url;link.hidden=false;video.hidden=false;video.src=url;video.load();
+  video.onerror=()=>{document.querySelector('#livePlaybackHint').textContent='المتصفح لم يتعرف على صيغة البث كرابط فيديو مباشر. استخدم فتح الرابط مباشرة، أو أرسل نوع جهاز البث لتجهيز المشغل المناسب.';};
+ }catch(error){message.textContent=error.message||'تعذر تحميل البث المباشر.';}
+}
 function showCustomerView(view){
- const home=view==='home',homeView=document.querySelector('#homeView'),contactView=document.querySelector('#contactView');
- homeView.hidden=!home;contactView.hidden=home;
- document.querySelector('#homeNav').classList.toggle('active',home);
- document.querySelector('#contactNav').classList.toggle('active',!home);
- document.querySelector('#homeNav').setAttribute('aria-pressed',String(home));
- document.querySelector('#contactNav').setAttribute('aria-pressed',String(!home));
+ const home=view==='home',contact=view==='contact',live=view==='live';
+ document.querySelector('#homeView').hidden=!home;
+ document.querySelector('#contactView').hidden=!contact;
+ document.querySelector('#liveView').hidden=!live;
+ for(const [id,active] of [['homeNav',home],['contactNav',contact],['liveNav',live]]){
+  document.querySelector('#'+id).classList.toggle('active',active);
+  document.querySelector('#'+id).setAttribute('aria-pressed',String(active));
+ }
+ if(live)loadLiveStream();
  window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelector('#homeNav').addEventListener('click',()=>showCustomerView('home'));
 document.querySelector('#contactNav').addEventListener('click',()=>showCustomerView('contact'));
+document.querySelector('#liveNav').addEventListener('click',()=>showCustomerView('live'));
 document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener('click',()=>{
  activeMediaKind=button.dataset.kind||'all';
  document.querySelectorAll('.media-tab').forEach(x=>x.classList.toggle('active',x===button));
