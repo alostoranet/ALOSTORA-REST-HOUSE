@@ -397,3 +397,21 @@ foreach ($testName in @("SeriesCanUsePartsAndStoreVideosDirectlyUnderTheSeries",
     if (-not $seriesTests.Contains($testName)) { throw ("Missing series placement regression test: " + $testName) }
 }
 Write-Host "PASS: standalone series, seasons, parts, direct video links, and category inheritance are wired and regression-tested."
+
+# Additional audio, book and application libraries support independently registered folders.
+$multiMedia = Get-Content (Join-Path $root "src/Alostora.RestHouse/MultiMediaLibraryService.cs") -Raw
+$mediaTests = Get-Content (Join-Path $root "tests/Alostora.RestHouse.Tests/MultiMediaLibraryServiceTests.cs") -Raw
+if ($app -notmatch '/api/admin/media-libraries/roots' -or
+    $app -notmatch '/api/admin/storage-summary' -or
+    $xaml -notmatch 'MediaLibraryRootsGrid' -or
+    $xaml -notmatch 'StorageSummaryText' -or
+    $code -notmatch 'AddMediaLibraryRootAsync' -or
+    $code -notmatch 'RemoveMediaLibraryRoot_Click' -or
+    $multiMedia -notmatch 'AddRoot\(' -or
+    $multiMedia -notmatch 'GetStorageSummary\(' -or
+    $mediaTests -notmatch 'SupportsMultipleIndependentRootsForEachMediaKind' -or
+    $mediaTests -notmatch 'RemovingExternalRootUnlinksItWithoutDeletingOriginalFiles' -or
+    $mediaTests -notmatch 'RejectsOverlappingRootsToAvoidDuplicateCatalogEntries') {
+    throw "Multiple media source folders, safe unlinking, and storage reporting are incomplete."
+}
+Write-Host "PASS: audio, books and apps support multiple source folders, safe unlinking, and storage reporting."
