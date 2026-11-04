@@ -42,6 +42,9 @@ public partial class MainWindow : Window
     private Expander? _activeEditorExpander;
     private object? _activeEditorContent;
     private readonly ObservableCollection<AdminVideo> _videos = new();
+    private readonly ObservableCollection<PlaybackPopularRow> _popularPlaybackRows = new();
+    private readonly ObservableCollection<PlaybackRecentRow> _recentPlaybackRows = new();
+
     private ICollectionView? _videosView;
     private string? _selectedVideoFolderPath;
     private readonly ObservableCollection<EpisodeCandidate> _episodeCandidates = new();
@@ -76,6 +79,8 @@ public partial class MainWindow : Window
         _videosView = CollectionViewSource.GetDefaultView(_videos);
         _videosView.Filter = FilterVideosByFolder;
         VideosGrid.ItemsSource = _videosView;
+        DashboardPopularGrid.ItemsSource = _popularPlaybackRows;
+        DashboardRecentGrid.ItemsSource = _recentPlaybackRows;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
         Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); };
         _messageRefreshTimer.Tick += async (_, _) => await LoadCustomerMessagesAsync();
@@ -1240,6 +1245,7 @@ public partial class MainWindow : Window
             await RefreshVideoFoldersTreeAsync();
             CountText.Text = $"عدد ملفات الفيديو: {_videos.Count}";
             UpdateDashboardStats();
+            await LoadDashboardWatchHistoryAsync();
             var incomplete = _videos.Count(x => !x.MetadataSaved);
             StatusText.Text = incomplete == 0
                 ? $"سجل الفيديوهات جاهز: {_videos.Count} فيديو، وجميعها لها بيانات محفوظة."
@@ -2185,6 +2191,55 @@ public partial class MainWindow : Window
         return "عنوان الشبكة غير معروف";
     }
 
+    private async void RefreshWatchHistory_Click(object sender, RoutedEventArgs e)
+    {
+        await LoadDashboardWatchHistoryAsync();
+    }
+
+    private async System.Threading.Tasks.Task LoadDashboardWatchHistoryAsync()
+    {
+        try
+        {
+            var history = await _http.GetFromJsonAsync<WatchPlaybackAdmin[]>("/api/admin/watch-history")
+                ?? Array.Empty<WatchPlaybackAdmin>();
+            var titles = _videos.ToDictionary(v => v.Id, v => v.Title ?? v.FileName ?? v.Id);
+            _popularPlaybackRows.Clear();
+            foreach (var item in history
+                .GroupBy(x => x.VideoId, StringComparer.OrdinalIgnoreCase)
+                .Select(g => new PlaybackPopularRow
+                {
+                    VideoId = g.Key,
+                    Title = titles.TryGetValue(g.Key, out var title) ? title : "فيديو غير موجود في المكتبة",
+                    PlayCount = g.Count()
+                })
+                .OrderByDescending(x => x.PlayCount)
+                .ThenBy(x => x.Title, StringComparer.OrdinalIgnoreCase)
+                .Take(10))
+                _popularPlaybackRows.Add(item);
+
+            _recentPlaybackRows.Clear();
+            foreach (var item in history.Take(20))
+            {
+                var title = titles.TryGetValue(item.VideoId, out var found) ? found : "فيديو غير موجود في المكتبة";
+                var localTime = DateTime.TryParse(item.StartedUtc, out var started)
+                    ? started.ToLocalTime().ToString("yyyy/MM/dd HH:mm")
+                    : item.StartedUtc;
+                _recentPlaybackRows.Add(new PlaybackRecentRow { Title = title, StartedLocal = localTime });
+            }
+
+            var total = history.Length;
+            DashboardWatchHistoryStatus.Text = total == 0
+                ? "لا توجد مشاهدات مسجلة بعد. ستظهر البيانات عند تشغيل العملاء للفيديوهات."
+                : $"سجل آخر {total:N0} عملية تشغيل فعلية — الأكثر مشاهدة محسوب من السجل المتاح.";
+        }
+        catch (Exception ex)
+        {
+            DashboardWatchHistoryStatus.Text = "تعذر تحميل سجل المشاهدة: " + ex.Message;
+            _popularPlaybackRows.Clear();
+            _recentPlaybackRows.Clear();
+        }
+    }
+
     private void UpdateDashboardStats()
     {
         if (DashboardVideosCount is null) return;
@@ -2601,6 +2656,26 @@ public partial class MainWindow : Window
         public string DisplayTitle { get; set; } = "";
         public string ContentKindLabel { get; set; } = "";
     }
+    private sealed class PlaybackPopularRow
+    {
+        public string VideoId { get; set; } = "";
+        public string Title { get; set; } = "";
+        public int PlayCount { get; set; }
+    }
+
+    private sealed class PlaybackRecentRow
+    {
+        public string Title { get; set; } = "";
+        public string StartedLocal { get; set; } = "";
+    }
+
+    private sealed class WatchPlaybackAdmin
+    {
+        public string VideoId { get; set; } = "";
+        public string ViewerId { get; set; } = "";
+        public string StartedUtc { get; set; } = "";
+    }
+
     private sealed class AdminVideo
     {
         public string Id { get; set; } = "";
