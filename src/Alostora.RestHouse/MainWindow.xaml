@@ -76,8 +76,8 @@
 <TabItem Header="🏠 لوحة التحكم">
 <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
 <Border Background="#142D4A" CornerRadius="12" Padding="22" Margin="0,0,0,14">
- <StackPanel><TextBlock Text="لوحة إدارة مكتبة الاستراحة" Foreground="White" FontSize="22" FontWeight="Bold"/>
- <TextBlock Text="نظرة عامة على الفيديوهات والمسلسلات والصوتيات والكتب والتطبيقات وأدوات إدارتها. الأرقام تُحمّل من بيانات البرنامج الفعلية." Foreground="#D7E5F3" FontSize="13" TextWrapping="Wrap" Margin="0,8,0,0"/></StackPanel>
+ <StackPanel><TextBlock Text="مركز إدارة الاستراحة" Foreground="White" FontSize="22" FontWeight="Bold"/>
+ <TextBlock Text="إدارة المحتوى وخدمات العملاء وهوية الاستراحة وإعدادات التشغيل من لوحة واحدة. الأرقام تُحمّل من بيانات البرنامج الفعلية." Foreground="#D7E5F3" FontSize="13" TextWrapping="Wrap" Margin="0,8,0,0"/></StackPanel>
 </Border>
 <UniformGrid Columns="3" Rows="3" Margin="0,0,0,14">
  <Border Background="#E8EEF5" CornerRadius="10" Padding="16" Margin="4"><StackPanel><TextBlock Text="إجمالي الفيديوهات" Foreground="#526174" FontSize="12"/><TextBlock x:Name="DashboardVideosCount" Text="—" Foreground="#142D4A" FontSize="27" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
@@ -110,13 +110,15 @@
  </StackPanel>
 </Border>
 <TextBlock Text="إدارة المحتوى" FontSize="18" FontWeight="Bold" Foreground="#142D4A" Margin="2,0,0,8"/>
-<UniformGrid Columns="2" Rows="3" Margin="0,0,0,12">
+<UniformGrid Columns="2" Rows="4" Margin="0,0,0,12">
  <Border Background="#F1F5F9" CornerRadius="10" Padding="16" Margin="4" Tag="1:0" Cursor="Hand" ToolTip="فتح جميع ملفات الفيديو المسجلة" MouseLeftButtonUp="DashboardCard_Click"><StackPanel><TextBlock Text="١. مكتبة الفيديو" FontWeight="Bold" FontSize="16" Foreground="#142D4A"/><TextBlock Text="عرض جميع الملفات المسجلة، سواء كانت أفلاماً أو حلقات أو فيديوهات مستقلة، وإدارتها من مكان واحد." TextWrapping="Wrap" Foreground="#526174" Margin="0,7,0,0"/></StackPanel></Border>
  <Border Background="#F1F5F9" CornerRadius="10" Padding="16" Margin="4" Tag="2:0" Cursor="Hand" ToolTip="إدارة المسلسلات والمواسم والحلقات" MouseLeftButtonUp="DashboardCard_Click"><StackPanel><TextBlock Text="٢. المسلسلات والحلقات" FontWeight="Bold" FontSize="16" Foreground="#142D4A"/><TextBlock Text="تنظيم المسلسلات والمواسم والأجزاء والحلقات وربط ملفات الفيديو بها." TextWrapping="Wrap" Foreground="#526174" Margin="0,7,0,0"/></StackPanel></Border>
  <Border Background="#F1F5F9" CornerRadius="10" Padding="16" Margin="4" Tag="3:0" Cursor="Hand" ToolTip="إدارة الأقسام والتصنيفات" MouseLeftButtonUp="DashboardCard_Click"><StackPanel><TextBlock Text="٣. الأقسام والتصنيفات" FontWeight="Bold" FontSize="16" Foreground="#142D4A"/><TextBlock Text="إنشاء الأقسام الرئيسية والفرعية وتحديد أماكن ظهور المحتوى للعملاء." TextWrapping="Wrap" Foreground="#526174" Margin="0,7,0,0"/></StackPanel></Border>
  <Border Background="#F1F5F9" CornerRadius="10" Padding="16" Margin="4" Tag="1:1" Cursor="Hand" ToolTip="تعديل بيانات وأغلفة الفيديوهات" MouseLeftButtonUp="DashboardCard_Click"><StackPanel><TextBlock Text="٤. بيانات الفيديو والأغلفة" FontWeight="Bold" FontSize="16" Foreground="#142D4A"/><TextBlock Text="تعديل العناوين والأوصاف والتصنيفات والأغلفة وبيانات العرض." TextWrapping="Wrap" Foreground="#526174" Margin="0,7,0,0"/></StackPanel></Border>
  <Border Background="#F1F5F9" CornerRadius="10" Padding="16" Margin="4" Tag="4:0" Cursor="Hand" ToolTip="رسائل العملاء والبلاغات" MouseLeftButtonUp="DashboardCard_Click"><StackPanel><TextBlock Text="٥. رسائل العملاء" FontWeight="Bold" FontSize="16" Foreground="#142D4A"/><TextBlock Text="مراجعة استفسارات العملاء والبلاغات الواردة." TextWrapping="Wrap" Foreground="#526174" Margin="0,7,0,0"/></StackPanel></Border>
  <Border Background="#F1F5F9" CornerRadius="10" Padding="16" Margin="4" Tag="5:0" Cursor="Hand" ToolTip="إعدادات السيرفر والمكتبة" MouseLeftButtonUp="DashboardCard_Click"><StackPanel><TextBlock Text="٦. إعدادات وتشغيل" FontWeight="Bold" FontSize="16" Foreground="#142D4A"/><TextBlock Text="إعدادات الشبكة ورابط المشاهدة ومسارات المكتبة والأدوات والنسخ الاحتياطي." TextWrapping="Wrap" Foreground="#526174" Margin="0,7,0,0"/></StackPanel></Border>
+ <Border Background="#F1F5F9" CornerRadius="10" Padding="16" Margin="4" Tag="5:1" Cursor="Hand" ToolTip="التحكم بأقسام صفحة العملاء" MouseLeftButtonUp="DashboardCard_Click"><StackPanel><TextBlock Text="٧. واجهة العميل" FontWeight="Bold" FontSize="16" Foreground="#142D4A"/><TextBlock Text="إظهار وإخفاء مكتبة الأفلام والمتابعة والصوتيات والكتب والتطبيقات والتواصل والترحيب." TextWrapping="Wrap" Foreground="#526174" Margin="0,7,0,0"/></StackPanel></Border>
+ <Border Background="#F1F5F9" CornerRadius="10" Padding="16" Margin="4" Tag="5:3" Cursor="Hand" ToolTip="إدارة الشريط الإعلاني" MouseLeftButtonUp="DashboardCard_Click"><StackPanel><TextBlock Text="٨. الإعلانات والتنبيهات" FontWeight="Bold" FontSize="16" Foreground="#142D4A"/><TextBlock Text="كتابة الرسائل والإعلانات ونشرها كشريط متحرك في صفحة العملاء." TextWrapping="Wrap" Foreground="#526174" Margin="0,7,0,0"/></StackPanel></Border>
 </UniformGrid>
 <Border Background="#FFF7E8" CornerRadius="9" Padding="12"><TextBlock Text="ملاحظة: لوحة التحكم تعرض إحصاءات فعلية من مكتبة الاستراحة. إزالة عنصر من الفهرس لا تحذف الملف الأصلي من الجهاز." Foreground="#80551A" TextWrapping="Wrap"/></Border>
 </StackPanel></ScrollViewer></TabItem>
@@ -273,7 +275,7 @@
 <TextBlock x:Name="CustomerMessageStatusText" Text="لا توجد رسائل محمّلة بعد." Foreground="#526174" TextWrapping="Wrap" Margin="0,10,0,0"/>
 </StackPanel></ScrollViewer></TabItem>
 <TabItem Header="⚑ البلاغات"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="بلاغات الشعارات والعلامات التجارية" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,8"/><TextBlock Text="تظهر هنا الرسائل التي يرسلها العملاء بخصوص شعار أو علامة تجارية أو الاشتباه في استخدامها دون إذن. اضغط على البلاغ لعرض التفاصيل." Foreground="#526174" TextWrapping="Wrap" Margin="0,0,0,10"/><DataGrid x:Name="LogoReportsGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="LogoReportsGrid_SelectionChanged" MouseDoubleClick="LogoReportsGrid_MouseDoubleClick" CanUserAddRows="False" Height="360"><DataGrid.Columns><DataGridTextColumn Header="رقم" Binding="{Binding Id}" Width="60"/><DataGridTextColumn Header="العنوان" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="الحالة" Binding="{Binding Status}" Width="100"/><DataGridTextColumn Header="التاريخ" Binding="{Binding CreatedUtc}" Width="150"/></DataGrid.Columns></DataGrid></StackPanel></ScrollViewer></TabItem></TabControl></TabItem>
-<TabItem Header="⚙️ إعدادات الاستراحة"><TabControl Margin="0" Background="White"><TabItem Header="🏠 الهوية والإعداد الأولي"><Border Background="White" CornerRadius="10" Padding="14">
+<TabItem Header="⚙️ إعدادات الاستراحة"><TabControl x:Name="SettingsTabs" Margin="0" Background="White"><TabItem Header="🏠 الهوية والإعداد الأولي"><Border Background="White" CornerRadius="10" Padding="14">
 <StackPanel>
 <TextBlock Text="هوية الاستراحة والشبكة" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,10"/>
 <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
