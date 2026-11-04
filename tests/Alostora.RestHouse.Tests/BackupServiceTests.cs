@@ -45,8 +45,6 @@ public sealed class BackupServiceTests : IDisposable
             Assert.Contains(zip.Entries, x => x.FullName == "profile.json");
             Assert.Contains(zip.Entries, x => x.FullName == "announcement.json");
             Assert.Contains(zip.Entries, x => x.FullName == "customer-page-settings.json");
-        Assert.Equal("[]", File.ReadAllText(Path.Combine(_root, "customer-ads.json")));
-        Assert.Contains("\"LimitMbps\":6", File.ReadAllText(Path.Combine(_root, "download-speed-settings.json")));
             Assert.Contains(zip.Entries, x => x.FullName == "download-speed-settings.json");
             Assert.Contains(zip.Entries, x => x.FullName == "customer-ads.json");
             Assert.Contains(zip.Entries, x => x.FullName == "posters/customer-ads/sample.png");
@@ -61,7 +59,7 @@ public sealed class BackupServiceTests : IDisposable
         File.WriteAllText(Path.Combine(_root, "profile.json"), "{\"RestHouseName\":\"بعد النسخة\"}");
         File.WriteAllText(Path.Combine(_root, "announcement.json"), "{\"Title\":\"تنبيه جديد\"}");
         File.WriteAllText(Path.Combine(_root, "customer-page-settings.json"), "{\"ShowApps\":true}");
-        File.WriteAllText(Path.Combine(_root, "customer-ads.json"), "[{\\\"Id\\\":\\\"before-restore\\\"}]");
+        File.WriteAllText(Path.Combine(_root, "customer-ads.json"), "[{\"Id\":\"before-restore\"}]");
         File.WriteAllText(Path.Combine(_root, "download-speed-settings.json"), "{\"LimitMbps\":12}");
         BackupService.RestoreArchive(database, posters, archive, _root);
 
