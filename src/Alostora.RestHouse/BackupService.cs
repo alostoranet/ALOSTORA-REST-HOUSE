@@ -105,7 +105,7 @@ public static class BackupService
             // Restore local branding and customer announcements when they exist in the archive.
             // Older archives without these files leave the current local settings untouched.
             Directory.CreateDirectory(applicationRoot);
-            foreach (var configName in new[] { "profile.json", "announcement.json" })
+            foreach (var configName in new[] { "profile.json", "announcement.json", "customer-page-settings.json" })
             {
                 var extractedConfig = Path.Combine(tempDirectory, configName);
                 if (!File.Exists(extractedConfig)) continue;
@@ -275,7 +275,7 @@ public static class BackupService
             File.WriteAllText(
                 Path.Combine(tempDirectory, "backup-info.txt"),
                 "ALOSTORA REST HOUSE backup\nCreated UTC: " + DateTime.UtcNow.ToString("O") +
-                "\nContains: SQLite database, poster images, local branding, and customer announcement settings. Original media files (videos, audio, books, and apps) are not included.");
+                "\nContains: SQLite database, poster images, local branding, customer announcement settings, and customer page visibility settings. Original media files (videos, audio, books, and apps) are not included.");
 
             var archiveDirectory = Path.GetDirectoryName(Path.GetFullPath(archivePath));
             if (string.IsNullOrEmpty(archiveDirectory))
