@@ -2351,6 +2351,7 @@ public partial class MainWindow : Window
             CustomerShowContactBox.IsChecked = settings.ShowContact;
             CustomerShowWelcomeBox.IsChecked = settings.ShowWelcome;
             CustomerShowAnnouncementBox.IsChecked = settings.ShowAnnouncement;
+            CustomerShowDownloadsBox.IsChecked = settings.ShowDownloads;
             CustomerPageSettingsStatusText.Text = "تم تحميل إعدادات ظهور أقسام صفحة العملاء.";
         }
         catch (Exception ex)
@@ -2372,7 +2373,8 @@ public partial class MainWindow : Window
                 showApps = CustomerShowAppsBox.IsChecked == true,
                 showContact = CustomerShowContactBox.IsChecked == true,
                 showWelcome = CustomerShowWelcomeBox.IsChecked == true,
-                showAnnouncement = CustomerShowAnnouncementBox.IsChecked == true
+                showAnnouncement = CustomerShowAnnouncementBox.IsChecked == true,
+                showDownloads = CustomerShowDownloadsBox.IsChecked == true
             };
             var response = await _http.PostAsJsonAsync("/api/admin/customer-settings", request);
             if (!response.IsSuccessStatusCode)
@@ -2984,6 +2986,7 @@ public partial class MainWindow : Window
         public bool ShowContact { get; set; } = true;
         public bool ShowWelcome { get; set; } = true;
         public bool ShowAnnouncement { get; set; } = true;
+        public bool ShowDownloads { get; set; } = true;
     }
 
     private sealed class AnnouncementAdmin
