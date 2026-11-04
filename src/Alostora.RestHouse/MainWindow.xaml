@@ -360,6 +360,12 @@
 <Border Background="#F1F5F9" CornerRadius="8" Padding="12" Margin="0,0,0,12"><StackPanel>
 <TextBlock Text="مكان حفظ ملفات الفيديو" FontWeight="Bold" Foreground="#142D4A"/><DockPanel Margin="0,5,0,0"><Button DockPanel.Dock="Left" Content="تغيير مجلد التخزين" Click="ChooseMediaFolder_Click" Padding="10,6" Margin="0,0,6,0"/><TextBlock x:Name="MediaFolderBox" Foreground="#64748B" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"/></DockPanel>
 </StackPanel></Border>
+<Border Background="#EAF2FA" CornerRadius="8" Padding="12" Margin="0,0,0,12"><StackPanel>
+<TextBlock Text="التحكم بسرعة تنزيل الملفات" FontWeight="Bold" Foreground="#142D4A"/>
+<TextBlock Text="هذا الحد يطبّق على مجموع تنزيلات الكتب والتطبيقات والصوتيات لجميع العملاء، ولا يقيّد مشاهدة الفيديو أو تشغيل الصوت. أدخل 0 لإلغاء الحد." Foreground="#526174" TextWrapping="Wrap" Margin="0,4,0,8"/>
+<DockPanel><Button DockPanel.Dock="Left" Content="حفظ حد السرعة" Click="SaveDownloadSpeedLimit_Click" Padding="12,7" Margin="6,0,0,0" Background="#C93640" Foreground="White"/><TextBox x:Name="DownloadSpeedLimitBox" Width="90" Padding="8" Text="0" FlowDirection="LeftToRight"/></DockPanel>
+<TextBlock x:Name="DownloadSpeedLimitStatusText" Text="0 = دون حد للسرعة." Foreground="#64748B" FontSize="11" Margin="0,6,0,0"/>
+</StackPanel></Border>
 <Border Background="#F1F5F9" CornerRadius="8" Padding="12" Margin="0,0,0,12"><StackPanel>
 <TextBlock Text="مكان حفظ أغلفة الصور" FontWeight="Bold" Foreground="#142D4A"/><DockPanel Margin="0,5,0,0"><Button DockPanel.Dock="Left" Content="تغيير مجلد الأغلفة" Click="ChoosePostersFolder_Click" Padding="10,6" Margin="0,0,6,0"/><TextBlock x:Name="PostersFolderBox" Foreground="#64748B" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"/></DockPanel>
 </StackPanel></Border>
