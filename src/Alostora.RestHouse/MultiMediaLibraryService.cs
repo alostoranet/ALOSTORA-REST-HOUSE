@@ -105,8 +105,8 @@ public sealed class MultiMediaLibraryService
         if (!Directory.Exists(fullPath))
             throw new DirectoryNotFoundException("المجلد المحدد غير موجود أو لا يمكن الوصول إليه.");
         var roots = ListRoots(kind);
-        if (roots.Any(x => string.Equals(x.Path, fullPath, StringComparison.OrdinalIgnoreCase)))
-            throw new ArgumentException("هذا المجلد مسجل بالفعل في المكتبة.");
+        if (roots.Any(x => IsWithin(fullPath, x.Path) || IsWithin(x.Path, fullPath)))
+            throw new ArgumentException("المجلد المحدد يطابق مجلداً مسجلاً أو يتداخل معه. اختر مجلداً مستقلاً لتجنب تكرار الملفات.");
         var id = RootId(kind, fullPath);
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
@@ -146,6 +146,7 @@ public sealed class MultiMediaLibraryService
             """;
         command.Parameters.AddWithValue("$kind", (object?)kind ?? DBNull.Value);
         using var reader = command.ExecuteReader();
+        var roots = ListRoots();
         var result = new List<RestHouseMediaItem>();
         while (reader.Read())
         {
@@ -153,7 +154,7 @@ public sealed class MultiMediaLibraryService
             var itemKind = reader.GetString(1);
             var relative = reader.GetString(2);
             var title = reader.GetString(3);
-            var path = Resolve(relative);
+            var path = Resolve(relative, roots);
             if (path is null || !File.Exists(path)) continue;
             var info = new FileInfo(path);
             result.Add(new(id, itemKind, title, info.Name, relative, info.Length,
@@ -213,7 +214,7 @@ public sealed class MultiMediaLibraryService
         {
             var rootItems = items.Where(item =>
             {
-                var path = Resolve(item.RelativePath);
+                var path = Resolve(item.RelativePath, roots);
                 return path is not null && IsWithin(path, root.Path);
             }).ToArray();
             long? total = null, free = null;
@@ -248,7 +249,7 @@ public sealed class MultiMediaLibraryService
         command.CommandText = "SELECT RelativePath FROM MediaLibraryItems WHERE Id=$id";
         command.Parameters.AddWithValue("$id", id);
         var relative = command.ExecuteScalar() as string;
-        var path = relative is null ? null : Resolve(relative);
+        var path = relative is null ? null : Resolve(relative, ListRoots());
         return path is not null && File.Exists(path) ? path : null;
     }
 
@@ -268,7 +269,7 @@ public sealed class MultiMediaLibraryService
         command.ExecuteNonQuery();
     }
 
-    private string? Resolve(string relative)
+    private string? Resolve(string relative, IReadOnlyList<MediaLibraryRoot>? roots = null)
     {
         try
         {
@@ -277,7 +278,8 @@ public sealed class MultiMediaLibraryService
                 var separator = relative.IndexOf('/');
                 if (separator <= 1) return null;
                 var rootId = relative[1..separator];
-                var root = ListRoots().FirstOrDefault(x => x.Id == rootId);
+                roots ??= ListRoots();
+                var root = roots.FirstOrDefault(x => x.Id == rootId);
                 if (root is null) return null;
                 var full = Path.GetFullPath(Path.Combine(root.Path, relative[(separator + 1)..].Replace('/', Path.DirectorySeparatorChar)));
                 return IsWithin(full, root.Path) ? full : null;
