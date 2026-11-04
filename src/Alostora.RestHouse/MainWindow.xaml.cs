@@ -2256,7 +2256,7 @@ public partial class MainWindow : Window
                 CustomerPageSettingsStatusText.Text = "تعذر حفظ الإعدادات: " + await response.Content.ReadAsStringAsync();
                 return;
             }
-            CustomerPageSettingsStatusText.Text = "تم حفظ إعدادات صفحة العملاء. ستظهر التغييرات عند تحديث صفحة العميل في الأجهزة المتصلة.";
+            CustomerPageSettingsStatusText.Text = "تم حفظ الإعدادات. ستصل التغييرات إلى صفحات العملاء المفتوحة خلال دقيقة أو عند تحديث الصفحة.";
         }
         catch (Exception ex)
         {
