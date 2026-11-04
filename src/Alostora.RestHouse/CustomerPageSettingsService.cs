@@ -12,7 +12,8 @@ public sealed record CustomerPageSettings(
     bool ShowContact = true,
     bool ShowWelcome = true,
     bool ShowAnnouncement = true,
-    bool ShowDownloads = true);
+    bool ShowDownloads = true,
+    bool ShowImageAds = true);
 
 public sealed class CustomerPageSettingsService
 {
@@ -40,7 +41,14 @@ public sealed class CustomerPageSettingsService
                 var hasDownloadsSetting = document.RootElement.ValueKind == JsonValueKind.Object &&
                     (document.RootElement.TryGetProperty(nameof(CustomerPageSettings.ShowDownloads), out _) ||
                      document.RootElement.TryGetProperty("showDownloads", out _));
-                return hasDownloadsSetting ? settings : settings with { ShowDownloads = true };
+                var hasImageAdsSetting = document.RootElement.ValueKind == JsonValueKind.Object &&
+                    (document.RootElement.TryGetProperty(nameof(CustomerPageSettings.ShowImageAds), out _) ||
+                     document.RootElement.TryGetProperty("showImageAds", out _));
+                return settings with
+                {
+                    ShowDownloads = hasDownloadsSetting ? settings.ShowDownloads : true,
+                    ShowImageAds = hasImageAdsSetting ? settings.ShowImageAds : true
+                };
             }
             catch
             {
