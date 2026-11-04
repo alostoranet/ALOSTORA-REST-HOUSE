@@ -77,6 +77,16 @@ main{max-width:1320px;padding:26px 28px 18px}
 .catalog-subheading{font-size:14px;font-weight:800;color:#dce8f5;margin:18px 0 7px;padding-right:9px;border-right:3px solid var(--accent)}
 .catalog-compact-meta{margin:0 0 12px;line-height:1.6}
 .catalog-section-title{font-size:17px;margin:13px 0 10px}
+
+/* Unified customer catalog card sizing across every navigation level. */
+.catalog-grid,.catalog-rail{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))!important;gap:14px!important;overflow:visible!important;padding:0!important;scroll-snap-type:none!important}
+.catalog-rail .catalog-card{flex:initial!important;min-width:0!important;width:100%!important}
+.catalog-card{width:100%;min-width:0;display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:13px}
+.catalog-card img.catalog-poster,.catalog-card .catalog-poster,.catalog-card .poster-empty{display:block;width:100%;height:auto;aspect-ratio:3/4;object-fit:cover;border-radius:9px;margin:0}
+.catalog-card h3{font-size:15px;line-height:1.45;margin:1px 0 0}
+.catalog-card small{font-size:12px;line-height:1.55}
+@media(max-width:600px){.catalog-grid,.catalog-rail{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.catalog-card{padding:8px}.catalog-card h3{font-size:14px}}
+
 </style></head><body>
 <header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button></nav></header>
 <main><section id="homeView">
@@ -225,7 +235,7 @@ function renderCatalogPage(){
     :items.some(video=>video.categoryId===sub.categoryId&&video.isPublished===true&&matches(video)&&matchesQuery(video))));
   });
   content.append(catalogSectionTitle('الأقسام الرئيسية'));
-  const grid=document.createElement('div');grid.className='catalog-grid catalog-rail';
+  const grid=document.createElement('div');grid.className='catalog-grid';
   for(const main of mains){
    const subs=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true);
    const count=subs.length;
@@ -241,18 +251,19 @@ function renderCatalogPage(){
   if(!main){content.append(catalogEmpty('القسم غير موجود أو لم يعد منشوراً.'));return;}
   content.append(catalogSectionTitle(main.title));
   const subs=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true);
+  const grid=document.createElement('div');grid.className='catalog-grid';
   let shown=0;
   for(const sub of subs){
    if(sub.contentKind==='Series'){
     const shows=seriesItems.filter(x=>x.isPublished===true&&x.categoryId===sub.categoryId&&matches(x)&&matchesQuery(x));
     if(!shows.length&&!matchesQuery(sub))continue;
-    content.append(catalogCard(sub.title,shows.length+' مسلسل',sub.posterPath,()=>navigateCatalog({type:'category',categoryId:sub.categoryId,title:sub.title})));shown++;
+    grid.append(catalogCard(sub.title,shows.length+' مسلسل',sub.posterPath,()=>navigateCatalog({type:'category',categoryId:sub.categoryId,title:sub.title})));shown++;
    }else{
     const count=items.filter(v=>v.isPublished===true&&v.categoryId===sub.categoryId).length;
-    content.append(catalogCard(sub.title,count+' عنصر',sub.posterPath,()=>navigateCatalog({type:'category',categoryId:sub.categoryId,title:sub.title})));shown++;
+    grid.append(catalogCard(sub.title,count+' عنصر',sub.posterPath,()=>navigateCatalog({type:'category',categoryId:sub.categoryId,title:sub.title})));shown++;
    }
   }
-  if(!shown)content.append(catalogEmpty('لا توجد مسلسلات أو عناصر منشورة في هذا القسم بعد.'));
+  if(shown)content.append(grid);else content.append(catalogEmpty('لا توجد مسلسلات أو عناصر منشورة في هذا القسم بعد.'));
   return;
  }
  if(pageType==='category'){
@@ -261,11 +272,12 @@ function renderCatalogPage(){
   content.append(catalogSectionTitle(category.title));
   if(category.contentKind==='Series'){
    const shows=sorted(seriesItems.filter(x=>x.isPublished===true&&x.categoryId===category.categoryId));
+   const grid=document.createElement('div');grid.className='catalog-grid';
    for(const show of shows){
     const seasons=show.seasons||[];
-    content.append(catalogCard(show.title,seasons.length+(show.organizationType==='Parts'?' جزء':' موسم'),show.posterPath,()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title})));
+    grid.append(catalogCard(show.title,seasons.length+(show.organizationType==='Parts'?' جزء':' موسم'),show.posterPath,()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title})));
    }
-   if(!shows.length)content.append(catalogEmpty('لا توجد مسلسلات منشورة في هذا القسم بعد.'));
+   if(shows.length)content.append(grid);else content.append(catalogEmpty('لا توجد مسلسلات منشورة في هذا القسم بعد.'));
   }else{
    const movies=sorted(items.filter(x=>x.isPublished===true&&x.kind!=='Series'&&x.categoryId===category.categoryId));
    const grid=document.createElement('div');grid.className='catalog-grid';
@@ -286,18 +298,22 @@ function renderCatalogPage(){
   const summary=document.createElement('p');summary.className='catalog-compact-meta';summary.textContent=[show.year,show.genre].filter(Boolean).join(' • ');content.append(summary);
   if(direct.length){
    content.append(catalogSectionTitle('حلقات أو فيديوهات مباشرة'));
+   const directGrid=document.createElement('div');directGrid.className='catalog-grid';
    for(const video of direct){
     const title=video.title||'فيديو';
-    content.append(catalogCard(title,video.isMissing?'الملف غير موجود':'تشغيل الفيديو',video.posterPath||show.posterPath,()=>{if(!video.isMissing&&video.url)play({id:video.videoId,url:video.url,title});}));
+    directGrid.append(catalogCard(title,video.isMissing?'الملف غير موجود':'تشغيل الفيديو',video.posterPath||show.posterPath,()=>{if(!video.isMissing&&video.url)play({id:video.videoId,url:video.url,title});}));
    }
+   content.append(directGrid);
   }
   if(seasons.length){
    const heading=document.createElement('h3');heading.className='catalog-subheading';heading.textContent=show.organizationType==='Parts'?'الأجزاء':'المواسم';content.append(heading);
+   const seasonGrid=document.createElement('div');seasonGrid.className='catalog-grid';
    for(const season of seasons){
     const episodes=season.episodes||[];
     const name=season.title||((show.organizationType==='Parts'?'الجزء ':'الموسم ')+season.seasonNumber);
-    content.append(catalogCard(name,episodes.length+' حلقة',season.posterPath||show.posterPath,()=>navigateCatalog({type:'season',seriesId:show.seriesId,seasonId:season.seasonId,title:name})));
+    seasonGrid.append(catalogCard(name,episodes.length+' حلقة',season.posterPath||show.posterPath,()=>navigateCatalog({type:'season',seriesId:show.seriesId,seasonId:season.seasonId,title:name})));
    }
+   content.append(seasonGrid);
   }
   if(!seasons.length&&!direct.length)content.append(catalogEmpty('لم تتم إضافة مواسم أو فيديوهات لهذا البرنامج بعد.'));
   return;
