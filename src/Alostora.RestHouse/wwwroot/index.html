@@ -751,5 +751,5 @@ document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener(
 }));
 for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();load();
 setInterval(async()=>{await loadCustomerSettings();await loadAnnouncement();},60000);
-setInterval(loadDownloads,2000);
+setInterval(()=>{if(downloadRows.length)loadDownloads();},2000);
 </script></body></html>
