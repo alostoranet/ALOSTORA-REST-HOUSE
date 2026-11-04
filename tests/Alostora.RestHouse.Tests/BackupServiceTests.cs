@@ -67,6 +67,7 @@ public sealed class BackupServiceTests : IDisposable
         Assert.Contains("تنبيه قديم", File.ReadAllText(Path.Combine(_root, "announcement.json")));
         Assert.Contains("\"ShowApps\":false", File.ReadAllText(Path.Combine(_root, "customer-page-settings.json")));
         Assert.Equal("[]", File.ReadAllText(Path.Combine(_root, "customer-ads.json")));
+        Assert.True(File.Exists(Path.Combine(posters, "customer-ads", "sample.png")));
         Assert.Contains("\"LimitMbps\":6", File.ReadAllText(Path.Combine(_root, "download-speed-settings.json")));
     }
 
