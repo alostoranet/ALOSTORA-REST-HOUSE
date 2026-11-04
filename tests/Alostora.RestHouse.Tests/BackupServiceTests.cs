@@ -16,7 +16,7 @@ public sealed class BackupServiceTests : IDisposable
     }
 
     [Fact]
-    public void BackupAndRestorePreserveLocalBrandingAndAnnouncements()
+    public void BackupAndRestorePreserveLocalBrandingAnnouncementsAndCustomerPageSettings()
     {
         var database = Path.Combine(_root, "resthouse.db");
         using (var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = database }.ToString()))
@@ -39,12 +39,13 @@ public sealed class BackupServiceTests : IDisposable
         {
             Assert.Contains(zip.Entries, x => x.FullName == "profile.json");
             Assert.Contains(zip.Entries, x => x.FullName == "announcement.json");
-        Assert.Contains("\"ShowApps\":false", File.ReadAllText(Path.Combine(_root, "customer-page-settings.json")));
+            Assert.Contains(zip.Entries, x => x.FullName == "customer-page-settings.json");
             var manifest = zip.GetEntry("backup-info.txt");
             Assert.NotNull(manifest);
             using var reader = new StreamReader(manifest!.Open());
             var manifestText = reader.ReadToEnd();
             Assert.Contains("Original media files (videos, audio, books, and apps) are not included", manifestText);
+            Assert.Contains("customer page visibility settings", manifestText);
         }
 
         File.WriteAllText(Path.Combine(_root, "profile.json"), "{\"RestHouseName\":\"بعد النسخة\"}");
@@ -54,7 +55,7 @@ public sealed class BackupServiceTests : IDisposable
 
         Assert.Contains("قبل النسخة", File.ReadAllText(Path.Combine(_root, "profile.json")));
         Assert.Contains("تنبيه قديم", File.ReadAllText(Path.Combine(_root, "announcement.json")));
-        Assert.Contains("\\\"ShowApps\\\":false", File.ReadAllText(Path.Combine(_root, "customer-page-settings.json")));
+        Assert.Contains("\"ShowApps\":false", File.ReadAllText(Path.Combine(_root, "customer-page-settings.json")));
     }
 
     public void Dispose()
