@@ -135,7 +135,7 @@ async function loadCustomerSettings(){
  try{
   const response=await fetch('/api/customer-settings',{cache:'no-store'});
   if(response.ok)customerSettings={...defaultCustomerSettings,...await response.json()};
- }catch{customerSettings={...defaultCustomerSettings};}
+ }catch{}
  applyCustomerSettings(previous!==JSON.stringify(customerSettings));
 }
 function applyCustomerSettings(refreshMedia=false){
