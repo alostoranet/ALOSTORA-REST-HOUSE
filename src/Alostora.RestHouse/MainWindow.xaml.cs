@@ -36,6 +36,7 @@ public partial class MainWindow : Window
     private readonly HttpClient _http = new();
     private readonly int _port;
     private string? _dashboardKindFilter;
+    private int _dashboardSeriesCount;
     private Window? _activeEditorWindow;
     private Expander? _activeEditorExpander;
     private object? _activeEditorContent;
@@ -907,6 +908,7 @@ public partial class MainWindow : Window
         {
             var rows = await _http.GetFromJsonAsync<CategoryAdmin[]>("/api/admin/catalog-categories") ?? Array.Empty<CategoryAdmin>();
             _categories = rows;
+            UpdateDashboardStats();
             var parents = rows.Where(x => x.ParentId is null && x.ContentKind == "Group").ToArray();
             var parentNames = parents.ToDictionary(x => x.CategoryId, x => x.Title, StringComparer.OrdinalIgnoreCase);
             foreach (var row in rows)
@@ -1190,6 +1192,7 @@ public partial class MainWindow : Window
             MissingEpisodeVideoPicker.ItemsSource = _videos;
             await RefreshVideoFoldersTreeAsync();
             CountText.Text = $"عدد ملفات الفيديو: {_videos.Count}";
+            UpdateDashboardStats();
             var incomplete = _videos.Count(x => !x.MetadataSaved);
             StatusText.Text = incomplete == 0
                 ? $"سجل الفيديوهات جاهز: {_videos.Count} فيديو، وجميعها لها بيانات محفوظة."
@@ -1391,6 +1394,8 @@ public partial class MainWindow : Window
                 row.CategoryTitle = _categories.FirstOrDefault(x => x.CategoryId == row.CategoryId)?.Title ?? "غير مصنف";
                 row.PublishStatus = row.IsPublished ? "منشور" : "مسودة";
             }
+            _dashboardSeriesCount = rows.Length;
+            UpdateDashboardStats();
             SeriesPicker.ItemsSource = rows;
             var linkedSeriesId = VideoSeriesPicker.SelectedValue as string;
             VideoSeriesPicker.ItemsSource = rows;
@@ -2133,6 +2138,15 @@ public partial class MainWindow : Window
         return "عنوان الشبكة غير معروف";
     }
 
+    private void UpdateDashboardStats()
+    {
+        if (DashboardVideosCount is null) return;
+        DashboardVideosCount.Text = _videos.Count.ToString("N0");
+        DashboardSeriesCount.Text = _dashboardSeriesCount.ToString("N0");
+        DashboardCategoriesCount.Text = _categories.Count(x => x.ParentId is not null || x.ContentKind == "Group").ToString("N0");
+        DashboardIncompleteCount.Text = _videos.Count(x => !x.MetadataSaved).ToString("N0");
+    }
+
     private void DashboardCard_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (sender is not FrameworkElement element)
@@ -2148,7 +2162,7 @@ public partial class MainWindow : Window
         MainNavigationTabs.SelectedIndex = tabIndex;
         if (tabIndex == 1)
         {
-            _dashboardKindFilter = parts.Length == 3 && (parts[2] == "Movie" || parts[2] == "Series") ? parts[2] : null;
+            _dashboardKindFilter = null;
             _selectedVideoFolderPath = null;
             _videosView?.Refresh();
             VideosGrid.SelectedIndex = -1;
