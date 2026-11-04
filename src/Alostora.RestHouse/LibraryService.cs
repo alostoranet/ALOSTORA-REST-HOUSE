@@ -651,6 +651,67 @@ public sealed class LibraryService : IDisposable
             .Count(path => ContentTypes.ContainsKey(Path.GetExtension(path)));
     }
 
+    public int UnregisterFolder(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath) || folderPath.Length > 2000)
+            throw new ArgumentException("مسار المجلد غير صالح.");
+
+        var full = Path.GetFullPath(folderPath.Trim());
+        if (IsInsideRoot(full))
+            throw new InvalidOperationException("لا يمكن إزالة مجلد من داخل مكتبة التخزين الرئيسية. يمكنك إزالة مجلد التخزين الخارجي فقط.");
+
+        var prefix = full.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var removedFiles = 0;
+        using (var connection = new SqliteConnection(_connectionString))
+        {
+            connection.Open();
+            using var transaction = connection.BeginTransaction();
+            using (var check = connection.CreateCommand())
+            {
+                check.Transaction = transaction;
+                check.CommandText = "SELECT 1 FROM LibraryScanRoots WHERE FolderPath=$path";
+                check.Parameters.AddWithValue("$path", full);
+                if (check.ExecuteScalar() is null)
+                    throw new KeyNotFoundException("مسار التخزين الخارجي غير مسجل في المكتبة.");
+            }
+
+            using (var count = connection.CreateCommand())
+            {
+                count.Transaction = transaction;
+                count.CommandText = "SELECT COUNT(*) FROM ExternalLibraryFiles WHERE FullPath=$path OR substr(FullPath,1,length($prefix))=$prefix";
+                count.Parameters.AddWithValue("$path", full);
+                count.Parameters.AddWithValue("$prefix", prefix);
+                removedFiles = Convert.ToInt32(count.ExecuteScalar());
+            }
+
+            foreach (var table in new[] { "LibraryScanRoots", "ExternalLibraryFiles", "SelectedLibraryFiles" })
+            {
+                using var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                var column = table == "LibraryScanRoots" ? "FolderPath" : "FullPath";
+                command.CommandText = $"DELETE FROM {table} WHERE {column}=$path OR substr({column},1,length($prefix))=$prefix";
+                command.Parameters.AddWithValue("$path", full);
+                command.Parameters.AddWithValue("$prefix", prefix);
+                command.ExecuteNonQuery();
+            }
+            transaction.Commit();
+        }
+
+        lock (_sync)
+        {
+            foreach (var watcher in _watchers.Where(w =>
+                string.Equals(w.Path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), full, StringComparison.OrdinalIgnoreCase) ||
+                w.Path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)).ToArray())
+            {
+                watcher.Dispose();
+                _watchers.Remove(watcher);
+            }
+        }
+
+        Invalidate();
+        return removedFiles;
+    }
+
     private bool IsInsideRoot(string path)
     {
         var relative = Path.GetRelativePath(_root, path);
