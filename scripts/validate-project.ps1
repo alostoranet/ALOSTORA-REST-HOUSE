@@ -104,6 +104,14 @@ $multiMediaTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/MultiMedi
 if (-not (Test-Path $multiMediaTestsPath)) { throw "Multimedia library regression tests are missing." }
 Write-Host "PASS: customer audio, books, and apps libraries are wired to the local media API and admin controls."
 
+# Dashboard statistics include all registered local media, not only videos.
+if ($xaml -notmatch 'x:Name="DashboardMediaCount"' -or
+    $code -notmatch '_dashboardMediaCount\s*=\s*items\.Length' -or
+    $code -notmatch 'DashboardMediaCount\.Text\s*=\s*_dashboardMediaCount') {
+    throw "The admin dashboard must count audio, books, and apps alongside videos."
+}
+Write-Host "PASS: admin dashboard counts all registered local media libraries."
+
 # The catalog must navigate through distinct customer pages, not stacked detail panels.
 if ($html -notmatch 'id="catalogView"' -or
     $html -notmatch 'id="catalogBack"' -or
