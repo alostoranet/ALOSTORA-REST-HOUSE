@@ -163,7 +163,7 @@
 <DockPanel>
 <StackPanel DockPanel.Dock="Top">
 <TextBlock Text="إدارة المكتبات الإضافية" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,8"/>
-<TextBlock Text="أضف ملفاتك إلى المجلدات Audio وBooks وApps داخل مجلد مكتبة الاستراحة، ثم اضغط فحص المكتبة. الفحص يسجل الملفات دون نقلها أو حذفها." Foreground="#64748B" TextWrapping="Wrap" Margin="0,0,0,12"/>
+<TextBlock Text="يمكنك الفحص من المجلدات الأساسية أو ربط مجلدات خارجية مستقلة من أقراص مختلفة لكل مكتبة. الفهرسة لا تنقل الملفات ولا تحذفها." Foreground="#64748B" TextWrapping="Wrap" Margin="0,0,0,12"/>
 <WrapPanel Margin="0,0,0,12">
 <Button Content="فحص الصوتيات" Click="ScanAudioLibrary_Click" Padding="13,8" Margin="0,0,7,6" Background="#E7F5EC"/>
 <Button Content="فحص الكتب" Click="ScanBooksLibrary_Click" Padding="13,8" Margin="0,0,7,6" Background="#E7F5EC"/>
