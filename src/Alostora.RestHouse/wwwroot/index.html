@@ -88,9 +88,14 @@ main{max-width:1320px;padding:26px 28px 18px}
 @media(max-width:600px){.catalog-grid,.catalog-rail{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.catalog-card{padding:8px}.catalog-card h3{font-size:14px}}
 .announcement-banner{max-width:1320px;margin:14px auto 0;padding:12px 18px;border-radius:11px;background:linear-gradient(100deg,#263f59,#1b3149);border-right:4px solid #d5a84e;color:#fff;display:flex;align-items:center;gap:16px;overflow:hidden;box-shadow:0 8px 22px #0003}.announcement-banner[hidden]{display:none!important}.announcement-banner strong{flex:0 0 auto;margin:0;color:#f6d58b;white-space:nowrap}.announcement-banner p{flex:1 1 auto;min-width:0;margin:0;line-height:1.8;white-space:nowrap;direction:rtl;width:max-content;max-width:none;animation:announcement-marquee 28s linear infinite}.announcement-banner:hover p{animation-play-state:paused}@keyframes announcement-marquee{from{transform:translateX(100%)}to{transform:translateX(-100%)}}@media(max-width:600px){.announcement-banner{margin:10px 12px;padding:10px 12px;gap:10px}.announcement-banner strong{font-size:12px}.announcement-banner p{font-size:13px}}
 
+.customer-ads{max-width:1320px;margin:14px auto 0;padding:0 12px}.customer-ads[hidden]{display:none!important}.customer-ad-stage{position:relative;aspect-ratio:16/5;min-height:120px;max-height:280px;overflow:hidden;border-radius:14px;background:#142d4a;box-shadow:0 7px 22px #142d4a1a}.customer-ad-stage>a,.customer-ad-stage>div{position:relative;display:block;width:100%;height:100%;color:inherit}.customer-ad-stage img{display:block;width:100%;height:100%;object-fit:cover}.customer-ad-caption{position:absolute;inset:auto 0 0;padding:14px 20px;color:#fff;font-weight:700;font-size:clamp(14px,2vw,20px);background:linear-gradient(transparent,#071a2cdb);text-shadow:0 1px 3px #0008}.customer-ad-controls{display:flex;justify-content:center;align-items:center;gap:14px;padding:8px 0}.customer-ad-controls>button{border:1px solid #dbe4ee;background:#fff;color:#245b87;border-radius:8px;padding:5px 12px;cursor:pointer}.customer-ad-dots{display:flex;align-items:center;gap:7px}.customer-ad-dot{width:8px;height:8px;padding:0;border:0;border-radius:50%;background:#b8c5d3;cursor:pointer}.customer-ad-dot.active{width:20px;border-radius:8px;background:#245b87}@media(max-width:600px){.customer-ads{margin:10px 0 0;padding:0 12px}.customer-ad-stage{aspect-ratio:16/7;min-height:120px}.customer-ad-caption{padding:10px 12px;font-size:14px}.customer-ad-controls{gap:9px}.customer-ad-controls>button{font-size:12px;padding:4px 8px}}@media(prefers-reduced-motion:reduce){.customer-ad-stage{scroll-behavior:auto}}
 </style></head><body>
 <header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><div class="header-search"><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل أو قسم..."></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
 <div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p id="announcementMessage"></p></div>
+<section id="customerAds" class="customer-ads" aria-label="إعلانات الاستراحة" hidden>
+ <div id="customerAdStage" class="customer-ad-stage"></div>
+ <div class="customer-ad-controls"><button id="customerAdPrev" type="button" aria-label="الإعلان السابق">السابق</button><div id="customerAdDots" class="customer-ad-dots"></div><button id="customerAdNext" type="button" aria-label="الإعلان التالي">التالي</button></div>
+</section>
 <main><section id="homeView">
 <section class="welcome-panel" id="welcomePanel"><div><span class="welcome-kicker">ALOSTORA REST HOUSE</span><h2>خدمات الاستراحة ومكتبتها في مكان واحد</h2><p>تصفح الأفلام والمسلسلات، واستمع إلى الصوتيات، وافتح الكتب وحمّل التطبيقات المتاحة على الشبكة المحلية.</p></div><div class="welcome-mark" aria-hidden="true">▶</div></section>
 <div class="toolbar" id="catalogToolbar">
@@ -133,8 +138,9 @@ main{max-width:1320px;padding:26px 28px 18px}
 </section><div id="appToast" class="app-toast" role="status" aria-live="polite"></div></main>
 <footer class="developer-credit">تصميم وبرمجة: محمد النظاري</footer>
 <script>
-const defaultCustomerSettings={showCatalog:true,showContinueWatching:true,showAudio:true,showBooks:true,showApps:true,showContact:true,showWelcome:true,showAnnouncement:true,showDownloads:true};
+const defaultCustomerSettings={showCatalog:true,showContinueWatching:true,showAudio:true,showBooks:true,showApps:true,showContact:true,showWelcome:true,showAnnouncement:true,showDownloads:true,showImageAds:true};
 let customerSettings={...defaultCustomerSettings};
+let customerAdItems=[],customerAdIndex=0,customerAdTimer=null;
 async function loadCustomerSettings(){
  const previousMedia=[customerSettings.showAudio,customerSettings.showBooks,customerSettings.showApps].join('|');
  try{
@@ -164,7 +170,52 @@ function applyCustomerSettings(refreshMedia=false){
  document.querySelector('#mediaLibrary').hidden=activeMediaKind==='all'&&!mediaItems.some(x=>enabled[x.kind]);
  document.querySelector('#announcementBanner').hidden=customerSettings.showAnnouncement===false||document.querySelector('#announcementBanner').dataset.active!=='true';
  document.querySelector('#downloadCenter').hidden=customerSettings.showDownloads===false||!downloadRows.length;
+ document.querySelector('#customerAds').hidden=customerSettings.showImageAds===false||customerAdItems.length===0||!document.querySelector('#contactView').hidden;
  if(refreshMedia)renderMediaLibraries();
+}
+function scheduleCustomerAd(){
+ if(customerAdTimer){clearTimeout(customerAdTimer);customerAdTimer=null;}
+ if(customerAdItems.length<2||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ const current=customerAdItems[customerAdIndex];
+ const delay=Math.max(5,Math.min(120,Number(current.durationSeconds)||10))*1000;
+ customerAdTimer=setTimeout(()=>renderCustomerAd(customerAdIndex+1),delay);
+}
+function renderCustomerAd(index=customerAdIndex){
+ const section=document.querySelector('#customerAds'),stage=document.querySelector('#customerAdStage'),dots=document.querySelector('#customerAdDots');
+ if(customerAdTimer){clearTimeout(customerAdTimer);customerAdTimer=null;}
+ if(!customerAdItems.length){stage.replaceChildren();dots.replaceChildren();section.hidden=true;return;}
+ customerAdIndex=((index%customerAdItems.length)+customerAdItems.length)%customerAdItems.length;
+ const item=customerAdItems[customerAdIndex];
+ const image=document.createElement('img');
+ image.src='/api/customer-ads/'+encodeURIComponent(item.id)+'/image';
+ image.alt=item.title||'إعلان الاستراحة';
+ image.loading='lazy';
+ let surface;
+ if(item.linkUrl){surface=document.createElement('a');surface.href=item.linkUrl;surface.target='_blank';surface.rel='noopener noreferrer';surface.setAttribute('aria-label',item.title||'فتح رابط الإعلان');}
+ else{surface=document.createElement('div');surface.setAttribute('role','group');surface.setAttribute('aria-label',item.title||'إعلان الاستراحة');}
+ surface.append(image);
+ if(item.title){const caption=document.createElement('div');caption.className='customer-ad-caption';caption.textContent=item.title;surface.append(caption);}
+ stage.replaceChildren(surface);
+ dots.replaceChildren();
+ customerAdItems.forEach((ad,i)=>{
+  const dot=document.createElement('button');dot.type='button';dot.className='customer-ad-dot'+(i===customerAdIndex?' active':'');
+  dot.setAttribute('aria-label','عرض الإعلان '+(i+1));dot.setAttribute('aria-pressed',String(i===customerAdIndex));
+  dot.addEventListener('click',()=>renderCustomerAd(i));dots.append(dot);
+ });
+ section.hidden=customerSettings.showImageAds===false||!document.querySelector('#contactView').hidden;
+ scheduleCustomerAd();
+}
+async function loadCustomerAds(){
+ try{
+  const response=await fetch('/api/customer-ads',{cache:'no-store'});
+  if(!response.ok)return;
+  const rows=await response.json();
+  const oldId=customerAdItems[customerAdIndex]?.id;
+  customerAdItems=Array.isArray(rows)?rows:[];
+  const sameIndex=customerAdItems.findIndex(x=>x.id===oldId);
+  customerAdIndex=sameIndex>=0?sameIndex:0;
+  renderCustomerAd(customerAdIndex);
+ }catch{}
 }
 async function loadAnnouncement(){
  try{
@@ -731,6 +782,7 @@ function showCustomerView(view){
  document.querySelector('#contactNav').classList.toggle('active',!home);
  document.querySelector('#homeNav').setAttribute('aria-pressed',String(home));
  document.querySelector('#contactNav').setAttribute('aria-pressed',String(!home));
+ document.querySelector('#customerAds').hidden=!home||customerSettings.showImageAds===false||customerAdItems.length===0;
  document.querySelector('.header-search').hidden=!home||customerSettings.showCatalog===false||activeMediaKind!=='all';
  window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -749,7 +801,7 @@ document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener(
  applyCustomerSettings();if(mediaOnly){document.querySelector('#mediaLibrary').hidden=false;renderMediaLibraries();}
  else{document.querySelector('#catalogView').hidden=false;document.querySelector('#catalogToolbar').hidden=false;document.querySelector('#welcomePanel').hidden=false;renderMediaLibraries();}
 }));
-for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();load();
-setInterval(async()=>{await loadCustomerSettings();await loadAnnouncement();},60000);
+for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();load();loadCustomerSettings();loadAnnouncement();loadCustomerAds();
+setInterval(async()=>{await loadCustomerSettings();await loadAnnouncement();await loadCustomerAds();},60000);
 setInterval(()=>{if(downloadRows.length)loadDownloads();},2000);
 </script></body></html>
