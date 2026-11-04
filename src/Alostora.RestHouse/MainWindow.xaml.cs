@@ -84,7 +84,7 @@ public partial class MainWindow : Window
         DashboardPopularGrid.ItemsSource = _popularPlaybackRows;
         DashboardRecentGrid.ItemsSource = _recentPlaybackRows;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await LoadAnnouncementAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); };
+        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await LoadAnnouncementAsync(); await LoadCustomerPageSettingsAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); };
         _messageRefreshTimer.Tick += async (_, _) => await LoadCustomerMessagesAsync();
         _messageRefreshTimer.Start();
         Closed += (_, _) => _messageRefreshTimer.Stop();
@@ -2211,6 +2211,59 @@ public partial class MainWindow : Window
         return "عنوان الشبكة غير معروف";
     }
 
+    private async void LoadCustomerPageSettings_Click(object sender, RoutedEventArgs e) => await LoadCustomerPageSettingsAsync();
+
+    private async System.Threading.Tasks.Task LoadCustomerPageSettingsAsync()
+    {
+        try
+        {
+            var settings = await _http.GetFromJsonAsync<CustomerPageSettingsAdmin>("/api/admin/customer-settings");
+            if (settings is null) return;
+            CustomerShowCatalogBox.IsChecked = settings.ShowCatalog;
+            CustomerShowContinueBox.IsChecked = settings.ShowContinueWatching;
+            CustomerShowAudioBox.IsChecked = settings.ShowAudio;
+            CustomerShowBooksBox.IsChecked = settings.ShowBooks;
+            CustomerShowAppsBox.IsChecked = settings.ShowApps;
+            CustomerShowContactBox.IsChecked = settings.ShowContact;
+            CustomerShowWelcomeBox.IsChecked = settings.ShowWelcome;
+            CustomerShowAnnouncementBox.IsChecked = settings.ShowAnnouncement;
+            CustomerPageSettingsStatusText.Text = "تم تحميل إعدادات ظهور أقسام صفحة العملاء.";
+        }
+        catch (Exception ex)
+        {
+            CustomerPageSettingsStatusText.Text = "تعذر تحميل إعدادات صفحة العملاء: " + ex.Message;
+        }
+    }
+
+    private async void SaveCustomerPageSettings_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var request = new
+            {
+                showCatalog = CustomerShowCatalogBox.IsChecked == true,
+                showContinueWatching = CustomerShowContinueBox.IsChecked == true,
+                showAudio = CustomerShowAudioBox.IsChecked == true,
+                showBooks = CustomerShowBooksBox.IsChecked == true,
+                showApps = CustomerShowAppsBox.IsChecked == true,
+                showContact = CustomerShowContactBox.IsChecked == true,
+                showWelcome = CustomerShowWelcomeBox.IsChecked == true,
+                showAnnouncement = CustomerShowAnnouncementBox.IsChecked == true
+            };
+            var response = await _http.PostAsJsonAsync("/api/admin/customer-settings", request);
+            if (!response.IsSuccessStatusCode)
+            {
+                CustomerPageSettingsStatusText.Text = "تعذر حفظ الإعدادات: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            CustomerPageSettingsStatusText.Text = "تم حفظ إعدادات صفحة العملاء. ستظهر التغييرات عند تحديث صفحة العميل في الأجهزة المتصلة.";
+        }
+        catch (Exception ex)
+        {
+            CustomerPageSettingsStatusText.Text = "تعذر حفظ إعدادات صفحة العملاء: " + ex.Message;
+        }
+    }
+
     private async void LoadAnnouncement_Click(object sender, RoutedEventArgs e) => await LoadAnnouncementAsync();
 
     private async System.Threading.Tasks.Task LoadAnnouncementAsync()
@@ -2791,6 +2844,18 @@ public partial class MainWindow : Window
     {
         public int Total { get; set; }
         public Dictionary<string, int> ViewCounts { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private sealed class CustomerPageSettingsAdmin
+    {
+        public bool ShowCatalog { get; set; } = true;
+        public bool ShowContinueWatching { get; set; } = true;
+        public bool ShowAudio { get; set; } = true;
+        public bool ShowBooks { get; set; } = true;
+        public bool ShowApps { get; set; } = true;
+        public bool ShowContact { get; set; } = true;
+        public bool ShowWelcome { get; set; } = true;
+        public bool ShowAnnouncement { get; set; } = true;
     }
 
     private sealed class AnnouncementAdmin
