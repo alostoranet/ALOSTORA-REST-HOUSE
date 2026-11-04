@@ -81,6 +81,15 @@ public sealed class WatchProgressService
         command.ExecuteNonQuery();
     }
 
+    public int GetTotalPlaybackCount()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM WatchHistory";
+        return Convert.ToInt32(command.ExecuteScalar());
+    }
+
     public IReadOnlyList<WatchPlaybackItem> GetRecentPlayback(int limit = 100)
     {
         using var connection = new SqliteConnection(_connectionString);
