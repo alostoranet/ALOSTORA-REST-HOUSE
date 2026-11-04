@@ -188,6 +188,17 @@
 </DataGrid.Columns>
 </DataGrid>
 <TextBlock x:Name="StorageSummaryText" Text="مساحة التخزين: اضغط حساب مساحة التخزين لعرض الملخص." Foreground="#245B87" TextWrapping="Wrap" Margin="0,0,0,10"/>
+<DataGrid x:Name="MediaStorageRootsGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" Height="165" Margin="0,0,0,10">
+<DataGrid.Columns>
+<DataGridTextColumn Header="المكتبة" Binding="{Binding KindLabel}" Width="90"/>
+<DataGridTextColumn Header="المجلد المرتبط" Binding="{Binding Path}" Width="*"/>
+<DataGridTextColumn Header="الملفات" Binding="{Binding IndexedFiles}" Width="70"/>
+<DataGridTextColumn Header="حجم المحتوى" Binding="{Binding IndexedBytesLabel}" Width="105"/>
+<DataGridTextColumn Header="حالة المجلد" Binding="{Binding FolderStatusLabel}" Width="105"/>
+<DataGridTextColumn Header="حالة القرص" Binding="{Binding DriveStatusLabel}" Width="95"/>
+<DataGridTextColumn Header="المساحة الحرة" Binding="{Binding DriveFreeLabel}" Width="105"/>
+</DataGrid.Columns>
+</DataGrid>
 <TextBlock x:Name="MultiMediaLibraryStatusText" Text="لم يتم فحص المكتبات بعد." Foreground="#526174" Margin="0,0,0,8"/>
 </StackPanel>
 <DataGrid x:Name="MultiMediaGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column">
