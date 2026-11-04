@@ -25,6 +25,20 @@ public sealed record LinkDetectedEpisodesRequest(List<DetectedEpisodeLink> Episo
 public sealed record RelinkEpisodeRequest(string VideoId);
 public sealed record UpdateEpisodeRequest(int EpisodeNumber, string? Title);
 public sealed record PreparePlaybackRequest(int? AudioStreamIndex);
+public sealed record LiveStreamSettingsRequest(string? Url);
+
+public sealed class LiveStreamSettingsService
+{
+ private readonly string _path;
+ public LiveStreamSettingsService(string root) => _path=Path.Combine(root,"live-stream.json");
+ public string? Load()
+ {
+  try { if(!File.Exists(_path)) return null; using var doc=JsonDocument.Parse(File.ReadAllText(_path)); return doc.RootElement.TryGetProperty("url",out var url)?url.GetString():null; }
+  catch { return null; }
+ }
+ public void Save(string url) => File.WriteAllText(_path,JsonSerializer.Serialize(new { url }));
+ public void Clear() { if(File.Exists(_path)) File.Delete(_path); }
+}
 
 public partial class App : Application
 {
@@ -71,6 +85,7 @@ public partial class App : Application
    builder.Services.AddSingleton(new CatalogCategoryService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new CustomerMessageService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new RestHouseProfileService(root));
+   builder.Services.AddSingleton(new LiveStreamSettingsService(root));
    builder.Services.AddSingleton(new PublicCatalogAccessService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddHostedService(provider => new ScheduledBackupService(root,posters,provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ScheduledBackupService>>()));
    _server=builder.Build();
@@ -255,6 +270,38 @@ public partial class App : Application
     var updated=current with{LogoPath="/posters/"+fileName};
     try{profile.Save(updated);return Results.Ok(new{logoPath=updated.LogoPath});}
     catch{try{File.Delete(Path.Combine(posters,fileName));}catch{}throw;}
+   });
+
+   _server.MapGet("/api/live-stream",(LiveStreamSettingsService live)=>Results.Ok(new{url=live.Load()}));
+   _server.MapGet("/api/admin/live-stream",(HttpContext c,LiveStreamSettingsService live)=>IsAdmin(c)?Results.Ok(new{url=live.Load()}):Results.NotFound());
+   _server.MapPost("/api/admin/live-stream",(HttpContext c,LiveStreamSettingsRequest request,LiveStreamSettingsService live)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    var value=(request?.Url??"").Trim();
+    if(value.Length==0||value.Length>2048)return Results.BadRequest(new{error="أدخل رابط بث صحيحاً."});
+    if(!value.Contains("://",StringComparison.Ordinal))value="http://"+value;
+    if(!Uri.TryCreate(value,UriKind.Absolute,out var uri)||uri.Scheme is not ("http" or "https")||string.IsNullOrWhiteSpace(uri.Host)||uri.Port is <1 or >65535)
+     return Results.BadRequest(new{error="الرابط يجب أن يكون عنوان HTTP أو HTTPS صالحاً، مثل 172.16.0.12:100."});
+    live.Save(uri.AbsoluteUri);return Results.Ok(new{saved=true,url=uri.AbsoluteUri});
+   });
+   _server.MapDelete("/api/admin/live-stream",(HttpContext c,LiveStreamSettingsService live)=>
+   {if(!IsAdmin(c))return Results.NotFound();live.Clear();return Results.Ok(new{deleted=true});});
+   _server.MapPost("/api/admin/live-stream/test",async (HttpContext c,LiveStreamSettingsRequest request)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    var value=(request?.Url??"").Trim();if(value.Length==0)return Results.BadRequest(new{error="لا يوجد رابط لاختباره."});
+    if(!value.Contains("://",StringComparison.Ordinal))value="http://"+value;
+    if(!Uri.TryCreate(value,UriKind.Absolute,out var uri)||uri.Scheme is not ("http" or "https"))return Results.BadRequest(new{error="صيغة الرابط غير صحيحة."});
+    try
+    {
+     using var client=new HttpClient{Timeout=TimeSpan.FromSeconds(5)};
+     using var message=new HttpRequestMessage(HttpMethod.Get,uri);
+     message.Headers.Range=new System.Net.Http.Headers.RangeHeaderValue(0,0);
+     using var response=await client.SendAsync(message,HttpCompletionOption.ResponseHeadersRead,c.RequestAborted);
+     return Results.Ok(new{reachable=response.IsSuccessStatusCode,status=(int)response.StatusCode,message=response.IsSuccessStatusCode?"تم الوصول إلى الرابط واستلام استجابة HTTP.":"الرابط استجاب، لكن الخادم أعاد حالة HTTP غير ناجحة."});
+    }
+    catch(Exception ex) when(ex is HttpRequestException or TaskCanceledException or UriFormatException)
+    {return Results.Ok(new{reachable=false,status=0,message="تعذر الوصول إلى الرابط خلال 5 ثوانٍ: "+ex.Message});}
    });
 
    _server.MapGet("/api/catalog-categories",(CatalogCategoryService categories)=>Results.Ok(categories.List(publishedOnly:true)));
