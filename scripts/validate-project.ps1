@@ -461,5 +461,18 @@ if ($app -notmatch '/api/customer-ads' -or
     throw "Customer image-ad gallery, admin controls, or backup support are incomplete."
 }
 Write-Host "PASS: customer image ads support safe local upload, carousel display, admin control, and backup."
+# Independent live broadcast player and shareable local stream URL.
+$livePage = Get-Content (Join-Path $root "src/Alostora.RestHouse/wwwroot/live.html") -Raw
+if ($app -notmatch 'MapGet\("/live"' -or
+    $xaml -notmatch 'CopyLiveAddress_Click' -or
+    $code -notmatch 'private void CopyLiveAddress_Click' -or
+    $livePage -notmatch 'id="liveVideo"' -or
+    $livePage -notmatch 'id="copyLiveLink"' -or
+    $livePage -notmatch 'Hls.isSupported' -or
+    $livePage -notmatch "https:") {
+    throw "Standalone live player route, link-copy control, or HLS playback wiring is incomplete."
+}
+Write-Host "PASS: standalone LAN live player supports shareable source links and HLS/browser playback."
+
 
 
