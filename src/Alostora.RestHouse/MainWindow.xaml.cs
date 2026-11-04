@@ -37,6 +37,7 @@ public partial class MainWindow : Window
     private readonly int _port;
     private string? _dashboardKindFilter;
     private int _dashboardSeriesCount;
+    private int _dashboardExternalRootCount;
     private Window? _activeEditorWindow;
     private Expander? _activeEditorExpander;
     private object? _activeEditorContent;
@@ -149,6 +150,8 @@ public partial class MainWindow : Window
             var previousPath = _selectedVideoFolderPath;
             var folders = await _http.GetFromJsonAsync<LibraryFolderInfo[]>("/api/admin/library/folders")
                 ?? Array.Empty<LibraryFolderInfo>();
+            _dashboardExternalRootCount = folders.Count(x => x.ParentPath is null && !x.IsManaged);
+            UpdateDashboardStats();
             VideoFoldersTree.Items.Clear();
             var all = new TreeViewItem { Header = $"كل المجلدات ({folders.Length})", Tag = null, IsExpanded = true };
             var nodes = new Dictionary<string, TreeViewItem>(StringComparer.OrdinalIgnoreCase);
@@ -777,6 +780,50 @@ public partial class MainWindow : Window
             StatusText.Text = "تم إنشاء المجلد. يمكنك تحديده وإضافة الفيديوهات إليه.";
         }
         catch (Exception ex) { StatusText.Text = "تعذر إنشاء المجلد: " + ex.Message; }
+    }
+
+    private async void RemoveExternalLibraryFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (VideoFoldersTree.SelectedItem is not TreeViewItem selected ||
+            selected.Tag is not string folderPath || string.IsNullOrWhiteSpace(folderPath))
+        {
+            StatusText.Text = "حدد مسار تخزين خارجي من شجرة المجلدات أولاً.";
+            return;
+        }
+
+        try
+        {
+            var folders = await _http.GetFromJsonAsync<LibraryFolderInfo[]>("/api/admin/library/folders")
+                ?? Array.Empty<LibraryFolderInfo>();
+            var root = folders.FirstOrDefault(x =>
+                string.Equals(x.FullPath, folderPath, StringComparison.OrdinalIgnoreCase));
+            if (root is null || root.ParentPath is not null || root.IsManaged)
+            {
+                StatusText.Text = "يمكن إزالة مسار تخزين خارجي مسجل فقط. لا يمكن إزالة مجلد فرعي من المكتبة الرئيسية.";
+                return;
+            }
+
+            if (MessageBox.Show(
+                "سيتم فك تسجيل مسار التخزين الخارجي من مكتبة المشاهدة فقط. ستختفي فيديوهاته من الفهرس، لكن جميع الملفات الأصلية وبياناتها ستبقى محفوظة على القرص. ويمكنك إضافة المسار مجدداً لاحقاً.\n\nهل تريد المتابعة؟",
+                "إزالة مسار التخزين من المكتبة",
+                MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+
+            var response = await _http.PostAsJsonAsync("/api/admin/library/unregister-folder", new { folderPath });
+            if (!response.IsSuccessStatusCode)
+            {
+                StatusText.Text = "تعذر إزالة المسار: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+
+            _selectedVideoFolderPath = null;
+            await LoadVideosAsync();
+            StatusText.Text = "تم فك تسجيل المسار من المكتبة. لم يتم حذف أي ملف فيديو من الجهاز.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "تعذر إزالة مسار التخزين: " + ex.Message;
+        }
     }
 
     private void OpenLibraryFolder_Click(object sender, RoutedEventArgs e)
@@ -2145,6 +2192,8 @@ public partial class MainWindow : Window
         DashboardSeriesCount.Text = _dashboardSeriesCount.ToString("N0");
         DashboardCategoriesCount.Text = _categories.Count(x => x.ParentId is not null || x.ContentKind == "Group").ToString("N0");
         DashboardIncompleteCount.Text = _videos.Count(x => !x.MetadataSaved).ToString("N0");
+        DashboardStorageRootsCount.Text = _dashboardExternalRootCount.ToString("N0");
+        DashboardPublishedCount.Text = _videos.Count(x => x.IsPublished).ToString("N0");
     }
 
     private void DashboardCard_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
