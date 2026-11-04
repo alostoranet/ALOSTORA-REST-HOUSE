@@ -210,7 +210,7 @@ function renderCatalogPage(){
  const collection=document.querySelector('#collection')?.value||'';
  const sort=document.querySelector('#sort')?.value||'title';
  const matches=item=>!collection||(collection==='favorites'&&favorites.has(favoriteKey(item)));
- const matchesQuery=item=>[item.title,item.description,item.genre].join(' ').toLocaleLowerCase('ar').includes(query);
+ const matchesQuery=item=>[item.title,item.description,item.genre,item.director,item.cast,item.tags,item.year].join(' ').toLocaleLowerCase('ar').includes(query);
  const sorted=rows=>rows.filter(matches).filter(matchesQuery).sort((a,b)=>{
   if(sort==='year'&&(b.year||0)!==(a.year||0))return (b.year||0)-(a.year||0);
   if(sort==='rating'&&Number(b.rating||0)!==Number(a.rating||0))return Number(b.rating||0)-Number(a.rating||0);
@@ -226,6 +226,61 @@ function renderCatalogPage(){
  playerSection.hidden=true;playerSection.style.display='none';
  content.replaceChildren();
  content.className='';
+ if(query){
+  continueSection.hidden=true;
+  message.hidden=true;
+  crumb.textContent='نتائج البحث عن: '+query;
+  const addResults=(heading,rows)=>{
+   if(!rows.length)return;
+   content.append(catalogSectionTitle(heading));
+   const grid=document.createElement('div');grid.className='catalog-grid';
+   for(const row of rows)grid.append(row);
+   content.append(grid);
+  };
+  const matchedCategories=categories.filter(x=>x.isPublished===true&&matchesQuery(x))
+   .sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'ar',{sensitivity:'base'}));
+  addResults('الأقسام والتصنيفات',matchedCategories.map(category=>catalogCard(
+   category.title,category.contentKind==='Series'?'قسم مسلسلات':'قسم فيديوهات',category.posterPath,
+   ()=>navigateCatalog({type:category.parentId==null?'main':'category',categoryId:category.categoryId,title:category.title})
+  )));
+  const matchedSeries=sorted(seriesItems.filter(x=>x.isPublished===true));
+  addResults('المسلسلات والبرامج',matchedSeries.map(show=>catalogCard(
+   show.title,[show.year,show.genre].filter(Boolean).join(' • ')||'مسلسل أو برنامج',show.posterPath,
+   ()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title}),null,show
+  )));
+  const linkedVideoIds=new Set();
+  const directResults=[],episodeResults=[];
+  for(const show of seriesItems.filter(x=>x.isPublished===true)){
+   for(const video of show.directVideos||[]){
+    if(video.videoId)linkedVideoIds.add(video.videoId);
+    const haystack=[video.title,show.title,show.description,show.genre].join(' ').toLocaleLowerCase('ar');
+    if(haystack.includes(query))directResults.push(catalogCard(
+     video.title||show.title,'فيديو ضمن '+show.title,video.posterPath||show.posterPath,
+     ()=>{if(!video.isMissing&&video.url)play({id:video.videoId,url:video.url,title:video.title||show.title});}
+    ));
+   }
+   for(const season of show.seasons||[]){
+    for(const episode of season.episodes||[]){
+     if(episode.videoId)linkedVideoIds.add(episode.videoId);
+     const episodeName='الحلقة '+episode.episodeNumber+(episode.title?' — '+episode.title:'');
+     const haystack=[episodeName,episode.title,episode.episodeNumber,season.title,show.title,show.description,show.genre].join(' ').toLocaleLowerCase('ar');
+     if(haystack.includes(query))episodeResults.push(catalogCard(
+      episodeName,[show.title,season.title||('الموسم '+season.seasonNumber)].filter(Boolean).join(' • '),
+      episode.posterPath||season.posterPath||show.posterPath,
+      ()=>{if(!episode.isMissing&&episode.url)play({id:episode.videoId,url:episode.url,title:episodeName});}
+     ));
+    }
+   }
+  }
+  addResults('الحلقات والفيديوهات المرتبطة',directResults.concat(episodeResults));
+  const matchedVideos=sorted(items.filter(x=>x.isPublished===true&&x.kind!=='Series'&&!linkedVideoIds.has(x.id)));
+  addResults('الأفلام والفيديوهات',matchedVideos.map(video=>catalogCard(
+   video.title,[video.year,video.genre,video.runtimeMinutes?video.runtimeMinutes+' دقيقة':''].filter(Boolean).join(' • '),
+   video.posterPath,()=>play({id:video.id,url:video.url,title:video.title}),null,video
+  )));
+  if(!content.children.length)content.append(catalogEmpty('لم نعثر على نتائج مطابقة. جرّب اسماً آخر أو جزءاً من العنوان.'));
+  return;
+ }
  if(pageType==='home'){
   const mains=categories.filter(x=>x.parentId==null&&x.isPublished===true).filter(main=>{
    if(matchesQuery(main))return true;
