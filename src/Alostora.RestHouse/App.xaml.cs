@@ -17,6 +17,7 @@ public sealed record BulkLibraryRequest(List<string> Ids);
 public sealed record CustomerMessageStatusRequest(string Status);
 public sealed record UpdateSeasonFolderRequest(string? FolderPath);
 public sealed record ScanFolderRequest(string FolderPath);
+public sealed record AddMediaLibraryRootRequest(string Kind, string FolderPath);
 public sealed record RegisterSelectedFilesRequest(string FolderPath, List<string> FilePaths);
 public sealed record RegisterFilesRequest(List<string> FilePaths);
 public sealed record CreateLibraryFolderRequest(string? ParentPath, string Name);
@@ -359,6 +360,33 @@ public partial class App : Application
    {
     if(kind is not null && kind is not ("Audio" or "Books" or "Apps")) return Results.BadRequest(new{error="نوع المكتبة غير صالح"});
     return Results.Ok(media.List(kind));
+   });
+   _server.MapGet("/api/admin/media-libraries/roots",(HttpContext c,string? kind,MultiMediaLibraryService media)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(kind is not null && kind is not ("Audio" or "Books" or "Apps"))return Results.BadRequest(new{error="نوع المكتبة غير صالح"});
+    return Results.Ok(media.ListRoots(kind));
+   });
+   _server.MapPost("/api/admin/media-libraries/roots",(HttpContext c,AddMediaLibraryRootRequest request,MultiMediaLibraryService media)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(request is null || request.Kind is not ("Audio" or "Books" or "Apps") || string.IsNullOrWhiteSpace(request.FolderPath))
+     return Results.BadRequest(new{error="حدد نوع المكتبة ومسار المجلد"});
+    try{return Results.Ok(media.AddRoot(request.Kind,request.FolderPath));}
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+    catch(DirectoryNotFoundException){return Results.BadRequest(new{error="المجلد المحدد غير موجود أو غير متاح"});}
+    catch(IOException){return Results.Problem("تعذر تسجيل المجلد المحدد.",statusCode:500);}
+   });
+   _server.MapDelete("/api/admin/media-libraries/roots/{id}",(HttpContext c,string id,MultiMediaLibraryService media)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(string.IsNullOrWhiteSpace(id)||id.Length>64)return Results.BadRequest(new{error="معرّف المجلد غير صالح"});
+    return media.RemoveRoot(id)?Results.Ok(new{removed=true,filesPreserved=true}):Results.BadRequest(new{error="لا يمكن إزالة مجلد المكتبة الأساسي أو أن المجلد غير مسجل"});
+   });
+   _server.MapGet("/api/admin/storage-summary",(HttpContext c,MultiMediaLibraryService media)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    return Results.Ok(media.GetStorageSummary());
    });
    _server.MapPost("/api/admin/media-libraries/scan",(HttpContext c,ScanMediaLibraryRequest request,MultiMediaLibraryService media)=>
    {
