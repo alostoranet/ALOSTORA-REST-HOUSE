@@ -27,6 +27,13 @@ public partial class MainWindow : Window
         public string KindLabel => Kind switch { "Audio" => "الصوتيات", "Books" => "الكتب", "Apps" => "التطبيقات", _ => Kind };
         public string SizeLabel => SizeBytes < 1024 * 1024 ? $"{SizeBytes / 1024.0:0.#} KB" : $"{SizeBytes / (1024.0 * 1024.0):0.##} MB";
     }
+    private sealed record MultiMediaRootAdminItem(string Id, string Kind, string Path, bool IsDefault)
+    {
+        public string KindLabel => Kind switch { "Audio" => "الصوتيات", "Books" => "الكتب", "Apps" => "التطبيقات", _ => Kind };
+        public string RootTypeLabel => IsDefault ? "أساسي" : "خارجي";
+    }
+    private sealed record MediaStorageSummaryAdmin(int RootCount, int IndexedFiles, long IndexedBytes, long? DriveTotalBytes, long? DriveFreeBytes);
+
     private readonly string _root;
     private string _library;
     private string _posters;
@@ -84,7 +91,7 @@ public partial class MainWindow : Window
         DashboardPopularGrid.ItemsSource = _popularPlaybackRows;
         DashboardRecentGrid.ItemsSource = _recentPlaybackRows;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await LoadAnnouncementAsync(); await LoadCustomerPageSettingsAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); };
+        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await LoadAnnouncementAsync(); await LoadCustomerPageSettingsAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); await RefreshMediaLibraryRootsAsync(); };
         _messageRefreshTimer.Tick += async (_, _) => await LoadCustomerMessagesAsync();
         _messageRefreshTimer.Start();
         Closed += (_, _) => _messageRefreshTimer.Stop();
@@ -111,6 +118,122 @@ public partial class MainWindow : Window
             if (MultiMediaLibraryStatusText is not null)
                 MultiMediaLibraryStatusText.Text = "تعذر تحميل المكتبات الإضافية: " + ex.Message;
         }
+    }
+
+    private async void AddAudioLibraryRoot_Click(object sender, RoutedEventArgs e) => await AddMediaLibraryRootAsync("Audio");
+    private async void AddBooksLibraryRoot_Click(object sender, RoutedEventArgs e) => await AddMediaLibraryRootAsync("Books");
+    private async void AddAppsLibraryRoot_Click(object sender, RoutedEventArgs e) => await AddMediaLibraryRootAsync("Apps");
+
+    private async System.Threading.Tasks.Task AddMediaLibraryRootAsync(string kind)
+    {
+        var initial = kind switch
+        {
+            "Audio" => Environment.GetFolderPath(Environment.SpecialFolder.MyMusic),
+            "Books" => Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            _ => Environment.GetFolderPath(Environment.SpecialFolder.MyDownloads)
+        };
+        var dialog = new OpenFolderDialog
+        {
+            Title = kind switch { "Audio" => "اختر مجلداً يحتوي ملفات الصوتيات", "Books" => "اختر مجلداً يحتوي الكتب والمستندات", _ => "اختر مجلداً يحتوي تطبيقات أندرويد" },
+            InitialDirectory = Directory.Exists(initial) ? initial : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            var response = await _http.PostAsJsonAsync("/api/admin/media-libraries/roots",
+                new { kind, folderPath = Path.GetFullPath(dialog.FolderName) });
+            if (!response.IsSuccessStatusCode)
+            {
+                MultiMediaLibraryStatusText.Text = "تعذر ربط المجلد: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            MultiMediaLibraryStatusText.Text = "تم ربط المجلد. جارٍ فحص الملفات...";
+            await ScanMultiMediaLibraryAsync(kind);
+            await RefreshMediaLibraryRootsAsync();
+        }
+        catch (Exception ex)
+        {
+            MultiMediaLibraryStatusText.Text = "تعذر ربط المجلد: " + ex.Message;
+        }
+    }
+
+    private async void RemoveMediaLibraryRoot_Click(object sender, RoutedEventArgs e)
+    {
+        if (MediaLibraryRootsGrid.SelectedItem is not MultiMediaRootAdminItem selected)
+        {
+            MultiMediaLibraryStatusText.Text = "حدد مجلداً خارجياً من القائمة أولاً.";
+            return;
+        }
+        if (selected.IsDefault)
+        {
+            MultiMediaLibraryStatusText.Text = "لا يمكن إزالة المجلد الأساسي. يمكنك إزالة المجلدات الخارجية فقط.";
+            return;
+        }
+        var confirm = MessageBox.Show(
+            "سيتم فك ربط هذا المسار من فهرس الاستراحة فقط. لن يتم حذف أي ملف من القرص. هل تريد المتابعة؟",
+            "تأكيد إزالة مسار المكتبة", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes) return;
+        try
+        {
+            var response = await _http.DeleteAsync("/api/admin/media-libraries/roots/" + Uri.EscapeDataString(selected.Id));
+            if (!response.IsSuccessStatusCode)
+            {
+                MultiMediaLibraryStatusText.Text = "تعذرت إزالة المسار: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            await RefreshMediaLibraryRootsAsync();
+            await RefreshMultiMediaLibraryAsync();
+            MultiMediaLibraryStatusText.Text = "تم فك ربط المسار من الفهرس. الملفات الأصلية لم تتغير.";
+        }
+        catch (Exception ex)
+        {
+            MultiMediaLibraryStatusText.Text = "تعذرت إزالة المسار: " + ex.Message;
+        }
+    }
+
+    private async void RefreshMediaLibraryRoots_Click(object sender, RoutedEventArgs e) => await RefreshMediaLibraryRootsAsync();
+
+    private async System.Threading.Tasks.Task RefreshMediaLibraryRootsAsync()
+    {
+        try
+        {
+            var roots = await _http.GetFromJsonAsync<MultiMediaRootAdminItem[]>("/api/admin/media-libraries/roots")
+                ?? Array.Empty<MultiMediaRootAdminItem>();
+            MediaLibraryRootsGrid.ItemsSource = roots;
+        }
+        catch (Exception ex)
+        {
+            MultiMediaLibraryStatusText.Text = "تعذر تحميل مسارات المكتبات: " + ex.Message;
+        }
+    }
+
+    private async void RefreshStorageSummary_Click(object sender, RoutedEventArgs e) => await RefreshStorageSummaryAsync(true);
+
+    private async System.Threading.Tasks.Task RefreshStorageSummaryAsync(bool showStatus)
+    {
+        try
+        {
+            var summary = await _http.GetFromJsonAsync<MediaStorageSummaryAdmin>("/api/admin/storage-summary");
+            if (summary is null) return;
+            var indexed = FormatStorageBytes(summary.IndexedBytes);
+            var total = summary.DriveTotalBytes.HasValue ? FormatStorageBytes(summary.DriveTotalBytes.Value) : "غير متاح";
+            var free = summary.DriveFreeBytes.HasValue ? FormatStorageBytes(summary.DriveFreeBytes.Value) : "غير متاح";
+            StorageSummaryText.Text = $"المجلدات المرتبطة: {summary.RootCount} | الملفات المفهرسة: {summary.IndexedFiles:N0} | حجم المحتوى المفهرس: {indexed} | إجمالي الأقراص المرتبطة: {total} | المساحة الحرة: {free}.";
+            if (showStatus) MultiMediaLibraryStatusText.Text = "تم تحديث ملخص التخزين.";
+        }
+        catch (Exception ex)
+        {
+            if (showStatus) MultiMediaLibraryStatusText.Text = "تعذر حساب مساحة التخزين: " + ex.Message;
+        }
+    }
+
+    private static string FormatStorageBytes(long bytes)
+    {
+        string[] units = ["بايت", "KB", "MB", "GB", "TB"];
+        double value = bytes;
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1) { value /= 1024; unit++; }
+        return $"{value:0.##} {units[unit]}";
     }
 
     private async void ScanAudioLibrary_Click(object sender, RoutedEventArgs e) => await ScanMultiMediaLibraryAsync("Audio");
