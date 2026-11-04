@@ -74,6 +74,8 @@ public partial class App : Application
    builder.Services.AddSingleton(new CatalogCategoryService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new CustomerMessageService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new RestHouseProfileService(root));
+   builder.Services.AddSingleton(new AnnouncementService(root));
+   builder.Services.AddSingleton<MetadataLookupService>();
    builder.Services.AddSingleton(new PublicCatalogAccessService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddHostedService(provider => new ScheduledBackupService(root,posters,provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ScheduledBackupService>>()));
    _server=builder.Build();
@@ -206,6 +208,38 @@ public partial class App : Application
    });
    _server.MapGet("/api/health",()=>Results.Ok(new{name="ALOSTORA REST HOUSE",status="running",version="0.3.0"}));
    _server.MapGet("/api/profile",(RestHouseProfileService profile)=>Results.Ok(profile.Load()));
+   _server.MapGet("/api/announcement",(AnnouncementService announcements)=>
+   {
+    var item=announcements.Load();
+    return Results.Ok(new{item.Title,item.Message,item.IsActive,item.Kind,item.UpdatedUtc});
+   });
+   _server.MapGet("/api/admin/announcement",(HttpContext c,AnnouncementService announcements)=>
+    IsAdmin(c)?Results.Ok(announcements.Load()):Results.NotFound());
+   _server.MapPost("/api/admin/announcement",(HttpContext c,RestHouseAnnouncement request,AnnouncementService announcements)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(request is null||request.Title?.Length>120||request.Message?.Length>1000||
+       (request.Kind is not ("ad" or "notice"))||
+       (request.IsActive&&string.IsNullOrWhiteSpace(request.Message)))
+     return Results.BadRequest(new{error="تحقق من العنوان والرسالة ونوع الإعلان."});
+    try{return Results.Ok(new{saved=true,announcement=announcements.Save(request)});}
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+   });
+   _server.MapGet("/api/admin/metadata/lookup",async (HttpContext c,string query,string? kind,MetadataLookupService lookup)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    try
+    {
+     var result=await lookup.SearchAsync(query,kind??"Movie",c.RequestAborted);
+     if(result is null)return Results.NotFound(new{error="لم نعثر على بيانات مطابقة. جرّب كتابة الاسم الأصلي."});
+     var posterPath=await lookup.DownloadPosterAsync(result.PosterUrl,posters,c.RequestAborted);
+     return Results.Ok(new{result.Title,result.Description,result.Year,result.Genre,result.Kind,
+      PosterPath=posterPath,result.Director,result.Rating,result.RuntimeMinutes,result.ReleaseDate,result.Provider});
+    }
+    catch(OperationCanceledException){return Results.StatusCode(499);}
+    catch(HttpRequestException){return Results.Problem("تعذر الاتصال بمصدر البيانات. تأكد من توفر الإنترنت على جهاز الإدارة ثم أعد المحاولة.",statusCode:503);}
+    catch(Exception ex){return Results.Problem("تعذر جلب بيانات الفيديو: "+ex.Message,statusCode:502);}
+   });
    _server.MapPost("/api/messages",(CreateCustomerMessageRequest request,CustomerMessageService messages)=>{
     var allowed=new[]{"طلب مسلسل","الإبلاغ عن مشكلة","اقتراح","بلاغ شعار أو علامة تجارية","أخرى"};
     if(request is null||!allowed.Contains(request.Category)||string.IsNullOrWhiteSpace(request.Title)||request.Title.Trim().Length<3||request.Title.Length>120||string.IsNullOrWhiteSpace(request.Details)||request.Details.Trim().Length<8||request.Details.Length>2500||(request.Contact?.Length??0)>100||(request.ViewerId?.Length??0)>100)
