@@ -147,8 +147,8 @@ function applyCustomerSettings(refreshMedia=false){
  });
  document.querySelector('#contactNav').hidden=customerSettings.showContact===false;
  if(customerSettings.showContact===false&&!document.querySelector('#contactView').hidden)showCustomerView('home');
+ if(activeMediaKind!=='all'&&!enabled[activeMediaKind])activeMediaKind='all';
  const mediaOnly=activeMediaKind!=='all';
- if(mediaOnly&&!enabled[activeMediaKind])activeMediaKind='all';
  document.querySelector('.header-search').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all'||!document.querySelector('#contactView').hidden;
  document.querySelector('#catalogView').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all';
  document.querySelector('#catalogToolbar').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all';
