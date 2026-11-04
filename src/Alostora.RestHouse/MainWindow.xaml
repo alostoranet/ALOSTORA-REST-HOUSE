@@ -334,7 +334,11 @@
 <TextBlock x:Name="FfmpegStatusText" Text="ضع ffmpeg.exe وffprobe.exe في المجلد نفسه عند الحاجة إلى التحويل." Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0"/>
 </StackPanel></Border>
 </StackPanel></ScrollViewer></TabItem>
-<TabItem Header="💾 النسخ الاحتياطي"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="حماية بيانات الاستراحة" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,8"/><TextBlock Text="أنشئ نسخة احتياطية من قاعدة البيانات والأغلفة والإعدادات المحلية قبل التحديثات أو العمليات الكبيرة. الاستعادة تنشئ نسخة أمان من البيانات الحالية قبل استبدالها." Foreground="#64748B" TextWrapping="Wrap" Margin="0,0,0,8"/><TextBlock Text="تنبيه: النسخة الاحتياطية لا تحتوي ملفات الوسائط الأصلية (الفيديوهات والصوتيات والكتب والتطبيقات). احتفظ بنسخة منفصلة من مجلدات هذه الملفات." Foreground="#9A5B16" TextWrapping="Wrap" Margin="0,0,0,14"/><Border Background="#FFF7E8" CornerRadius="10" Padding="14" Margin="0,0,0,12"><StackPanel>
+<TabItem Header="📢 الإعلانات">
+<ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
+<TextBlock Text="إدارة شريط الإعلانات والتنبيهات" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,8"/>
+<TextBlock Text="اكتب الإعلان ثم انشره ليظهر كشريط متحرك أعلى صفحة العملاء. يمكنك إيقافه أو تعديله في أي وقت." Foreground="#64748B" TextWrapping="Wrap" Margin="0,0,0,12"/>
+<Border Background="#FFF7E8" CornerRadius="10" Padding="14" Margin="0,0,0,12"><StackPanel>
 <TextBlock Text="الشريط الإعلاني المتحرك للعملاء" FontSize="16" FontWeight="Bold" Foreground="#80551A" Margin="0,0,0,8"/>
 <TextBlock Text="العنوان (اختياري)"/><TextBox x:Name="AnnouncementTitleBox" Padding="8" Margin="0,4,0,8" MaxLength="120"/>
 <TextBlock Text="نص الإعلان الذي سيمر في الشريط"/><TextBox x:Name="AnnouncementMessageBox" Padding="8" Margin="0,4,0,8" Height="70" AcceptsReturn="True" TextWrapping="Wrap" MaxLength="1000"/>
@@ -343,6 +347,9 @@
 <WrapPanel><Button Content="حفظ ونشر" Click="SaveAnnouncement_Click" Padding="12,7" Background="#C93640" Foreground="White" Margin="0,0,6,0"/><Button Content="تحميل الحالة الحالية" Click="LoadAnnouncement_Click" Padding="12,7"/></WrapPanel>
 <TextBlock x:Name="AnnouncementStatusText" Text="لا يوجد إعلان منشور حالياً." Foreground="#80551A" Margin="0,8,0,0" TextWrapping="Wrap"/>
 </StackPanel></Border>
+</StackPanel></ScrollViewer>
+</TabItem>
+<TabItem Header="💾 النسخ الاحتياطي"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="حماية بيانات الاستراحة" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,8"/><TextBlock Text="أنشئ نسخة احتياطية من قاعدة البيانات والأغلفة والإعدادات المحلية قبل التحديثات أو العمليات الكبيرة. الاستعادة تنشئ نسخة أمان من البيانات الحالية قبل استبدالها." Foreground="#64748B" TextWrapping="Wrap" Margin="0,0,0,8"/><TextBlock Text="تنبيه: النسخة الاحتياطية لا تحتوي ملفات الوسائط الأصلية (الفيديوهات والصوتيات والكتب والتطبيقات). احتفظ بنسخة منفصلة من مجلدات هذه الملفات." Foreground="#9A5B16" TextWrapping="Wrap" Margin="0,0,0,14"/>
 <Border Background="#F1F5F9" CornerRadius="10" Padding="16"><StackPanel><TextBlock Text="النسخ الاحتياطي والاستعادة" FontWeight="Bold" FontSize="16" Foreground="#142D4A" Margin="0,0,0,10"/><WrapPanel><Button Content="إنشاء نسخة احتياطية" Click="CreateBackup_Click" Padding="14,9" Margin="0,0,8,0" Background="#E7F5EC" Foreground="#176B3A"/><Button Content="استعادة نسخة احتياطية" Click="RestoreBackup_Click" Padding="14,9" Background="#FCE8E8" Foreground="#9F2630"/></WrapPanel></StackPanel></Border></StackPanel></ScrollViewer></TabItem>
 </TabControl></TabItem>
 
