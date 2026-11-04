@@ -195,7 +195,7 @@ public sealed class CustomerAdService
             return rows.Where(x => Guid.TryParseExact(x.Id, "N", out _) &&
                                    Path.GetFileName(x.FileName) == x.FileName &&
                                    x.FileName.StartsWith(x.Id, StringComparison.OrdinalIgnoreCase) &&
-                                   Path.GetExtension(x.FileName).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".webp" &&
+                                   Path.GetExtension(x.FileName).ToLowerInvariant() is (".jpg" or ".jpeg" or ".png" or ".webp") &&
                                    x.DurationSeconds is >= 5 and <= 120 &&
                                    x.SortOrder > 0).ToList();
         }
