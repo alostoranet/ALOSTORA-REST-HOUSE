@@ -474,7 +474,7 @@ if ($app -notmatch 'MapGet\("/live"' -or
 }
 if (-not (Test-Path (Join-Path $root "src/Alostora.RestHouse/wwwroot/hls.min.js")) -or
     -not (Test-Path (Join-Path $root "src/Alostora.RestHouse/wwwroot/HLSJS-LICENSE.txt")) -or
-    -not $livePage.Contains("searchParams.get('src')") -or
+    -not $livePage.Contains(".get('src')") -or
     -not $livePage.Contains("searchParams.set('src',") -or
     -not $livePage.Contains("new URL(")) {
     throw "Standalone live player is missing its local HLS library, license, or share-link handling."
