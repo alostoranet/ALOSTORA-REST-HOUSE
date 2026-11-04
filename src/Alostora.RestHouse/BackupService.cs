@@ -230,12 +230,14 @@ public static class BackupService
             {
                 DataSource = databasePath,
                 Mode = SqliteOpenMode.ReadWrite,
-                Cache = SqliteCacheMode.Shared
+                Cache = SqliteCacheMode.Shared,
+                Pooling = false
             };
             var destinationBuilder = new SqliteConnectionStringBuilder
             {
                 DataSource = backupDatabase,
-                Mode = SqliteOpenMode.ReadWriteCreate
+                Mode = SqliteOpenMode.ReadWriteCreate,
+                Pooling = false
             };
 
             using (var source = new SqliteConnection(sourceBuilder.ToString()))
