@@ -91,7 +91,7 @@ public partial class MainWindow : Window
         DashboardPopularGrid.ItemsSource = _popularPlaybackRows;
         DashboardRecentGrid.ItemsSource = _recentPlaybackRows;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await LoadAnnouncementAsync(); await LoadCustomerPageSettingsAsync(); await LoadDownloadSpeedLimitAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); await RefreshMediaLibraryRootsAsync(); };
+        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await LoadAnnouncementAsync(); await LoadCustomerAdsAsync(); await LoadCustomerPageSettingsAsync(); await LoadDownloadSpeedLimitAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); await RefreshMediaLibraryRootsAsync(); };
         _messageRefreshTimer.Tick += async (_, _) => await LoadCustomerMessagesAsync();
         _messageRefreshTimer.Start();
         Closed += (_, _) => _messageRefreshTimer.Stop();
@@ -2478,6 +2478,157 @@ public partial class MainWindow : Window
             AnnouncementStatusText.Text = request.isActive ? "تم حفظ الإعلان ونشره للعملاء." : "تم حفظ الإعلان وإيقاف ظهوره.";
         }
         catch (Exception ex) { AnnouncementStatusText.Text = "تعذر حفظ الإعلان: " + ex.Message; }
+    }
+
+    private async void LoadCustomerAds_Click(object sender, RoutedEventArgs e) => await LoadCustomerAdsAsync();
+
+    private async System.Threading.Tasks.Task LoadCustomerAdsAsync(string? selectId = null)
+    {
+        try
+        {
+            var rows = await _http.GetFromJsonAsync<CustomerAdItem[]>("/api/admin/customer-ads") ?? Array.Empty<CustomerAdItem>();
+            CustomerAdsGrid.ItemsSource = rows;
+            var selected = rows.FirstOrDefault(x => x.Id == (selectId ?? (CustomerAdsGrid.SelectedItem as CustomerAdItem)?.Id));
+            if (selected is not null) CustomerAdsGrid.SelectedItem = selected;
+            CustomerAdsStatusText.Text = $"الإعلانات المصورة المسجلة: {rows.Length} من 50. الصور تحفظ محلياً داخل مجلد أغلفة الاستراحة.";
+        }
+        catch (Exception ex) { CustomerAdsStatusText.Text = "تعذر تحميل الإعلانات المصورة: " + ex.Message; }
+    }
+
+    private void CustomerAdsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (CustomerAdsGrid.SelectedItem is not CustomerAdItem item) return;
+        CustomerAdTitleBox.Text = item.Title;
+        CustomerAdLinkBox.Text = item.LinkUrl;
+        CustomerAdDurationBox.Text = item.DurationSeconds.ToString();
+        CustomerAdActiveBox.IsChecked = item.IsActive;
+    }
+
+    private async void AddCustomerAd_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختر صورة الإعلان",
+            Filter = "صور الإعلانات|*.jpg;*.jpeg;*.png;*.webp",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        if (!int.TryParse(CustomerAdDurationBox.Text.Trim(), out var duration) || duration is < 5 or > 120)
+        {
+            CustomerAdsStatusText.Text = "حدد مدة عرض بين 5 و120 ثانية أولاً.";
+            return;
+        }
+        try
+        {
+            var bytes = await File.ReadAllBytesAsync(dialog.FileName);
+            if (bytes.LongLength > CustomerAdService.MaximumImageBytes)
+            {
+                CustomerAdsStatusText.Text = "حجم الصورة يتجاوز 5 ميجابايت.";
+                return;
+            }
+            using var form = new MultipartFormDataContent();
+            var image = new ByteArrayContent(bytes);
+            var contentType = Path.GetExtension(dialog.FileName).ToLowerInvariant() switch
+            {
+                ".png" => "image/png",
+                ".webp" => "image/webp",
+                _ => "image/jpeg"
+            };
+            image.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            form.Add(image, "image", Path.GetFileName(dialog.FileName));
+            form.Add(new StringContent(CustomerAdTitleBox.Text.Trim()), "title");
+            form.Add(new StringContent(CustomerAdLinkBox.Text.Trim()), "linkUrl");
+            form.Add(new StringContent(duration.ToString()), "durationSeconds");
+            var response = await _http.PostAsync("/api/admin/customer-ads", form);
+            if (!response.IsSuccessStatusCode)
+            {
+                CustomerAdsStatusText.Text = "تعذرت إضافة الإعلان: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            var result = await response.Content.ReadFromJsonAsync<CustomerAdUploadResult>();
+            CustomerAdsStatusText.Text = "تمت إضافة الصورة إلى معرض الإعلانات.";
+            await LoadCustomerAdsAsync(result?.Ad?.Id);
+        }
+        catch (Exception ex) { CustomerAdsStatusText.Text = "تعذرت إضافة صورة الإعلان: " + ex.Message; }
+    }
+
+    private async void SaveCustomerAd_Click(object sender, RoutedEventArgs e)
+    {
+        if (CustomerAdsGrid.SelectedItem is not CustomerAdItem selected)
+        {
+            CustomerAdsStatusText.Text = "حدد إعلاناً من القائمة أولاً.";
+            return;
+        }
+        if (!int.TryParse(CustomerAdDurationBox.Text.Trim(), out var duration) || duration is < 5 or > 120)
+        {
+            CustomerAdsStatusText.Text = "مدة العرض يجب أن تكون بين 5 و120 ثانية.";
+            return;
+        }
+        try
+        {
+            var request = new CustomerAdUpdateRequest(CustomerAdTitleBox.Text.Trim(), CustomerAdLinkBox.Text.Trim(), duration, CustomerAdActiveBox.IsChecked == true);
+            var response = await _http.PostAsJsonAsync("/api/admin/customer-ads/" + selected.Id, request);
+            if (!response.IsSuccessStatusCode)
+            {
+                CustomerAdsStatusText.Text = "تعذر حفظ الإعلان: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            await LoadCustomerAdsAsync(selected.Id);
+            CustomerAdsStatusText.Text = "تم حفظ إعدادات الإعلان.";
+        }
+        catch (Exception ex) { CustomerAdsStatusText.Text = "تعذر حفظ الإعلان: " + ex.Message; }
+    }
+
+    private async System.Threading.Tasks.Task MoveCustomerAdAsync(string direction)
+    {
+        if (CustomerAdsGrid.SelectedItem is not CustomerAdItem selected)
+        {
+            CustomerAdsStatusText.Text = "حدد إعلاناً أولاً.";
+            return;
+        }
+        try
+        {
+            var response = await _http.PostAsJsonAsync("/api/admin/customer-ads/" + selected.Id + "/move", new CustomerAdMoveRequest(direction));
+            if (!response.IsSuccessStatusCode)
+            {
+                CustomerAdsStatusText.Text = "تعذر تغيير الترتيب: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            await LoadCustomerAdsAsync(selected.Id);
+            CustomerAdsStatusText.Text = "تم تحديث ترتيب الإعلانات.";
+        }
+        catch (Exception ex) { CustomerAdsStatusText.Text = "تعذر تغيير الترتيب: " + ex.Message; }
+    }
+
+    private async void MoveCustomerAdUp_Click(object sender, RoutedEventArgs e) => await MoveCustomerAdAsync("up");
+    private async void MoveCustomerAdDown_Click(object sender, RoutedEventArgs e) => await MoveCustomerAdAsync("down");
+
+    private async void DeleteCustomerAd_Click(object sender, RoutedEventArgs e)
+    {
+        if (CustomerAdsGrid.SelectedItem is not CustomerAdItem selected)
+        {
+            CustomerAdsStatusText.Text = "حدد إعلاناً أولاً.";
+            return;
+        }
+        if (MessageBox.Show("سيتم حذف صورة هذا الإعلان من مجلد الإعلانات المصورة داخل البرنامج فقط. لن يتم حذف ملف الصورة الأصلي الذي اخترته من مكانه. هل تريد المتابعة؟",
+            "حذف صورة الإعلان", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        try
+        {
+            var response = await _http.DeleteAsync("/api/admin/customer-ads/" + selected.Id);
+            if (!response.IsSuccessStatusCode)
+            {
+                CustomerAdsStatusText.Text = "تعذر حذف الإعلان: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            await LoadCustomerAdsAsync();
+            CustomerAdsStatusText.Text = "تم حذف صورة الإعلان من معرض الاستراحة.";
+        }
+        catch (Exception ex) { CustomerAdsStatusText.Text = "تعذر حذف الإعلان: " + ex.Message; }
+    }
+
+    private sealed class CustomerAdUploadResult
+    {
+        public CustomerAdItem? Ad { get; set; }
     }
 
     private async void LookupMetadata_Click(object sender, RoutedEventArgs e)
