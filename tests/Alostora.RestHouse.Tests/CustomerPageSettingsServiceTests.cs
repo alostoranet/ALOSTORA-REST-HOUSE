@@ -27,6 +27,7 @@ public sealed class CustomerPageSettingsServiceTests : IDisposable
         Assert.True(value.ShowContact);
         Assert.True(value.ShowWelcome);
         Assert.True(value.ShowAnnouncement);
+        Assert.True(value.ShowDownloads);
     }
 
     [Fact]
@@ -35,13 +36,14 @@ public sealed class CustomerPageSettingsServiceTests : IDisposable
         var saved = _service.Save(new CustomerPageSettings(
             ShowCatalog: true, ShowContinueWatching: false, ShowAudio: true,
             ShowBooks: false, ShowApps: false, ShowContact: true,
-            ShowWelcome: false, ShowAnnouncement: true));
+            ShowWelcome: false, ShowAnnouncement: true, ShowDownloads: false));
         var loaded = _service.Load();
         Assert.Equal(saved, loaded);
         Assert.False(loaded.ShowContinueWatching);
         Assert.False(loaded.ShowBooks);
         Assert.False(loaded.ShowApps);
         Assert.False(loaded.ShowWelcome);
+        Assert.False(loaded.ShowDownloads);
     }
 
     public void Dispose()
