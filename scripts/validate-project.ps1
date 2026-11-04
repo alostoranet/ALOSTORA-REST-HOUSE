@@ -461,6 +461,18 @@ if ($app -notmatch '/api/customer-ads' -or
     throw "Customer image-ad gallery, admin controls, or backup support are incomplete."
 }
 Write-Host "PASS: customer image ads support safe local upload, carousel display, admin control, and backup."
+# Each registered media root must have its own size and availability row in the admin panel.
+$multiMediaTests = Get-Content (Join-Path $root "tests/Alostora.RestHouse.Tests/MultiMediaLibraryServiceTests.cs") -Raw
+if ($xaml -notmatch 'MediaStorageRootsGrid' -or
+    $code -notmatch 'MediaStorageRootAdmin' -or
+    $code -notmatch 'FolderStatusLabel' -or
+    $code -notmatch 'DriveStatusLabel' -or
+    $code -notmatch 'MediaStorageRootsGrid.ItemsSource' -or
+    $multiMediaTests -notmatch 'StorageSummaryReportsIndexedSizeForEachRegisteredRoot') {
+    throw "Per-folder indexed size and drive/folder availability reporting is incomplete."
+}
+Write-Host "PASS: each registered media folder reports its own size and availability status."
+
 # This product build intentionally excludes all live-broadcast routes, controls, and player assets.
 if ($app -match 'MapGet\("/live"' -or
     $xaml -match 'CopyLiveAddress_Click|LiveUrlText' -or
