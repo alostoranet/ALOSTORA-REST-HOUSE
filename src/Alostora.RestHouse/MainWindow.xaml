@@ -196,6 +196,25 @@
 <TextBlock x:Name="CustomerMessageStatusText" Text="لا توجد رسائل محمّلة بعد." Foreground="#526174" TextWrapping="Wrap" Margin="0,10,0,0"/>
 </StackPanel></ScrollViewer></TabItem>
 <TabItem Header="⚑ البلاغات"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="بلاغات الشعارات والعلامات التجارية" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,8"/><TextBlock Text="تظهر هنا الرسائل التي يرسلها العملاء بخصوص شعار أو علامة تجارية أو الاشتباه في استخدامها دون إذن. اضغط على البلاغ لعرض التفاصيل." Foreground="#526174" TextWrapping="Wrap" Margin="0,0,0,10"/><DataGrid x:Name="LogoReportsGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="LogoReportsGrid_SelectionChanged" MouseDoubleClick="LogoReportsGrid_MouseDoubleClick" CanUserAddRows="False" Height="360"><DataGrid.Columns><DataGridTextColumn Header="رقم" Binding="{Binding Id}" Width="60"/><DataGridTextColumn Header="العنوان" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="الحالة" Binding="{Binding Status}" Width="100"/><DataGridTextColumn Header="التاريخ" Binding="{Binding CreatedUtc}" Width="150"/></DataGrid.Columns></DataGrid></StackPanel></ScrollViewer></TabItem></TabControl></TabItem>
+<TabItem Header="📡 البث المباشر">
+<ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
+<TextBlock Text="إعداد رابط البث المباشر" FontSize="20" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,8"/>
+<TextBlock Text="أدخل عنوان جهاز البث على الشبكة المحلية مع المنفذ. مثال: 172.16.0.12:100. إذا لم تكتب http:// سيضيفه البرنامج تلقائياً." TextWrapping="Wrap" Foreground="#526174" Margin="0,0,0,12"/>
+<TextBlock Text="رابط البث (IP:Port أو URL)" FontWeight="SemiBold"/>
+<TextBox x:Name="LiveStreamUrlBox" Padding="10" Margin="0,5,0,10" FlowDirection="LeftToRight" FontSize="15" ToolTip="مثال: 172.16.0.12:100"/>
+<WrapPanel Margin="0,0,0,10">
+<Button Content="حفظ وإظهار للعملاء" Click="SaveLiveStream_Click" Padding="13,8" Margin="0,0,6,6" Background="#C93640" Foreground="White" FontWeight="Bold"/>
+<Button Content="اختبار الرابط" Click="TestLiveStream_Click" Padding="13,8" Margin="0,0,6,6"/>
+<Button Content="نسخ الرابط" Click="CopyLiveStream_Click" Padding="13,8" Margin="0,0,6,6"/>
+<Button Content="إعادة تحميل" Click="LoadLiveStream_Click" Padding="13,8" Margin="0,0,6,6"/>
+<Button Content="حذف الرابط" Click="DeleteLiveStream_Click" Padding="13,8" Margin="0,0,6,6" Background="#FCE8E8" Foreground="#9F2630"/>
+</WrapPanel>
+<Border Background="#EEF4FA" CornerRadius="9" Padding="12"><StackPanel>
+<TextBlock Text="ملاحظة توافق التشغيل" FontWeight="Bold" Foreground="#142D4A"/>
+<TextBlock Text="اختبار الرابط يتحقق من وصول الخادم واستجابته عبر HTTP، لكنه لا يضمن توافق صيغة الفيديو مع مشغل المتصفح. إذا كان الرابط صفحة ويب أو بثاً بصيغة خاصة فقد يحتاج إلى طريقة تشغيل مختلفة." TextWrapping="Wrap" Foreground="#526174" Margin="0,6,0,0"/>
+</StackPanel></Border>
+<TextBlock x:Name="LiveStreamStatusText" Text="أدخل رابط البث ثم احفظه ليظهر للعملاء." Foreground="#526174" TextWrapping="Wrap" Margin="0,12,0,0"/>
+</StackPanel></ScrollViewer></TabItem>
 <TabItem Header="⚙️ إعدادات الاستراحة"><TabControl Margin="0" Background="White"><TabItem Header="🏠 الهوية والإعداد الأولي"><Border Background="White" CornerRadius="10" Padding="14">
 <StackPanel>
 <TextBlock Text="هوية الاستراحة والشبكة" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,10"/>
