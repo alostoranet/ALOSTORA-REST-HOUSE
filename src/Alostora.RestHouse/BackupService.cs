@@ -162,7 +162,7 @@ public static class BackupService
         }
         finally
         {
-            foreach (var configName in new[] { "profile.json", "announcement.json" })
+            foreach (var configName in new[] { "profile.json", "announcement.json", "customer-page-settings.json" })
                 try { var staged = Path.Combine(applicationRoot, configName + ".restore.tmp"); if (File.Exists(staged)) File.Delete(staged); } catch { }
             try { if (File.Exists(stagedDatabase)) File.Delete(stagedDatabase); } catch { }
             try { if (Directory.Exists(stagedPosters)) Directory.Delete(stagedPosters, recursive: true); } catch { }
