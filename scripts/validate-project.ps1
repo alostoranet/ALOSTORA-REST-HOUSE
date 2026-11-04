@@ -301,6 +301,15 @@ if ($xaml -notmatch 'مساعد توافق صيغ الفيديو \(FFmpeg\) — 
 }
 Write-Host "PASS: FFmpeg is documented as an optional non-destructive playback helper."
 
+# Backup documentation must distinguish application data from original media files.
+$backupPath = Join-Path $root "src/Alostora.RestHouse/BackupService.cs"
+$backup = Get-Content $backupPath -Raw
+if ($backup -notmatch 'Original media files \(videos, audio, books, and apps\) are not included' -or
+    $xaml -notmatch 'النسخة الاحتياطية لا تحتوي ملفات الوسائط الأصلية') {
+    throw "Backup scope must clearly state that original media files require a separate copy."
+}
+Write-Host "PASS: backup manifest and admin UI clearly disclose that original media files are excluded."
+
 
 # Regression checks for hierarchical category selection, logo reports, and view counts.
 if ($xaml -notmatch 'VideoMainCategoryPicker' -or $xaml -notmatch 'SeriesMainCategoryPicker' -or
