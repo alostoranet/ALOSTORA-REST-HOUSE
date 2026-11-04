@@ -246,6 +246,9 @@ public static class BackupService
                 source.BackupDatabase(destination);
             }
 
+            // Release pooled SQLite handles before the temporary backup directory is removed.
+            SqliteConnection.ClearAllPools();
+
             if (Directory.Exists(postersDirectory))
             {
                 var targetPosters = Path.Combine(tempDirectory, "posters");
