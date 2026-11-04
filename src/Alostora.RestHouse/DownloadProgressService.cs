@@ -29,19 +29,22 @@ public sealed class DownloadProgressService
                 Status = "جارٍ التنزيل",
                 UpdatedUtc = DateTime.UtcNow
             });
+        PruneClientHistory(clientId, downloadId);
     }
 
     public void Report(string clientId, string downloadId, long bytesTransferred)
     {
         var key = Key(clientId, downloadId);
-        _downloads.AddOrUpdate(key,
-            _ => new(downloadId, "", "", bytesTransferred, Math.Max(1, bytesTransferred), "جارٍ التنزيل", DateTime.UtcNow),
-            (_, old) => old with
+        while (_downloads.TryGetValue(key, out var old))
+        {
+            var updated = old with
             {
                 BytesTransferred = Math.Clamp(bytesTransferred, 0, old.TotalBytes),
                 Status = "جارٍ التنزيل",
                 UpdatedUtc = DateTime.UtcNow
-            });
+            };
+            if (_downloads.TryUpdate(key, updated, old)) return;
+        }
     }
 
     public void Complete(string clientId, string downloadId)
@@ -56,6 +59,17 @@ public sealed class DownloadProgressService
         var key = Key(clientId, downloadId);
         if (_downloads.TryGetValue(key, out var old) && old.Status != "اكتمل")
             _downloads[key] = old with { Status = "توقف الاتصال — يمكن محاولة الاستئناف من مدير التنزيلات", UpdatedUtc = DateTime.UtcNow };
+    }
+
+    private void PruneClientHistory(string clientId, string keepDownloadId)
+    {
+        var prefix = clientId + "|";
+        var stale = _downloads.Where(x => x.Key.StartsWith(prefix, StringComparison.Ordinal) && x.Value.DownloadId != keepDownloadId)
+            .OrderByDescending(x => x.Value.UpdatedUtc)
+            .Skip(29)
+            .Select(x => x.Key)
+            .ToArray();
+        foreach (var key in stale) _downloads.TryRemove(key, out _);
     }
 
     public IReadOnlyList<DownloadProgressItem> List(string clientId) =>
