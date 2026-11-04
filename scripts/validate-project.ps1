@@ -42,6 +42,8 @@ $requiredRoutes = @(
     '/api/admin/profile',
     '/api/admin/profile/logo',
     '/api/profile',
+    '/api/customer-settings',
+    '/api/admin/customer-settings',
     '/api/admin/series',
     '/api/admin/seasons',
     '/api/admin/register-selected-files',
@@ -103,6 +105,35 @@ if ($html -notmatch 'data-kind="Audio"' -or
 $multiMediaTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/MultiMediaLibraryServiceTests.cs"
 if (-not (Test-Path $multiMediaTestsPath)) { throw "Multimedia library regression tests are missing." }
 Write-Host "PASS: customer audio, books, and apps libraries are wired to the local media API and admin controls."
+
+# Every customer-facing section can be toggled from the Windows management application.
+$customerSettingsTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/CustomerPageSettingsServiceTests.cs"
+if (-not (Test-Path $customerSettingsTestsPath) -or
+    $xaml -notmatch 'Header="🖥️ واجهة العميل"' -or
+    $xaml -notmatch 'CustomerShowCatalogBox' -or
+    $xaml -notmatch 'CustomerShowContinueBox' -or
+    $xaml -notmatch 'CustomerShowAudioBox' -or
+    $xaml -notmatch 'CustomerShowBooksBox' -or
+    $xaml -notmatch 'CustomerShowAppsBox' -or
+    $xaml -notmatch 'CustomerShowContactBox' -or
+    $xaml -notmatch 'CustomerShowWelcomeBox' -or
+    $xaml -notmatch 'CustomerShowAnnouncementBox' -or
+    $code -notmatch 'SaveCustomerPageSettings_Click' -or
+    $code -notmatch 'LoadCustomerPageSettingsAsync' -or
+    $app -notmatch 'MapGet\("\/api\/customer-settings"' -or
+    $app -notmatch 'MapPost\("\/api\/admin\/customer-settings"' -or
+    $html -notmatch 'function applyCustomerSettings\(' -or
+    $html -notmatch 'customerSettings\.showApps' -or
+    $html -notmatch 'customerSettings\.showBooks' -or
+    $html -notmatch 'customerSettings\.showAudio') {
+    throw "Customer page section visibility controls are incomplete."
+}
+if ($html -notmatch 'announcement-marquee' -or
+    $html -notmatch 'animationDuration' -or
+    $xaml -notmatch 'الشريط الإعلاني المتحرك للعملاء') {
+    throw "The customer announcement must be a styled scrolling banner managed by the admin."
+}
+Write-Host "PASS: customer page sections are admin-controlled and the announcement is a scrolling banner."
 
 # Dashboard statistics include all registered local media, not only videos.
 if ($xaml -notmatch 'x:Name="DashboardMediaCount"' -or
@@ -304,11 +335,12 @@ Write-Host "PASS: FFmpeg is documented as an optional non-destructive playback h
 # Backup documentation must distinguish application data from original media files.
 $backupPath = Join-Path $root "src/Alostora.RestHouse/BackupService.cs"
 $backup = Get-Content $backupPath -Raw
-if ($backup -notmatch 'Original media files \(videos, audio, books, and apps\) are not included' -or
+if ($backup -notmatch 'customer-page-settings.json' -or
+    $backup -notmatch 'Original media files \(videos, audio, books, and apps\) are not included' -or
     $xaml -notmatch 'النسخة الاحتياطية لا تحتوي ملفات الوسائط الأصلية') {
     throw "Backup scope must clearly state that original media files require a separate copy."
 }
-Write-Host "PASS: backup manifest and admin UI clearly disclose that original media files are excluded."
+Write-Host "PASS: backup preserves customer visibility settings and clearly excludes original media files."
 
 
 # Regression checks for hierarchical category selection, logo reports, and view counts.
