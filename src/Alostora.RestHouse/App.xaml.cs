@@ -20,6 +20,7 @@ public sealed record ScanFolderRequest(string FolderPath);
 public sealed record RegisterSelectedFilesRequest(string FolderPath, List<string> FilePaths);
 public sealed record RegisterFilesRequest(List<string> FilePaths);
 public sealed record CreateLibraryFolderRequest(string? ParentPath, string Name);
+public sealed record UnregisterLibraryFolderRequest(string FolderPath);
 public sealed record DetectedEpisodeLink(string VideoId, int EpisodeNumber, string? Title, bool Selected);
 public sealed record LinkDetectedEpisodesRequest(List<DetectedEpisodeLink> Episodes);
 public sealed record RelinkEpisodeRequest(string VideoId);
@@ -521,6 +522,20 @@ public partial class App : Application
     try { var count=files.RegisterSelectedFiles(request.FolderPath,request.FilePaths); return Results.Ok(new{registered=true,videoCount=count}); }
     catch(Exception ex) { return Results.BadRequest(new{error=ex.Message}); }
    });
+   _server.MapPost("/api/admin/library/unregister-folder",(HttpContext c,UnregisterLibraryFolderRequest request,LibraryService files)=>
+   {
+    if(!IsAdmin(c)) return Results.NotFound();
+    if(request is null||string.IsNullOrWhiteSpace(request.FolderPath)||request.FolderPath.Length>2000)
+     return Results.BadRequest(new{error="مسار التخزين غير صالح"});
+    try
+    {
+     var count=files.UnregisterFolder(request.FolderPath);
+     return Results.Ok(new{unregistered=true,videoCount=count,message="تم فك تسجيل مسار التخزين من المكتبة فقط. لم يتم حذف أي ملف من القرص أو بيانات الفيديو."});
+    }
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+    catch(InvalidOperationException ex){return Results.BadRequest(new{error=ex.Message});}
+    catch(KeyNotFoundException ex){return Results.NotFound(new{error=ex.Message});}
+   });
    _server.MapPost("/api/admin/scan-folder",(HttpContext c,ScanFolderRequest request,LibraryService files)=>{
     if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.FolderPath)||(request.FolderPath.Length>1000)||!Directory.Exists(request.FolderPath)) return Results.BadRequest(new{error="حدد مجلداً موجوداً ويمكن الوصول إليه"});
@@ -673,14 +688,10 @@ public partial class App : Application
     foreach(var id in ids) librarySvc.RemoveFromLibrary(id);
     return Results.Ok(new{removed=ids.Length,message="تمت إزالة الملفات المحددة من المكتبة فقط، دون حذف الملفات الأصلية"});
    });
-   _server.MapPost("/api/admin/library/bulk-delete",(HttpContext c,BulkLibraryRequest request,LibraryService librarySvc,VideoMetadataService metadata,WatchProgressService progress)=>
+   _server.MapPost("/api/admin/library/bulk-delete",(HttpContext c,BulkLibraryRequest request)=>
    {
     if(!IsAdmin(c)) return Results.NotFound();
-    if(request.Ids is null||request.Ids.Count<1||request.Ids.Count>5000||request.Ids.Any(id=>string.IsNullOrWhiteSpace(id)||id.Length!=24||!id.All(Uri.IsHexDigit))) return Results.BadRequest(new{error="قائمة الملفات المحددة غير صالحة"});
-    var ids=request.Ids.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-    if(ids.Any(id=>librarySvc.Resolve(id) is null)) return Results.NotFound(new{error="بعض الملفات المحددة لم تعد موجودة في المكتبة"});
-    foreach(var id in ids) { librarySvc.DeleteFile(id); metadata.Delete(id); progress.DeleteVideo(id); }
-    return Results.Ok(new{deleted=ids.Length,message="تم حذف الملفات المحددة نهائياً وتنظيف بياناتها"});
+    return Results.Conflict(new{error="حذف ملفات الفيديو الأصلية معطّل حفاظاً على مكتبتك. استخدم «إزالة المحدد من المكتبة» لإخفائها دون حذفها من القرص."});
    });
    _server.MapPost("/api/admin/library/{id}/remove",(HttpContext c,string id,LibraryService librarySvc)=>
    {
