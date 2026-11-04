@@ -432,3 +432,17 @@ if ($app -notmatch '/api/downloads/\{clientId\}' -or
     throw "Customer download progress, visibility controls, or resumable range support are incomplete."
 }
 Write-Host "PASS: customer downloads expose progress, resume-friendly byte ranges, and admin visibility control."
+# Optional aggregate download bandwidth limit is managed by the rest-house admin app.
+$speedService = Get-Content (Join-Path $root "src/Alostora.RestHouse/DownloadSpeedLimitService.cs") -Raw
+$speedTests = Get-Content (Join-Path $root "tests/Alostora.RestHouse.Tests/DownloadSpeedLimitServiceTests.cs") -Raw
+if ($app -notmatch '/api/admin/download-speed-limit' -or
+    $app -notmatch 'speedLimit.WaitAsync' -or
+    $xaml -notmatch 'DownloadSpeedLimitBox' -or
+    $window -notmatch 'SaveDownloadSpeedLimit_Click' -or
+    $speedService -notmatch 'WaitAsync\(' -or
+    $speedTests -notmatch 'DefaultsToUnlimitedAndPersistsConfiguredLimit' -or
+    $backup -notmatch 'download-speed-settings.json') {
+    throw "Optional download speed limit, admin controls, or backup coverage are incomplete."
+}
+Write-Host "PASS: aggregate download speed limit is optional, admin-controlled, and backed up."
+
