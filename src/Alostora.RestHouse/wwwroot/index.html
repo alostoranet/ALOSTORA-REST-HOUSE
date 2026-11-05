@@ -264,6 +264,7 @@ function applyCustomerSettings(refreshMedia=false){
  document.querySelector('#catalogView').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all';
  document.querySelector('#catalogToolbar').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all';
  document.querySelector('#welcomePanel').hidden=customerSettings.showWelcome===false||activeMediaKind!=='all';
+ document.querySelector('#customerOverview').hidden=customerSettings.showWelcome===false||activeMediaKind!=='all';
  document.querySelector('#continueSection').hidden=customerSettings.showContinueWatching===false||activeMediaKind!=='all';
  document.querySelector('#message').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all';
  document.querySelectorAll('.media-tab').forEach(button=>button.classList.toggle('active',(button.dataset.kind||'all')===activeMediaKind));
@@ -510,6 +511,8 @@ function renderCatalogPage(){
  const titles={home:'الرئيسية',main:'الأقسام الداخلية',category:'المحتوى',series:'تفاصيل البرنامج',season:'الحلقات',player:'المشاهدة الآن'};
  crumb.textContent=catalogStack.map(x=>x.title||titles[x.type]||'').concat(catalogPage.title||titles[pageType]||'المكتبة').filter(Boolean).join('  /  ');
  const query=(document.querySelector('#search')?.value||'').trim().toLocaleLowerCase('ar');
+ document.querySelector('#welcomePanel').hidden=pageType!=='home'||customerSettings.showWelcome===false;
+ document.querySelector('#customerOverview').hidden=pageType!=='home'||customerSettings.showWelcome===false||!!query;
  const collection=document.querySelector('#collection')?.value||'';
  const sort=document.querySelector('#sort')?.value||'title';
  const matches=item=>!collection||(collection==='favorites'&&favorites.has(favoriteKey(item)));
