@@ -89,6 +89,19 @@ if ($html -notmatch 'id="homeNav"' -or
     throw "Customer navigation must separate the home catalog from the contact form."
 }
 Write-Host "PASS: customer home and contact form have separate navigation states."
+# The customer home must summarize published library content and surface genuinely popular titles.
+if ($html -notmatch 'id="customerOverview"' -or
+    $html -notmatch 'id="overviewCategoryCount"' -or
+    $html -notmatch 'id="overviewVideoCount"' -or
+    $html -notmatch 'id="overviewSeriesCount"' -or
+    $html -notmatch 'id="popularSection"' -or
+    $html -notmatch 'function renderCustomerOverview\(' -or
+    $html -notmatch 'Number\(b\.viewCount\|\|0\)-Number\(a\.viewCount\|\|0\)' -or
+    $html -notmatch 'renderCustomerOverview\(\)') {
+    throw "Customer home overview and popularity discovery are incomplete."
+}
+Write-Host "PASS: customer home shows published library counts and popular titles from real view counts."
+
 
 # Audio, books, and Android apps are first-class local-network customer libraries.
 if ($html -notmatch 'data-kind="Audio"' -or
