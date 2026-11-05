@@ -163,6 +163,21 @@ button:disabled{cursor:not-allowed;opacity:.58}
  .catalog-card:hover,.nav-button:hover{transform:none}
 }
 
+
+/* Customer discovery overview: quick library orientation and proven popular titles. */
+.customer-overview{display:grid;gap:20px;margin:18px 0 24px}
+.overview-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.overview-stat{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:16px 18px;border:1px solid #38536f;border-radius:13px;background:linear-gradient(145deg,#172f49,#11243a);box-shadow:0 8px 22px #0002}
+.overview-stat span{color:#c5d3e2;font-size:13px;line-height:1.7}
+.overview-stat strong{color:#fff;font-size:25px;font-variant-numeric:tabular-nums}
+.popular-section{padding:18px;border:1px solid #38536f;border-radius:16px;background:linear-gradient(145deg,#122941,#0e1d30);box-shadow:0 10px 26px #0002}
+.popular-section[hidden]{display:none!important}
+.popular-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px}
+.popular-heading h2{margin:0;font-size:19px}
+.popular-heading span{color:#aebfd1;font-size:12px}
+.popular-section .catalog-card{max-width:240px}
+@media(max-width:600px){.overview-stats{gap:8px}.overview-stat{display:grid;justify-items:center;text-align:center;padding:12px 6px;gap:5px}.overview-stat span{font-size:11px}.overview-stat strong{font-size:22px}.popular-section{padding:12px}.popular-heading{align-items:flex-start;flex-direction:column;gap:4px}}
+
 </style></head><body>
 <header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><div class="header-search"><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل أو قسم..."></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
 <div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p id="announcementMessage"></p></div>
@@ -172,6 +187,17 @@ button:disabled{cursor:not-allowed;opacity:.58}
 </section>
 <main><section id="homeView">
 <section class="welcome-panel" id="welcomePanel"><div><span class="welcome-kicker">ALOSTORA REST HOUSE</span><h2>خدمات الاستراحة ومكتبتها في مكان واحد</h2><p>تصفح الأفلام والمسلسلات، واستمع إلى الصوتيات، وافتح الكتب وحمّل التطبيقات المتاحة على الشبكة المحلية.</p></div><div class="welcome-mark" aria-hidden="true">▶</div></section>
+<section id="customerOverview" class="customer-overview" aria-label="ملخص المكتبة">
+ <div class="overview-stats">
+  <article class="overview-stat"><span>الأقسام المنشورة</span><strong id="overviewCategoryCount">—</strong></article>
+  <article class="overview-stat"><span>الأفلام والفيديوهات</span><strong id="overviewVideoCount">—</strong></article>
+  <article class="overview-stat"><span>المسلسلات والبرامج</span><strong id="overviewSeriesCount">—</strong></article>
+ </div>
+ <section id="popularSection" class="popular-section" hidden>
+  <div class="popular-heading"><h2>الأكثر مشاهدة</h2><span>اختيارات روّاد الاستراحة</span></div>
+  <div id="popularGrid" class="catalog-grid"></div>
+ </section>
+</section>
 <div class="toolbar" id="catalogToolbar">
 
 <select id="categoryFilter" aria-label="القسم" hidden><option value="">كل الأقسام</option></select>
@@ -407,6 +433,25 @@ function addFavoriteButton(card,item){const button=document.createElement('butto
 function isNew(dateValue){if(!dateValue)return false;const date=new Date(dateValue);return !Number.isNaN(date.getTime())&&(Date.now()-date.getTime())<14*24*60*60*1000;}
 function makeNewBadge(){const badge=document.createElement('span');badge.className='new-badge';badge.textContent='جديد';return badge;}
 function render(){renderCatalogPage();}
+function renderCustomerOverview(){
+ const publishedVideos=items.filter(item=>item.isPublished===true&&item.kind!=='Series');
+ const publishedSeries=seriesItems.filter(item=>item.isPublished===true);
+ const publishedCategories=categories.filter(item=>item.parentId==null&&item.isPublished===true);
+ document.querySelector('#overviewCategoryCount').textContent=publishedCategories.length.toLocaleString('ar');
+ document.querySelector('#overviewVideoCount').textContent=publishedVideos.length.toLocaleString('ar');
+ document.querySelector('#overviewSeriesCount').textContent=publishedSeries.length.toLocaleString('ar');
+ const section=document.querySelector('#popularSection'),grid=document.querySelector('#popularGrid');
+ const popular=publishedVideos.filter(item=>Number(item.viewCount||0)>0)
+  .sort((a,b)=>Number(b.viewCount||0)-Number(a.viewCount||0)||String(a.title||'').localeCompare(String(b.title||''),'ar'))
+  .slice(0,6);
+ grid.replaceChildren();
+ for(const item of popular){
+  const views=Number(item.viewCount||0);
+  grid.append(catalogCard(item.title,views.toLocaleString('ar')+' مشاهدة',item.posterPath,
+   ()=>play({id:item.id,url:item.url,title:item.title}),null,item));
+ }
+ section.hidden=popular.length===0;
+}
 function catalogCard(title,subtitle,posterPath,action,badge,favoriteItem){
  const card=document.createElement('article');card.className='catalog-card';card.tabIndex=0;card.setAttribute('role','button');card.addEventListener('click',action);card.addEventListener('keydown',event=>{if(event.target===card&&(event.key==='Enter'||event.key===' ')){event.preventDefault();action();}});
  const poster=makePoster(posterPath,title);if(poster){poster.className=poster.tagName==='IMG'?'':'poster-empty';poster.classList.add('catalog-poster');card.append(poster);}
@@ -540,6 +585,7 @@ function renderCatalogPage(){
   return;
  }
  if(pageType==='home'){
+  renderCustomerOverview();
   const mains=categories.filter(x=>x.parentId==null&&x.isPublished===true).filter(main=>{
    if(matchesQuery(main))return true;
    const children=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true);
