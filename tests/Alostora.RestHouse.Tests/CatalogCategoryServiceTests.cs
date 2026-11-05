@@ -57,7 +57,7 @@ public sealed class CatalogCategoryServiceTests : IDisposable
         _categories.Save(new SaveCatalogCategoryRequest(null, null, "القسم الرئيسي", "Group", null, true));
         var main = Assert.Single(_categories.List());
         _categories.Save(new SaveCatalogCategoryRequest(null, main.CategoryId, "قسم الأفلام", "Movie", null, true));
-        var child = Assert.Single(_categories.List().Where(x => x.ContentKind == "Movie"));
+        var child = Assert.Single(_categories.List(), x => x.ContentKind == "Movie");
 
         var error = Assert.Throws<InvalidOperationException>(() =>
             _categories.Save(new SaveCatalogCategoryRequest(null, child.CategoryId, "قسم متداخل", "Series", null, true)));
