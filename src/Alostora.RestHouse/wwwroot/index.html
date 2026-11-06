@@ -14,7 +14,8 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 .brand-logo{width:66px;height:66px;object-fit:contain;border-radius:16px;background:#fff;padding:4px;box-shadow:0 5px 18px #0003}
 .brand-bar h1{margin:0;color:#fff;font-size:clamp(22px,2.3vw,29px);font-weight:800;letter-spacing:.1px;line-height:1.35}
 .brand-bar p{margin:5px 0 0;color:#c4d2df;font-size:13px;line-height:1.6}
-.customer-nav{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:15px}
+.customer-nav{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:12px}
+.compact-top-nav{min-height:34px;padding:5px 11px;border-radius:9px;font-size:12px}
 .nav-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:8px 17px;border:1px solid #405970;border-radius:11px;background:#1b344b;color:#edf2f6;font-size:14px;font-weight:700;white-space:nowrap;transition:background .18s,border-color .18s,transform .18s}
 .nav-button:hover{border-color:var(--gold);background:#24435d}
 .nav-button.active{background:linear-gradient(135deg,#d9bd83,#b89354);border-color:#d9bd83;color:#17283a}
@@ -26,16 +27,16 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 .search-box input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#fff;font:inherit;font-size:13px;padding:7px 0;box-shadow:none}
 .search-box input::placeholder{color:#91a5b8}
 .header-search[hidden]{display:none!important}
-.announcement-banner{position:relative;display:flex;align-items:center;gap:12px;max-width:1280px;min-height:46px;margin:13px auto 0;padding:7px 15px;overflow:hidden;border:1px solid #304a61;border-right:3px solid #b9955d;border-radius:10px;background:linear-gradient(100deg,#0d2031,#17354d 52%,#10263a);box-shadow:0 6px 18px #0002;color:#fff}
+.announcement-banner{position:relative;display:flex;align-items:center;gap:10px;max-width:1280px;min-height:43px;margin:13px auto 0;padding:5px 12px;overflow:hidden;border:1px solid #ef555b;border-right:4px solid #fff;border-radius:5px;background:linear-gradient(100deg,#9f1420,#d3232d 52%,#a91420);box-shadow:0 5px 16px #0003;color:#fff}
 .announcement-banner[hidden]{display:none!important}
-.announcement-banner strong{z-index:1;flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;padding:2px 3px;background:transparent;color:#e4c68f;font-size:12px;font-weight:800;white-space:nowrap;letter-spacing:.15px}
-.announcement-banner strong:before{content:"";width:7px;height:7px;border-radius:50%;background:#d45c61;box-shadow:0 0 0 4px #d45c6120,0 0 10px #d45c61a0}
-.announcement-banner p{display:flex;align-items:center;flex:1 1 auto;min-width:0;max-width:100%;height:auto;min-height:34px;margin:0;overflow:hidden;white-space:nowrap;direction:rtl;padding:5px 0;box-sizing:border-box}
-.announcement-banner #announcementMessage{display:inline-block;width:max-content;max-width:none;white-space:nowrap;color:#f7f1e6;font-size:14px;font-weight:650;line-height:1.7;padding:3px 0 5px;vertical-align:middle;text-shadow:0 1px 8px #0004;will-change:transform;animation:announcement-message-marquee 30s linear .8s infinite}
-.announcement-banner:hover p{animation-play-state:paused}
+.announcement-banner strong{z-index:1;flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;padding:3px 9px;border-radius:3px;background:#fff;color:#b51622;font-size:12px;font-weight:900;white-space:nowrap;letter-spacing:.15px}
+.announcement-banner strong:before{content:"";width:7px;height:7px;border-radius:50%;background:#d3232d;box-shadow:0 0 0 3px #d3232d20,0 0 8px #d3232d80}
+.announcement-banner p{display:flex;align-items:center;justify-content:center;flex:1 1 auto;min-width:0;max-width:100%;height:auto;min-height:32px;margin:0;overflow:hidden;white-space:nowrap;direction:rtl;padding:2px 0;box-sizing:border-box}
+.announcement-banner #announcementMessage{display:inline-block;width:max-content;max-width:none;white-space:nowrap;color:#fff;font-size:14px;font-weight:800;line-height:1.55;padding:4px 0;vertical-align:middle;text-align:center;text-shadow:0 1px 3px #650a10;will-change:transform;animation:announcement-message-marquee 30s linear .8s infinite}
+.announcement-banner:hover #announcementMessage{animation-play-state:paused}
 @keyframes announcement-message-reveal{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
 @keyframes announcement-message-marquee{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.announcement-banner #announcementMessage{animation:none;white-space:normal;transform:none}.announcement-banner p{white-space:normal}.announcement-banner.is-entering #announcementMessage{animation:none!important}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.announcement-banner #announcementMessage{animation:none;white-space:normal;transform:none;text-align:center}.announcement-banner p{white-space:normal}.announcement-banner.is-entering #announcementMessage{animation:none!important}}
 .customer-ads{max-width:1280px;margin:13px auto 0;padding:0 14px}
 .customer-ads[hidden]{display:none!important}
 .customer-ad-stage{position:relative;aspect-ratio:16/5;min-height:110px;max-height:250px;overflow:hidden;border:1px solid #344e65;border-radius:15px;background:#142b40;box-shadow:0 9px 24px #0003}
@@ -228,7 +229,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
  .catalog-hero img,.catalog-hero .poster-empty{width:96px;flex-basis:96px}
 }
 </style></head><body>
-<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
+<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="homeNav" class="nav-button compact-top-nav" type="button" hidden>⌂ الرئيسية</button><button id="contactNav" class="nav-button compact-top-nav" type="button">✉ تواصل مع الإدارة</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
 <div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p><span id="announcementMessage"></span></p></div>
 <section id="customerAds" class="customer-ads" aria-label="إعلانات الاستراحة" hidden>
  <div id="customerAdStage" class="customer-ad-stage"></div>
@@ -289,7 +290,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
 </form>
 <p id="contactFeedback" role="status" aria-live="polite"></p>
 </section><div id="appToast" class="app-toast" role="status" aria-live="polite"></div></main>
-<footer class="developer-credit"><span class="credit-pair"><button id="contactCta" class="footer-contact-button" type="button"><span aria-hidden="true">✉</span> تواصل مع الإدارة</button><span class="developer-label"><span class="developer-icon" aria-hidden="true">✦</span> تصميم وبرمجة الاستراحة :</span></span><strong>م/ أبو عبيدة محمد النظاري</strong><a href="https://wa.me/967777824918" target="_blank" rel="noopener noreferrer" aria-label="تواصل عبر واتساب على الرقم 777824918"><span class="whatsapp-mark" aria-hidden="true">◉</span><bdi dir="ltr">777824918</bdi></a></footer>
+<footer class="developer-credit"><span class="credit-pair"><span class="developer-label"><span class="developer-icon" aria-hidden="true">✦</span> تصميم وبرمجة الاستراحة :</span></span><strong>م/ أبو عبيدة محمد النظاري</strong><a href="https://wa.me/967777824918" target="_blank" rel="noopener noreferrer" aria-label="تواصل عبر واتساب على الرقم 777824918"><span class="whatsapp-mark" aria-hidden="true">◉</span><bdi dir="ltr">777824918</bdi></a></footer>
 <script>
 const defaultCustomerSettings={showCatalog:true,showContinueWatching:true,showAudio:true,showBooks:true,showApps:true,showContact:true,showWelcome:true,showAnnouncement:true,showDownloads:true,showImageAds:true};
 let customerSettings={...defaultCustomerSettings};
@@ -311,7 +312,6 @@ function applyCustomerSettings(refreshMedia=false){
  });
  const contactNav=document.querySelector('#contactNav');if(contactNav)contactNav.hidden=customerSettings.showContact===false;
  document.querySelector('#continueNav').hidden=customerSettings.showContinueWatching===false;
- document.querySelector('#contactCta').hidden=customerSettings.showContact===false;
  if(customerSettings.showContact===false&&!document.querySelector('#contactView').hidden)showCustomerView('home');
  if(activeMediaKind!=='all'&&!enabled[activeMediaKind])activeMediaKind='all';
  const mediaOnly=activeMediaKind!=='all';
@@ -320,7 +320,7 @@ function applyCustomerSettings(refreshMedia=false){
  document.querySelector('#catalogToolbar').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all';
  document.querySelector('#welcomePanel').hidden=customerSettings.showWelcome===false||activeMediaKind!=='all';
  document.querySelector('#customerOverview').hidden=customerSettings.showWelcome===false||activeMediaKind!=='all';
- document.querySelector('#continueSection').hidden=customerSettings.showContinueWatching===false||activeMediaKind!=='all';
+ document.querySelector('#continueSection').hidden=customerSettings.showContinueWatching===false||activeMediaKind!=='all'||catalogPage.type!=='continue';
  document.querySelector('#message').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all';
  document.querySelectorAll('.media-tab').forEach(button=>button.classList.toggle('active',(button.dataset.kind||'all')===activeMediaKind));
  document.querySelector('#mediaLibrary').hidden=activeMediaKind==='all'&&!mediaItems.some(x=>enabled[x.kind]);
@@ -622,7 +622,8 @@ function renderCatalogPage(){
  const playerSection=document.querySelector('#playerSection');
  if(!content||!catalogPage||!playerSection)return;
  const pageType=catalogPage.type||'home';
- const customerNav=document.querySelector('.customer-nav');if(customerNav)customerNav.hidden=pageType!=='home';
+ const customerNav=document.querySelector('.customer-nav');if(customerNav)customerNav.hidden=false;
+ const homeNav=document.querySelector('#homeNav');if(homeNav)homeNav.hidden=pageType==='home'&&document.querySelector('#contactView').hidden;
  const announcement=document.querySelector('#announcementBanner');if(announcement)announcement.hidden=pageType!=='home'||customerSettings.showAnnouncement===false||announcement.dataset.active!=='true';
  const customerAds=document.querySelector('#customerAds');if(customerAds)customerAds.hidden=pageType!=='home'||customerSettings.showImageAds===false||customerAdItems.length===0;
  const quickNav=document.querySelector('#mediaQuickNav');if(quickNav&&pageType!=='home')quickNav.hidden=true;
@@ -1041,15 +1042,31 @@ async function loadBrandProfile(){
 document.querySelector('#catalogBack').addEventListener('click',goCatalogBack);
 function showCustomerView(view){
  const home=view==='home',homeView=document.querySelector('#homeView'),contactView=document.querySelector('#contactView');
- homeView.hidden=!home;contactView.hidden=home;document.querySelector('#contactCta').hidden=!home||customerSettings.showContact===false;
+ homeView.hidden=!home;contactView.hidden=home;
  const contactNav=document.querySelector('#contactNav');if(contactNav){contactNav.classList.toggle('active',!home);contactNav.setAttribute('aria-pressed',String(!home));}
+ const homeNav=document.querySelector('#homeNav');if(homeNav)homeNav.hidden=home&&catalogPage.type==='home';
  document.querySelector('#customerAds').hidden=!home||customerSettings.showImageAds===false||customerAdItems.length===0;
  const announcement=document.querySelector('#announcementBanner');if(announcement)announcement.hidden=!home||customerSettings.showAnnouncement===false||announcement.dataset.active!=='true';
  document.querySelector('.header-search').hidden=!home||customerSettings.showCatalog===false||activeMediaKind!=='all';
  window.scrollTo({top:0,behavior:'smooth'});
 }
+function goCatalogHome(){
+ if(catalogPage.type==='player'){
+  playbackGeneration++;flushProgress();if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
+  player.pause();player.onerror=null;player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;
+ }
+ catalogStack=[];catalogPage={type:'home'};activeMediaKind='all';
+ document.querySelectorAll('.media-tab').forEach(x=>x.classList.remove('active'));
+ document.querySelector('#mediaLibrary').hidden=true;
+ document.querySelector('#catalogView').hidden=false;
+ document.querySelector('#catalogToolbar').hidden=false;
+ document.querySelector('#welcomePanel').hidden=customerSettings.showWelcome===false;
+ document.querySelector('#customerOverview').hidden=customerSettings.showWelcome===false;
+ renderCatalogPage();
+}
 function openCustomerContact(){goCatalogHome();document.querySelector('#sharedAudioPlayer')?.pause();showCustomerView('contact');}
-document.querySelector('#contactCta').addEventListener('click',openCustomerContact);
+document.querySelector('#contactNav').addEventListener('click',openCustomerContact);
+document.querySelector('#homeNav').addEventListener('click',()=>{showCustomerView('home');goCatalogHome();});
 document.querySelector('#continueNav').addEventListener('click',()=>{activeMediaKind='all';document.querySelectorAll('.media-tab').forEach(x=>x.classList.remove('active'));document.querySelector('#mediaLibrary').hidden=true;showCustomerView('home');document.querySelector('#catalogView').hidden=false;navigateCatalog({type:'continue',title:'متابعة المشاهدة'});});
 document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener('click',()=>{
  activeMediaKind=button.dataset.kind||'all';
