@@ -678,12 +678,6 @@ public partial class App : Application
    _server.MapGet("/api/series",(HttpContext c,SeriesCatalogService series,LibraryService files,VideoMetadataService meta,PublicCatalogAccessService publicCatalog)=>
    {
     IReadOnlySet<string>? allowedSeriesIds=IsLocal(c)?null:publicCatalog.GetPublishedSeriesIds();
-    foreach(var seriesRow in series.ListSeries().Where(row=>allowedSeriesIds is null||allowedSeriesIds.Contains(row.SeriesId)))
-    {
-     if(!string.IsNullOrWhiteSpace(seriesRow.FolderPath)&&Directory.Exists(seriesRow.FolderPath)) files.EnsureFolderRegistered(seriesRow.FolderPath);
-     foreach(var seasonRow in series.ListSeasons(seriesRow.SeriesId))
-      if(!string.IsNullOrWhiteSpace(seasonRow.FolderPath)&&Directory.Exists(seasonRow.FolderPath)) files.EnsureFolderRegistered(seasonRow.FolderPath);
-    }
     return Results.Ok(series.GetCatalog(files,meta,allowedSeriesIds,IsLocal(c)?null:publicCatalog.GetPublishedVideoIds()));
    });
    _server.MapGet("/api/admin/series",(HttpContext c,SeriesCatalogService series,LibraryService files)=>{ if(!IsAdmin(c)) return Results.NotFound(); var rows=series.ListSeries(); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.EnsureFolderRegistered(row.FolderPath); return Results.Ok(rows); });
@@ -715,7 +709,7 @@ public partial class App : Application
     }
     series.SaveSeries(request); if(!string.IsNullOrWhiteSpace(request.FolderPath)) files.RegisterFolder(request.FolderPath); return Results.Ok(new{saved=true});
    });
-   _server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalogService series,LibraryService files)=>{ if(!IsAdmin(c)) return Results.NotFound(); var rows=series.ListSeasons(seriesId); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.RegisterFolder(row.FolderPath); return Results.Ok(rows); });
+   _server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalogService series)=>{ if(!IsAdmin(c)) return Results.NotFound(); return Results.Ok(series.ListSeasons(seriesId)); });
    _server.MapPost("/api/admin/seasons",(HttpContext c,SaveSeasonRequest request,SeriesCatalogService series)=>{
     if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeasonNumber<1||request.SeasonNumber>500||(request.Title?.Length??0)>120||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="بيانات الموسم أو الجزء غير صحيحة أو مجلده غير موجود"});
