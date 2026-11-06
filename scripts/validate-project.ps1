@@ -203,6 +203,15 @@ if ($html -notmatch 'id="catalogView"' -or
 }
 Write-Host "PASS: customer catalog uses separate navigation pages and a dedicated player view."
 # The landing page has no redundant Home control; inside catalog pages Home and Back remain adjacent and functional.
+if (-not $html.Contains('<video id="player" controls playsinline preload="metadata"></video>') -or
+    $html.Contains('id="nowPlayingTitle"') -or
+    -not $html.Contains('تصميم وبرمجة الاستراحة') -or
+    -not $html.Contains('م/ أبو عبيدة محمد النظاري') -or
+    -not $html.Contains('href="https://wa.me/967777824918"') -or
+    -not $html.Contains('<bdi dir="ltr">777824918</bdi>')) {
+    throw "Customer player must show only the single breadcrumb title above the video, and footer must include the designer credit with a WhatsApp link displaying the local number only."
+}
+
 if (-not $html.Contains('id="catalogHome"') -or
     -not $html.Contains('id="catalogBack"') -or
     -not $html.Contains("homeButton.hidden=pageType==='home'") -or
