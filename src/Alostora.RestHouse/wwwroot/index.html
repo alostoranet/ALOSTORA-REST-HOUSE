@@ -185,6 +185,52 @@ button:disabled{cursor:not-allowed;opacity:.58}
 .popular-section .catalog-card{max-width:240px}
 @media(max-width:600px){.overview-stats{gap:8px}.overview-stat{display:grid;justify-items:center;text-align:center;padding:12px 6px;gap:5px}.overview-stat span{font-size:11px}.overview-stat strong{font-size:22px}.popular-section{padding:12px}.popular-heading{align-items:flex-start;flex-direction:column;gap:4px}}
 
+/* Mobile-first customer catalog: keep controls compact and let the library lead. */
+.catalog-page-head[hidden],#catalogToolbar[hidden]{display:none!important}
+.catalog-page-head{margin:0 0 10px;padding:8px 0 10px;gap:10px}
+.catalog-back{min-width:88px}
+#catalogBreadcrumb{font-size:14px;font-weight:700;color:#dce8f5;min-width:0}
+#catalogToolbar{margin:8px 0 14px;padding:8px;gap:8px;border-radius:11px}
+#catalogToolbar select{min-width:0;flex:1 1 145px;min-height:40px;padding:8px 10px;font-size:13px}
+@media(max-width:600px){
+ header{padding:13px 14px 12px}
+ .brand-bar{min-height:48px;gap:10px}
+ .brand-logo{width:48px;height:48px}
+ header h1{font-size:21px}
+ header p{font-size:12px;margin-top:4px}
+ .header-search{margin-top:9px}
+ .header-search input{min-height:40px;padding:8px 11px;font-size:13px;border-radius:9px}
+ .customer-nav{gap:6px;margin-top:9px}
+ .nav-button{padding:8px 10px;font-size:12px;border-radius:8px;min-height:38px}
+ .announcement-banner{margin:7px 10px 0;padding:7px 10px;min-height:38px}
+ .announcement-banner p{font-size:11px;line-height:1.5}
+ .customer-ads{margin:7px 0 0;padding:0 10px}
+ .customer-ad-stage{aspect-ratio:16/6;min-height:82px;max-height:145px}
+ .customer-ad-controls{padding:3px 0;gap:7px}
+ .customer-ad-controls>button{min-height:28px;padding:2px 7px;font-size:10px}
+ main{padding:10px 10px 16px}
+ .welcome-panel{min-height:0;margin:2px 0 10px;padding:12px}
+ .welcome-panel h2{font-size:17px;margin:4px 0}
+ .welcome-panel p{font-size:11px;line-height:1.6}
+ .welcome-mark{width:40px;height:40px;flex-basis:40px;font-size:16px}
+ .customer-overview{gap:10px;margin:10px 0}
+ .overview-stats{gap:6px}
+ .overview-stat{padding:8px 4px}
+ .overview-stat span{font-size:10px}
+ .overview-stat strong{font-size:18px}
+ #catalogToolbar{display:flex;flex-wrap:nowrap;gap:6px;margin:6px 0 12px;padding:6px}
+ #catalogToolbar select{flex:1 1 0;width:50%;min-width:0;padding:7px 6px;font-size:11px;min-height:36px}
+ .catalog-page-head{margin:0 0 8px;padding:5px 0 8px}
+ .catalog-back{min-height:38px;padding:7px 13px;font-size:13px}
+ #catalogBreadcrumb{font-size:12px}
+ .catalog-section-title{margin:10px 0 8px;font-size:16px}
+ .catalog-grid{gap:8px!important}
+ .catalog-card{padding:7px;gap:6px}
+ .catalog-card h3{font-size:13px}
+ #playerSection{margin:8px 0;padding:9px}
+ #playerSection h2{font-size:16px}
+ #playerSection video{max-height:58vh}
+}
 </style></head><body>
 <header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><div class="header-search"><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل أو قسم..."></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
 <div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p id="announcementMessage"></p></div>
@@ -205,12 +251,6 @@ button:disabled{cursor:not-allowed;opacity:.58}
   <div id="popularGrid" class="catalog-grid"></div>
  </section>
 </section>
-<div class="toolbar" id="catalogToolbar">
-
-<select id="categoryFilter" aria-label="القسم" hidden><option value="">كل الأقسام</option></select>
-<select id="collection"><option value="">كل الأعمال المنشورة</option><option value="favorites">المفضلة</option></select>
-<select id="sort" aria-label="ترتيب المكتبة"><option value="title">ترتيب حسب الاسم</option><option value="year">الأحدث إنتاجاً</option><option value="rating">الأعلى تقييماً</option></select>
-</div>
 <p id="message">يتم تحميل المكتبة...</p>
 <section id="mediaLibrary" hidden><h2 id="mediaLibraryTitle">الصوتيات والكتب والتطبيقات</h2><div id="mediaGrid" class="catalog-grid"></div><p id="mediaPlayerHint" class="empty" role="status"></p></section>
 <section id="downloadCenter" class="download-center" hidden>
@@ -219,7 +259,13 @@ button:disabled{cursor:not-allowed;opacity:.58}
 <div id="downloadList"></div>
 </section>
 <section id="catalogView" aria-live="polite">
-<div class="catalog-page-head"><button id="catalogHome" class="catalog-home" type="button">الرئيسية</button><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div></div>
+<div class="catalog-page-head" id="catalogPageHead"><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div></div>
+<div class="toolbar" id="catalogToolbar">
+
+<select id="categoryFilter" aria-label="القسم" hidden><option value="">كل الأقسام</option></select>
+<select id="collection"><option value="">كل الأعمال المنشورة</option><option value="favorites">المفضلة</option></select>
+<select id="sort" aria-label="ترتيب المكتبة"><option value="title">ترتيب حسب الاسم</option><option value="year">الأحدث إنتاجاً</option><option value="rating">الأعلى تقييماً</option></select>
+</div>
 <div id="catalogContent"></div>
 <section id="playerSection" aria-live="polite" hidden>
 <h2 id="nowPlayingTitle">المشغل</h2><video id="player" controls playsinline preload="metadata"></video>
@@ -508,18 +554,19 @@ function goCatalogBack(){
 }
 function renderCatalogPage(){
  const content=document.querySelector('#catalogContent'),back=document.querySelector('#catalogBack'),crumb=document.querySelector('#catalogBreadcrumb');
- const toolbar=document.querySelector('#catalogToolbar'),continueSection=document.querySelector('#continueSection'),message=document.querySelector('#message');
+ const pageHead=document.querySelector('#catalogPageHead'),toolbar=document.querySelector('#catalogToolbar'),continueSection=document.querySelector('#continueSection'),message=document.querySelector('#message');
  
  const playerSection=document.querySelector('#playerSection');
  if(!content||!catalogPage||!playerSection)return;
  const pageType=catalogPage.type||'home';
- toolbar.hidden=pageType==='player';
+ pageHead.hidden=pageType==='home';
+  toolbar.hidden=pageType!=='category';
   continueSection.hidden=pageType!=='home';
  message.hidden=pageType!=='home';
  back.hidden=pageType==='home'||catalogStack.length===0;
  back.textContent='رجوع';
  const titles={home:'الرئيسية',main:'الأقسام الداخلية',category:'المحتوى',series:'تفاصيل البرنامج',season:'الحلقات',player:'المشاهدة الآن'};
- crumb.textContent=catalogStack.map(x=>x.title||titles[x.type]||'').concat(catalogPage.title||titles[pageType]||'المكتبة').filter(Boolean).join('  /  ');
+ crumb.textContent=catalogPage.title||titles[pageType]||'المكتبة';
  const query=(document.querySelector('#search')?.value||'').trim().toLocaleLowerCase('ar');
  document.querySelector('#welcomePanel').hidden=pageType!=='home'||customerSettings.showWelcome===false;
  document.querySelector('#customerOverview').hidden=pageType!=='home'||customerSettings.showWelcome===false||!!query;
@@ -915,7 +962,6 @@ async function loadBrandProfile(){
  }catch{}
 }
 document.querySelector('#catalogBack').addEventListener('click',goCatalogBack);
-document.querySelector('#catalogHome').addEventListener('click',goCatalogHome);
 function goCatalogHome(){if(catalogPage.type==='player'){playbackGeneration++;flushProgress();if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}player.pause();player.onerror=null;player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;}catalogStack=[];catalogPage={type:'home',title:'الرئيسية'};renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});}
 function showCustomerView(view){
  const home=view==='home',homeView=document.querySelector('#homeView'),contactView=document.querySelector('#contactView');
