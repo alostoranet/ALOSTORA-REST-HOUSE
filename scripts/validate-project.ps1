@@ -106,6 +106,15 @@ if ($html -notmatch "customerOverview'\)\.hidden=pageType!=='home'" -or
     throw "Customer home discovery panels must not remain visible on detail or player pages."
 }
 Write-Host "PASS: customer home discovery panels are scoped to the home page."
+# Catalog tiles must expose a real keyboard-operable button and must not nest a favorite button inside a role=button article.
+if ($html -notmatch "className='catalog-open-button'" -or
+    $html -notmatch "open\.setAttribute\('aria-label'" -or
+    $html -match "card\.setAttribute\('role','button'\)" -or
+    $html -notmatch 'catalog-open-button:focus-visible') {
+    throw "Customer catalog cards must use accessible native buttons with visible keyboard focus."
+}
+Write-Host "PASS: customer catalog cards use accessible native buttons and visible keyboard focus."
+
 
 
 
