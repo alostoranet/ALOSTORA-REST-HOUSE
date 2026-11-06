@@ -1066,6 +1066,7 @@ function goCatalogHome(){
 }
 function openCustomerContact(){goCatalogHome();document.querySelector('#sharedAudioPlayer')?.pause();showCustomerView('contact');}
 document.querySelector('#contactNav').addEventListener('click',openCustomerContact);
+document.querySelector('#contactCta').addEventListener('click',openCustomerContact);
 document.querySelector('#homeNav').addEventListener('click',()=>{showCustomerView('home');goCatalogHome();});
 document.querySelector('#continueNav').addEventListener('click',()=>{activeMediaKind='all';document.querySelectorAll('.media-tab').forEach(x=>x.classList.remove('active'));document.querySelector('#mediaLibrary').hidden=true;showCustomerView('home');document.querySelector('#catalogView').hidden=false;navigateCatalog({type:'continue',title:'متابعة المشاهدة'});});
 document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener('click',()=>{
