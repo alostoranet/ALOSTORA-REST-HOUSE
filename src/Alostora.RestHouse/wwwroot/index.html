@@ -63,6 +63,20 @@ main{max-width:1320px;padding:26px 28px 18px}
 .catalog-section-title{font-size:20px;font-weight:800;color:#f5f7fb;margin:24px 0 12px}
 .catalog-page-head{position:sticky;top:0;z-index:5;background:rgba(12,23,39,.94);backdrop-filter:blur(12px);padding:12px 0;border-radius:0 0 10px 10px}
 @media(max-width:600px){.catalog-rail{gap:10px}.catalog-rail .catalog-card{flex-basis:155px}.catalog-section-title{font-size:18px}}
+
+/* Final coordinated palette: gold for Home, red for administration/contact actions, blue for live viewing. */
+#homeNav.active{background:#d6aa3b;border-color:#e7c66b;color:#182536;box-shadow:0 5px 16px #d6aa3b33}
+#contactNav.active{background:#c93640;border-color:#e35b63;color:#fff}
+#liveNav.active{background:#276b91;border-color:#55a0c5;color:#fff}
+.media-tab.active{background:#354f6b;border-color:#d6aa3b;color:#fff}
+.catalog-card:hover{border-color:#d6aa3b}
+.catalog-back:hover{background:#d6aa3b;color:#172638}
+.catalog-section-title{color:#f0d58b}
+#playerSection{border-color:#42617e;box-shadow:0 10px 26px #0003}
+#liveView{border-color:#347da5;background:linear-gradient(135deg,#142d43,#102337)}
+#liveView h2{color:#8dc9e8}
+#liveOpenLink{background:#276b91}
+@media(max-width:600px){.nav-button{padding:10px 13px;font-size:13px}.catalog-card h3{font-size:14px}}
 </style></head><body>
 <header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button id="liveNav" class="nav-button" type="button" aria-pressed="false">البث المباشر</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
 <main><section id="homeView">
