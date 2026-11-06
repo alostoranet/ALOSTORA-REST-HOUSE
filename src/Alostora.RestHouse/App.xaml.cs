@@ -730,7 +730,8 @@ public partial class App : Application
      var usedNumbers=linked.Select(x=>x.EpisodeNumber).ToHashSet();
      var knownFiles=files.List().Select(video=>(video,resolved:files.Resolve(video.Id)))
       .Where(x=>x.resolved is not null)
-      .ToDictionary(x=>Path.GetFullPath(x.resolved!.FullPath),x=>x.video,StringComparer.OrdinalIgnoreCase);
+      .GroupBy(x=>Path.GetFullPath(x.resolved!.FullPath),StringComparer.OrdinalIgnoreCase)
+      .ToDictionary(group=>group.Key,group=>group.First().video,StringComparer.OrdinalIgnoreCase);
      var candidates=files.PreviewFolder(root).Select(file=>{
       var path=Path.GetFullPath(file.FullPath);
       knownFiles.TryGetValue(path,out var known);
@@ -788,7 +789,8 @@ public partial class App : Application
      if(paths.Count>0) files.RegisterSelectedFiles(season.FolderPath!,paths);
      var idByPath=files.List().Select(video=>(video,resolved:files.Resolve(video.Id)))
       .Where(x=>x.resolved is not null)
-      .ToDictionary(x=>Path.GetFullPath(x.resolved!.FullPath),x=>x.video.Id,StringComparer.OrdinalIgnoreCase);
+      .GroupBy(x=>Path.GetFullPath(x.resolved!.FullPath),StringComparer.OrdinalIgnoreCase)
+      .ToDictionary(group=>group.Key,group=>group.First().video.Id,StringComparer.OrdinalIgnoreCase);
      var linkedCount=0; var skipped=0;
      foreach(var item in selected)
      {
