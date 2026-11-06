@@ -569,3 +569,15 @@ if ($code -notmatch 'PublishBox\.IsChecked\s*==\s*true\s*&&\s*selectedCategory\s
     throw "Published videos must be linked to a valid customer-facing subcategory."
 }
 Write-Host "PASS: published videos cannot be saved without a customer-facing subcategory."
+
+# Announcement ticker must animate its label and message elegantly, only when content changes.
+if ($html -notmatch 'announcement-label-drop' -or
+    $html -notmatch 'announcement-message-reveal' -or
+    $html -notmatch 'announcement-marquee' -or
+    $html -notmatch 'const changed=banner\.dataset\.contentKey!==contentKey' -or
+    $html -notmatch 'prefers-reduced-motion:reduce' -or
+    $html -notmatch '<span id="announcementMessage"></span>') {
+    throw "Customer announcement ticker entrance, reveal, refresh behavior, or reduced-motion support is incomplete."
+}
+Write-Host "PASS: announcement label drops in, message reveals smoothly, ticker scrolls, and reduced-motion is respected."
+
