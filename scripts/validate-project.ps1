@@ -686,11 +686,14 @@ if ($xaml -notmatch 'Content="التحديثات" Click="Updates_Click"' -or
 }
 Write-Host "PASS: the Windows app includes a prepared updates button and a clear not-yet-available message."
 
-# Customer page exposes the same prepared updates action without requiring an update URL.
-if ($html -notmatch 'id="updatesCta"' -or
-    $html -notmatch 'footer-updates-button' -or
-    $html -notmatch "document\.querySelector\('#updatesCta'\)\.addEventListener\('click'" -or
-    $html -notmatch 'سيتم توفير خدمة التحديثات قريباً') {
-    throw "Customer page updates action or its offline-safe placeholder message is missing."
+# App updates belong only to the Windows management app; the customer page must not expose update controls.
+if ($xaml -notmatch 'Content="التحديثات" Click="Updates_Click"' -or
+    $code -notmatch 'void Updates_Click\(' -or
+    $code -notmatch 'سيتم توفير خدمة التحديثات قريباً') {
+    throw "The Windows management app must retain its prepared updates action."
 }
-Write-Host "PASS: customer page exposes the updates button and a clear offline-safe placeholder."
+if ($html -match 'updatesCta|footer-updates-button|سيتم توفير خدمة التحديثات قريباً' -or
+    $html -match "document\.querySelector\('#updatesCta'\)") {
+    throw "The customer page must not expose application update controls or update placeholder messages."
+}
+Write-Host "PASS: app updates are available in Windows management only; the customer page has no update control or placeholder."
