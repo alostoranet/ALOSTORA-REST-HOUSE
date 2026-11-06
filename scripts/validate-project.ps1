@@ -583,3 +583,17 @@ if ($html -notmatch 'announcement-label-drop' -or
 }
 Write-Host "PASS: announcement label drops in, message reveals smoothly, ticker scrolls, and reduced-motion is respected."
 
+# Customer search stays below navigation and new arrivals appear only when recently updated content exists.
+if ($html.IndexOf('id="continueNav"') -gt $html.IndexOf('class="header-search"') -or
+    $html -notmatch 'id="newArrivals"' -or
+    $html -notmatch 'function isRecentlyAdded\(' -or
+    $html -notmatch 'isRecentlyAdded\(x\.updatedUtc\)' -or
+    $html -notmatch 'recentEpisodes\.push' -or
+    $html -notmatch 'section\.hidden=rows\.length===0' -or
+    $metadata -notmatch 'bool IsPublished, string UpdatedUtc' -or
+    $series -notmatch 'string OrganizationType, string UpdatedUtc') {
+    throw "Customer search placement or dynamic new-arrivals metadata is incomplete."
+}
+Write-Host "PASS: compact search sits below navigation; new movies, series, and episodes are shown only while recently updated."
+
+
