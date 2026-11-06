@@ -448,11 +448,27 @@ Write-Host "PASS: FFmpeg is documented as an optional non-destructive playback h
 $backupPath = Join-Path $root "src/Alostora.RestHouse/BackupService.cs"
 $backup = Get-Content $backupPath -Raw
 if ($backup -notmatch 'customer-page-settings.json' -or
+    $backup -notmatch 'settings\.json' -or
     $backup -notmatch 'Original media files \(videos, audio, books, and apps\) are not included' -or
     $xaml -notmatch 'النسخة الاحتياطية لا تحتوي ملفات الوسائط الأصلية') {
-    throw "Backup scope must clearly state that original media files require a separate copy."
+    throw "Backup scope must preserve application settings and clearly state that original media files require a separate copy."
 }
-Write-Host "PASS: backup preserves customer visibility settings and clearly excludes original media files."
+Write-Host "PASS: backup preserves customer visibility and application settings, and clearly excludes original media files."
+
+# Runtime diagnostics and the visible WPF management workflow must remain covered.
+$appSource = Get-Content (Join-Path $root "src/Alostora.RestHouse/App.xaml.cs") -Raw
+$wpfSmoke = Get-Content (Join-Path $root "tests/Alostora.RestHouse.WpfSmokeTest/Program.cs") -Raw
+if ($appSource -notmatch 'DispatcherUnhandledException' -or
+    $appSource -notmatch 'AppDomain\.CurrentDomain\.UnhandledException' -or
+    $appSource -notmatch 'TaskScheduler\.UnobservedTaskException' -or
+    $appSource -notmatch 'application-errors\.log' -or
+    $code -notmatch 'InitializeManagementWindowSafelyAsync' -or
+    $code -notmatch 'RefreshCustomerMessagesSafelyAsync' -or
+    $wpfSmoke -notmatch 'app\.Run\(window\)' -or
+    $wpfSmoke -notmatch 'SaveCustomerPageSettings_Click') {
+    throw "Global diagnostics, safe management initialization, or visible live URL save smoke coverage is incomplete."
+}
+Write-Host "PASS: global exception diagnostics, safe management initialization, and visible live URL save smoke coverage are present."
 
 
 # Regression checks for hierarchical category selection, logo reports, and view counts.
