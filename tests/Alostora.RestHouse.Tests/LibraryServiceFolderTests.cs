@@ -91,6 +91,30 @@ public sealed class LibraryServiceFolderTests : IDisposable
     }
 
     [Fact]
+    public void PreviewFolderFindsNestedVideosWithoutRegisteringThemInTheLibrary()
+    {
+        var mediaRoot = Path.Combine(_root, "media");
+        var externalFolder = Path.Combine(_root, "external-preview");
+        var nestedFolder = Path.Combine(externalFolder, "season-1", "disc-1");
+        Directory.CreateDirectory(nestedFolder);
+        var first = Path.Combine(externalFolder, "episode-01.mp4");
+        var nested = Path.Combine(nestedFolder, "episode-02.mkv");
+        File.WriteAllBytes(first, [1, 2, 3]);
+        File.WriteAllBytes(nested, [4, 5, 6]);
+        File.WriteAllText(Path.Combine(nestedFolder, "readme.txt"), "not a video");
+
+        using var library = new LibraryService(mediaRoot, _databasePath);
+        var preview = library.PreviewFolder(externalFolder);
+
+        Assert.Equal(2, preview.Count);
+        Assert.Contains(preview, x => x.FullPath == first);
+        Assert.Contains(preview, x => x.FullPath == nested);
+        Assert.Empty(library.List());
+        Assert.True(File.Exists(first));
+        Assert.True(File.Exists(nested));
+    }
+
+    [Fact]
     public void CannotUnregisterTheManagedLibraryRoot()
     {
         var mediaRoot = Path.Combine(_root, "media");
