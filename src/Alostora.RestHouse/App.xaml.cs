@@ -969,12 +969,6 @@ public partial class App : Application
    _server.MapPost("/api/admin/episode-poster/{episodeId:long}",async (HttpContext c,long episodeId,SeriesCatalogService series)=>
    {
     if(!IsAdmin(c)) return Results.NotFound();
-    if(series.GetEpisodePoster(episodeId) is null && !series.ListSeries().Any(s=>series.GetCatalog(
-       c.RequestServices.GetRequiredService<LibraryService>(),
-       c.RequestServices.GetRequiredService<VideoMetadataService>()) is not null))
-    {
-     // The update below is the authoritative existence check; a null poster is valid.
-    }
     if(c.Request.ContentLength is > 5_242_880) return Results.StatusCode(413);
     var type=c.Request.ContentType?.Split(';')[0].Trim().ToLowerInvariant();
     var ext=type switch {"image/jpeg"=>".jpg","image/png"=>".png","image/webp"=>".webp",_=>null};
