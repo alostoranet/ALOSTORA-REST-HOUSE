@@ -217,8 +217,7 @@ if ($html -notmatch 'id="catalogView"' -or
     $html -notmatch 'function renderCatalogPage\(' -or
     $html -notmatch "pageType==='season'" -or
     $html -notmatch "pageType==='player'" -or
-    $html -match 'id="seriesDetails"' -or
-    $html -match 'id="movieDetails"') {
+    $html -match 'id="seriesDetails"' -or    $html -match 'id="movieDetails"') {
     throw "Customer catalog must use separate category, program, season, and player pages."
 }
 Write-Host "PASS: customer catalog uses separate navigation pages and a dedicated player view."
@@ -437,8 +436,7 @@ if (-not (Test-Path $profileServicePath) -or -not (Test-Path $profileTestsPath) 
 Write-Host "PASS: rest house name, network name, and logo settings are persisted and displayed."
 
 # Advanced media tools are optional helpers, not mandatory customer-facing setup.
-if ($xaml -notmatch 'مساعد توافق صيغ الفيديو \(FFmpeg\) — اختياري' -or
-    $xaml -notmatch 'لا يغيّر ملف الفيديو الأصلي') {
+if ($xaml -notmatch 'مساعد توافق صيغ الفيديو \(FFmpeg\) — اختياري' -or    $xaml -notmatch 'لا يغيّر ملف الفيديو الأصلي') {
     throw "The FFmpeg purpose and optional status must be explained in the advanced settings."
 }
 Write-Host "PASS: FFmpeg is documented as an optional non-destructive playback helper."
@@ -597,7 +595,6 @@ if ($app -match 'MapGet\("/live"' -or
     throw "Live broadcast routes, controls, or assets must not be included in this ALOSTORA REST HOUSE build."
 }
 Write-Host "PASS: no live-broadcast route, admin control, player page, or HLS assets are included."
-
 # Series cover selection must preview immediately, after upload/lookup, and when an existing series is selected.
 if ($xaml -notmatch 'x:Name="SeriesPosterPreview"' -or
     $code -notmatch 'UpdateSeriesPosterPreview\(s\.PosterPath\)' -or
@@ -653,14 +650,13 @@ Write-Host "PASS: customer home uses clean primary navigation, named sections, a
 
 # Customer playback keeps its LAN fallback; season pages show episodes directly without a duplicate hero poster.
 if ($html -notmatch "item=\{\.\.\.item,url:'/media/'\+encodeURIComponent\(item\.id\)\}" -or
-if ($html -notmatch "item=\{\.\.\.item,url:'/media/'\+encodeURIComponent\(item\.id\)\}" -or
     $html -match "catalogHero\(name,season\.posterPath\|\|show\.posterPath" -or
     $html -notmatch "catalogSectionTitle\('حلقات '\+name\)") {
-}
     throw "Customer playback fallback or single-poster season layout regression detected."
-# Home is absent only on the landing page; the compact contact button is in the persistent header, not the footer.
+}
 Write-Host "PASS: catalog playback has a canonical LAN media URL fallback; season pages show episodes without duplicate hero posters."
-    $html -notmatch '<nav class="customer-nav"[^>]*>\s*<button id="homeNav"' -or
+# Home is absent only on the landing page; the compact contact button is in the persistent header, not the footer.
+if ($html -notmatch '<nav class="customer-nav"[^>]*>\s*<button id="homeNav"' -or
     $html -notmatch 'id="contactNav"' -or
     $html -notmatch 'class="credit-pair"' -or
     $html -match 'id="contactCta"' -or
