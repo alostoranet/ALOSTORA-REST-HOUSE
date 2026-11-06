@@ -92,7 +92,22 @@
  <StackPanel><TextBlock Text="مركز إدارة الاستراحة" Foreground="White" FontSize="22" FontWeight="Bold"/>
  <TextBlock Text="إدارة المحتوى وخدمات العملاء وهوية الاستراحة وإعدادات التشغيل من لوحة واحدة. الأرقام تُحمّل من بيانات البرنامج الفعلية." Foreground="#D7E5F3" FontSize="13" TextWrapping="Wrap" Margin="0,8,0,0"/></StackPanel>
 </Border>
-<UniformGrid Columns="3" Rows="3" Margin="0,0,0,14">
+<TabControl x:Name="DashboardSectionsTabs" TabStripPlacement="Top" Background="Transparent" BorderThickness="0" Margin="0,0,0,10">
+ <TabControl.ItemContainerStyle>
+  <Style TargetType="{x:Type TabItem}">
+   <Setter Property="MinWidth" Value="150"/><Setter Property="Padding" Value="18,11"/><Setter Property="Margin" Value="0,0,8,8"/>
+   <Setter Property="Background" Value="#E8EEF5"/><Setter Property="Foreground" Value="#334155"/>
+   <Setter Property="FontSize" Value="14"/><Setter Property="FontWeight" Value="Bold"/>
+   <Setter Property="HorizontalContentAlignment" Value="Center"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="{x:Type TabItem}">
+    <Border x:Name="SectionTabBorder" Background="{TemplateBinding Background}" BorderBrush="#D7E0EA" BorderThickness="1" CornerRadius="9" Padding="{TemplateBinding Padding}">
+     <ContentPresenter ContentSource="Header" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
+    </Border>
+    <ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="SectionTabBorder" Property="Background" Value="#D6AD58"/><Setter TargetName="SectionTabBorder" Property="BorderBrush" Value="#B98A36"/><Setter Property="Foreground" Value="#142D4A"/></Trigger></ControlTemplate.Triggers>
+   </ControlTemplate></Setter.Value></Setter>
+  </Style>
+ </TabControl.ItemContainerStyle>
+ <TabItem Header="👁 المشاهدات"><StackPanel><UniformGrid Columns="3" Rows="3" Margin="0,0,0,14">
  <Border Background="#E8EEF5" CornerRadius="10" Padding="16" Margin="4"><StackPanel><TextBlock Text="إجمالي الفيديوهات" Foreground="#526174" FontSize="12"/><TextBlock x:Name="DashboardVideosCount" Text="—" Foreground="#142D4A" FontSize="27" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
  <Border Background="#E8EEF5" CornerRadius="10" Padding="16" Margin="4"><StackPanel><TextBlock Text="المسلسلات" Foreground="#526174" FontSize="12"/><TextBlock x:Name="DashboardSeriesCount" Text="—" Foreground="#142D4A" FontSize="27" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
  <Border Background="#E8EEF5" CornerRadius="10" Padding="16" Margin="4"><StackPanel><TextBlock Text="الأقسام والتصنيفات" Foreground="#526174" FontSize="12"/><TextBlock x:Name="DashboardCategoriesCount" Text="—" Foreground="#142D4A" FontSize="27" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
@@ -100,9 +115,8 @@
  <Border Background="#E8EEF5" CornerRadius="10" Padding="16" Margin="4"><StackPanel><TextBlock Text="مسارات التخزين الخارجية" Foreground="#526174" FontSize="12"/><TextBlock x:Name="DashboardStorageRootsCount" Text="—" Foreground="#142D4A" FontSize="27" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
  <Border Background="#E8EEF5" CornerRadius="10" Padding="16" Margin="4"><StackPanel><TextBlock Text="الفيديوهات المنشورة" Foreground="#526174" FontSize="12"/><TextBlock x:Name="DashboardPublishedCount" Text="—" Foreground="#16834A" FontSize="27" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
  <Border Background="#E8EEF5" CornerRadius="10" Padding="16" Margin="4"><StackPanel><TextBlock Text="الصوتيات والكتب والتطبيقات" Foreground="#526174" FontSize="12"/><TextBlock x:Name="DashboardMediaCount" Text="—" Foreground="#245B87" FontSize="27" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel></Border>
-</UniformGrid>
-<TextBlock Text="إحصاءات المشاهدة الفعلية" FontSize="18" FontWeight="Bold" Foreground="#142D4A" Margin="2,8,0,8"/>
-<Border Background="#F8FAFC" CornerRadius="10" Padding="12" Margin="4,0,4,12">
+</UniformGrid></StackPanel></TabItem>
+ <TabItem Header="📊 إحصائيات المشاهدة"><StackPanel><TextBlock Text="إحصاءات المشاهدة الفعلية" FontSize="18" FontWeight="Bold" Foreground="#142D4A" Margin="2,8,0,8"/><Border Background="#F8FAFC" CornerRadius="10" Padding="12" Margin="4,0,4,12">
  <StackPanel>
   <DockPanel Margin="0,0,0,8"><TextBlock x:Name="DashboardWatchHistoryStatus" Text="جارٍ تحميل سجل المشاهدة..." Foreground="#64748B" VerticalAlignment="Center"/><Button DockPanel.Dock="Right" Content="تحديث المشاهدات" Click="RefreshWatchHistory_Click" Padding="10,5"/></DockPanel>
   <Grid>
@@ -121,9 +135,8 @@
    </StackPanel>
   </Grid>
  </StackPanel>
-</Border>
-<TextBlock Text="إدارة المحتوى" FontSize="18" FontWeight="Bold" Foreground="#142D4A" Margin="2,0,0,8"/>
-<UniformGrid Columns="2" Rows="5" Margin="0,0,0,12">
+</Border></StackPanel></TabItem>
+ <TabItem Header="📚 إدارة المحتوى"><StackPanel><TextBlock Text="إدارة المحتوى" FontSize="18" FontWeight="Bold" Foreground="#142D4A" Margin="2,0,0,8"/><UniformGrid Columns="2" Rows="5" Margin="0,0,0,12">
  <Border Background="#F1F5F9" CornerRadius="10" Padding="16" Margin="4" Tag="1:0" Cursor="Hand" ToolTip="فتح جميع ملفات الفيديو المسجلة" MouseLeftButtonUp="DashboardCard_Click"><StackPanel><TextBlock Text="١. مكتبة الفيديو" FontWeight="Bold" FontSize="16" Foreground="#142D4A"/><TextBlock Text="عرض جميع الملفات المسجلة، سواء كانت أفلاماً أو حلقات أو فيديوهات مستقلة، وإدارتها من مكان واحد." TextWrapping="Wrap" Foreground="#526174" Margin="0,7,0,0"/></StackPanel></Border>
  <Border Background="#F1F5F9" CornerRadius="10" Padding="16" Margin="4" Tag="2:0" Cursor="Hand" ToolTip="إدارة المسلسلات والمواسم والحلقات" MouseLeftButtonUp="DashboardCard_Click"><StackPanel><TextBlock Text="٢. المسلسلات والحلقات" FontWeight="Bold" FontSize="16" Foreground="#142D4A"/><TextBlock Text="تنظيم المسلسلات والمواسم والأجزاء والحلقات وربط ملفات الفيديو بها." TextWrapping="Wrap" Foreground="#526174" Margin="0,7,0,0"/></StackPanel></Border>
  <Border Background="#F1F5F9" CornerRadius="10" Padding="16" Margin="4" Tag="3:0" Cursor="Hand" ToolTip="إدارة الأقسام والتصنيفات" MouseLeftButtonUp="DashboardCard_Click"><StackPanel><TextBlock Text="٣. الأقسام والتصنيفات" FontWeight="Bold" FontSize="16" Foreground="#142D4A"/><TextBlock Text="إنشاء الأقسام الرئيسية والفرعية وتحديد أماكن ظهور المحتوى للعملاء." TextWrapping="Wrap" Foreground="#526174" Margin="0,7,0,0"/></StackPanel></Border>
@@ -134,8 +147,8 @@
  <Border Background="#F1F5F9" CornerRadius="10" Padding="16" Margin="4" Tag="5:3" Cursor="Hand" ToolTip="إدارة الشريط الإعلاني" MouseLeftButtonUp="DashboardCard_Click"><StackPanel><TextBlock Text="٨. الإعلانات والتنبيهات" FontWeight="Bold" FontSize="16" Foreground="#142D4A"/><TextBlock Text="كتابة الرسائل والإعلانات ونشرها كشريط متحرك في صفحة العملاء." TextWrapping="Wrap" Foreground="#526174" Margin="0,7,0,0"/></StackPanel></Border>
  <Border Background="#F1F5F9" CornerRadius="10" Padding="16" Margin="4" Tag="1:2" Cursor="Hand" ToolTip="إدارة الصوتيات والكتب والتطبيقات" MouseLeftButtonUp="DashboardCard_Click"><StackPanel><TextBlock Text="٩. مكتبات الوسائط الإضافية" FontWeight="Bold" FontSize="16" Foreground="#142D4A"/><TextBlock Text="فحص وإدارة مكتبات الصوتيات والكتب وتطبيقات أندرويد المسجلة." TextWrapping="Wrap" Foreground="#526174" Margin="0,7,0,0"/></StackPanel></Border>
  <Border Background="#F1F5F9" CornerRadius="10" Padding="16" Margin="4" Tag="2:0" Cursor="Hand" ToolTip="إدارة المسلسلات والمواسم والحلقات" MouseLeftButtonUp="DashboardCard_Click"><StackPanel><TextBlock Text="١٠. المسلسلات والحلقات" FontWeight="Bold" FontSize="16" Foreground="#142D4A"/><TextBlock Text="إدارة بيانات المسلسلات والمواسم والأجزاء وربط الحلقات بملفاتها." TextWrapping="Wrap" Foreground="#526174" Margin="0,7,0,0"/></StackPanel></Border>
-</UniformGrid>
-<Border Background="#FFF7E8" CornerRadius="9" Padding="12"><TextBlock Text="ملاحظة: لوحة التحكم تعرض إحصاءات فعلية من مكتبة الاستراحة. إزالة عنصر من الفهرس لا تحذف الملف الأصلي من الجهاز." Foreground="#80551A" TextWrapping="Wrap"/></Border>
+</UniformGrid><Border Background="#FFF7E8" CornerRadius="9" Padding="12"><TextBlock Text="ملاحظة: لوحة التحكم تعرض إحصاءات فعلية من مكتبة الاستراحة. إزالة عنصر من الفهرس لا تحذف الملف الأصلي من الجهاز." Foreground="#80551A" TextWrapping="Wrap"/></Border></StackPanel></TabItem>
+</TabControl>
 </StackPanel></ScrollViewer></TabItem>
 <TabItem Header="📚 إدارة المكتبة"><TabControl x:Name="LibraryTabs" Margin="0" Background="White"><TabItem Header="📁 مكتبة الفيديوهات"><Border Background="White" CornerRadius="10" Padding="14"><DockPanel><StackPanel DockPanel.Dock="Top"><TextBlock Text="سجل الفيديوهات وبياناتها" FontSize="18" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,10"/><WrapPanel HorizontalAlignment="Right" Margin="0,0,0,10"><Button Content="تحديث القائمة" Click="RefreshLibrary_Click" Padding="14,7" Margin="0,0,6,0"/><Button Content="تحديد الكل" Click="SelectAllVideos_Click" Padding="12,7" Margin="0,0,6,0"/><Button Content="إلغاء التحديد" Click="ClearVideoSelection_Click" Padding="12,7" Margin="0,0,6,0"/><Button Content="إزالة المحدد من المكتبة" Click="RemoveVideoFromLibrary_Click" Padding="14,7" Margin="0,0,6,0" Background="#E6F1FA" Foreground="#245B87"/><Button Content="إضافة ملفات فيديو من الجهاز" Click="AddVideoFiles_Click" Padding="14,7" Margin="0,0,6,0" Background="#E7F5EC" Foreground="#176B3A"/><Button Content="إضافة مجلد فيديو خارجي" Click="AddExternalMediaFolder_Click" Padding="14,7" Margin="0,0,6,0"/><Button Content="إزالة مسار خارجي" Click="RemoveExternalLibraryFolder_Click" Padding="14,7" Margin="0,0,6,0" Background="#FFF1E8"/><Button Content="إنشاء مجلد جديد" Click="CreateLibraryFolder_Click" Padding="14,7" Margin="0,0,6,0"/><Button Content="فتح المجلد المحدد" Click="OpenLibraryFolder_Click" Padding="14,7" Margin="0,0,6,0"/><Button Content="نسخ المحدد إلى المجلد" Click="CopyVideosToSelectedFolder_Click" Padding="14,7"/></WrapPanel></StackPanel><TextBlock Text="مجلدات المكتبة — اختر مجلداً لعرض الفيديوهات الموجودة بداخله" Foreground="#526174" FontSize="12" Margin="0,0,0,5"/><TreeView x:Name="VideoFoldersTree" Height="125" SelectedItemChanged="VideoFoldersTree_SelectedItemChanged" Margin="0,0,0,10"/><DataGrid x:Name="VideosGrid" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended" SelectionUnit="FullRow" SelectionChanged="VideosGrid_SelectionChanged" CanUserAddRows="False" HeadersVisibility="Column"><DataGrid.Columns><DataGridTextColumn Header="اسم الفيديو" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="النوع" Binding="{Binding KindLabel}" Width="70"/><DataGridTextColumn Header="القسم" Binding="{Binding CategoryTitle}" Width="135"/><DataGridTextColumn Header="المشاهدات" Binding="{Binding ViewCount}" Width="85"/><DataGridTextColumn Header="البيانات" Binding="{Binding MetadataStatus}" Width="100"/><DataGridTextColumn Header="النشر" Binding="{Binding PublishStatus}" Width="70"/></DataGrid.Columns></DataGrid></DockPanel></Border></TabItem>
 <TabItem Header="✏️ بيانات الفيديو"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="بيانات الفيلم أو المسلسل" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,14"/>
