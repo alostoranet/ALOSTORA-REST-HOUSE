@@ -631,12 +631,6 @@ public partial class App : Application
    {
     var isLocal=IsLocal(c);
     IReadOnlySet<string>? visibleVideoIds=isLocal?null:publicCatalog.GetPublishedVideoIds();
-    foreach(var seriesRow in catalog.ListSeries())
-    {
-     if(!string.IsNullOrWhiteSpace(seriesRow.FolderPath)&&Directory.Exists(seriesRow.FolderPath)) svc.EnsureFolderRegistered(seriesRow.FolderPath);
-     foreach(var seasonRow in catalog.ListSeasons(seriesRow.SeriesId))
-      if(!string.IsNullOrWhiteSpace(seasonRow.FolderPath)&&Directory.Exists(seasonRow.FolderPath)) svc.EnsureFolderRegistered(seasonRow.FolderPath);
-    }
     var metadataById=meta.List().ToDictionary(x=>x.VideoId);
     var viewCounts=watchProgress.GetViewCounts();
     var categoryById=categories.List().ToDictionary(x=>x.CategoryId,x=>x.Title,StringComparer.OrdinalIgnoreCase);
@@ -680,7 +674,7 @@ public partial class App : Application
     IReadOnlySet<string>? allowedSeriesIds=IsLocal(c)?null:publicCatalog.GetPublishedSeriesIds();
     return Results.Ok(series.GetCatalog(files,meta,allowedSeriesIds,IsLocal(c)?null:publicCatalog.GetPublishedVideoIds()));
    });
-   _server.MapGet("/api/admin/series",(HttpContext c,SeriesCatalogService series,LibraryService files)=>{ if(!IsAdmin(c)) return Results.NotFound(); var rows=series.ListSeries(); foreach(var row in rows) if(!string.IsNullOrWhiteSpace(row.FolderPath)&&Directory.Exists(row.FolderPath)) files.EnsureFolderRegistered(row.FolderPath); return Results.Ok(rows); });
+   _server.MapGet("/api/admin/series",(HttpContext c,SeriesCatalogService series)=>{ if(!IsAdmin(c)) return Results.NotFound(); return Results.Ok(series.ListSeries()); });
    _server.MapDelete("/api/admin/series/{seriesId}",(HttpContext c,string seriesId,SeriesCatalogService series)=>
    {
     if(!IsAdmin(c)) return Results.NotFound();
@@ -694,7 +688,7 @@ public partial class App : Application
     try { series.DeleteSeason(seasonId); return Results.Ok(new{deleted=true,message="تم حذف الموسم وروابط حلقاته دون حذف ملفات الفيديو"}); }
     catch(KeyNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
    });
-   _server.MapPost("/api/admin/series",(HttpContext c,SaveSeriesRequest request,SeriesCatalogService series,LibraryService files,CatalogCategoryService categories)=>{
+   _server.MapPost("/api/admin/series",(HttpContext c,SaveSeriesRequest request,SeriesCatalogService series,CatalogCategoryService categories)=>{
     if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeriesId.Length>80||string.IsNullOrWhiteSpace(request.Title)||request.Title.Length>160||(request.Description?.Length??0)>2000||(request.Genre?.Length??0)>80||(request.Year is not null&&(request.Year<1888||request.Year>DateTime.UtcNow.Year+5))||(request.PosterPath?.Length??0)>200||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))||request.OrganizationType is not ("None" or "Seasons" or "Parts")) return Results.BadRequest(new{error="تحقق من بيانات المسلسل وطريقة تنظيمه"});
     if(request.OrganizationType=="None"&&series.ListSeasons(request.SeriesId).Count>0)return Results.BadRequest(new{error="هذا المسلسل يحتوي على مواسم أو أجزاء مسجلة. لا يمكن تحويله إلى تنظيم مباشر قبل نقل محتواها."});
@@ -707,7 +701,7 @@ public partial class App : Application
      if(!string.IsNullOrWhiteSpace(poster)&&!PosterExists(poster,posters))return Results.BadRequest(new{error="مسار غلاف المسلسل غير صالح أو أن ملف الصورة غير موجود"});
      if(category is null||category.ContentKind!="Series"||!category.IsPublished||parent is null||!parent.IsPublished)return Results.BadRequest(new{error="اختر تصنيف مسلسلات منشوراً تابعاً لقسم رئيسي منشور"});
     }
-    series.SaveSeries(request); if(!string.IsNullOrWhiteSpace(request.FolderPath)) files.RegisterFolder(request.FolderPath); return Results.Ok(new{saved=true});
+    series.SaveSeries(request); return Results.Ok(new{saved=true});
    });
    _server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalogService series)=>{ if(!IsAdmin(c)) return Results.NotFound(); return Results.Ok(series.ListSeasons(seriesId)); });
    _server.MapPost("/api/admin/seasons",(HttpContext c,SaveSeasonRequest request,SeriesCatalogService series)=>{
