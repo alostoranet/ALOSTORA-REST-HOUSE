@@ -248,11 +248,15 @@ Write-Host "PASS: Home is hidden on landing only; inner pages expose Home and Ba
 
 if ($html.Contains('content.append(catalogSectionTitle(main.title))') -or
     $html.Contains('content.append(catalogSectionTitle(category.title))') -or
-    $html.Contains('content.append(catalogSectionTitle(name))') -or
-    -not $html.Contains('catalogHero(show.title,show.posterPath,seriesMeta,show.description,false)')) {
-    throw "An inner category title is duplicated in the content; it must appear only once beside Home and Back."
+    $html.Contains('content.append(catalogSectionTitle(name))' -and $html.Contains("catalogPage.type==='series'") -or
+    $html.Contains('catalogHero(show.title,show.posterPath,seriesMeta,show.description,false)') -or
+    $html.Contains('catalogHero(name,season.posterPath||show.posterPath,seasonMeta,show.description,true)') -or
+    -not $html.Contains("categoryFilter.value=(pageType==='main'||pageType==='category')") -or
+    -not $html.Contains('id="categoryFilter" class="header-filter"') -or
+    -not $html.Contains('id="sort" class="header-filter"')) {
+    throw "Series/season pages must show only their season or episode cards, and compact category/sort controls must remain beside search."
 }
-Write-Host "PASS: inner catalog titles appear once in the navigation row, not repeated below."
+Write-Host "PASS: series and season pages avoid duplicate hero posters; compact category/sort selectors sit beside search."
 
 
 
