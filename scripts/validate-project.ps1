@@ -601,7 +601,7 @@ Write-Host "PASS: compact search sits below navigation; new movies, series, and 
 if ($html -match 'الأقسام الداخلية|قسم مسلسلات|قسم فيديوهات|أقسام داخلية' -or
     $html -notmatch 'class="media-quick-nav"' -or
     $html -notmatch 'class="customer-nav" aria-label="التنقل الرئيسي"' -or
-    $html -notmatch 'catalog-card h3\{font-size:19px') {
+    $html -notmatch 'catalog-card h3\{[^}]*font-size:19px') {
     throw "Customer catalog still exposes internal labels or cluttered navigation, or lacks clear section titles."
 }
 Write-Host "PASS: customer home uses clean primary navigation, named sections, and large readable category titles."
