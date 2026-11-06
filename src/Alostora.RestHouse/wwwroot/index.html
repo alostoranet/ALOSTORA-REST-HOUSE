@@ -311,6 +311,7 @@ function applyCustomerSettings(refreshMedia=false){
   button.hidden=kind==='all'?!customerSettings.showCatalog&&!enabled.Audio&&!enabled.Books&&!enabled.Apps:!enabled[kind];
  });
  document.querySelector('#contactNav').hidden=customerSettings.showContact===false;
+ document.querySelector('#continueNav').hidden=customerSettings.showContinueWatching===false;
  document.querySelector('#contactCta').hidden=customerSettings.showContact===false;
  if(customerSettings.showContact===false&&!document.querySelector('#contactView').hidden)showCustomerView('home');
  if(activeMediaKind!=='all'&&!enabled[activeMediaKind])activeMediaKind='all';
