@@ -414,7 +414,7 @@ function renderMediaLibraries(){
  if(quickNav){quickNav.hidden=availableKinds.length===0;for(const button of quickNav.querySelectorAll('.media-tab')){button.hidden=!availableKinds.includes(button.dataset.kind);button.classList.toggle('active',button.dataset.kind===activeMediaKind);}}
  const titles={all:'الصوتيات والكتب والتطبيقات',Audio:'مكتبة الصوتيات',Books:'مكتبة الكتب',Apps:'مكتبة التطبيقات'};
  document.querySelector('#mediaLibraryTitle').textContent=titles[activeMediaKind]||titles.all;
- section.hidden=activeMediaKind==='all'&&rows.length===0;
+ section.hidden=activeMediaKind==='all';
  const oldAudio=document.querySelector('#sharedAudioPlayer');
  if(oldAudio){oldAudio.pause();oldAudio.remove();}
  grid.replaceChildren();hint.textContent='';
@@ -568,10 +568,12 @@ function renderCatalogPage(){
  const playerSection=document.querySelector('#playerSection');
  if(!content||!catalogPage||!playerSection)return;
  const pageType=catalogPage.type||'home';
+ const quickNav=document.querySelector('#mediaQuickNav');if(quickNav&&pageType!=='home')quickNav.hidden=true;
+ const arrivals=document.querySelector('#newArrivals');if(arrivals&&pageType!=='home')arrivals.hidden=true;
  pageHead.hidden=pageType==='home';
   toolbar.hidden=pageType!=='category';
   continueSection.hidden=pageType!=='continue';
- message.hidden=pageType!=='home';
+ message.hidden=true;
  back.hidden=pageType==='home'||catalogStack.length===0;
  back.textContent='رجوع';
  const titles={home:'الرئيسية',main:'الأقسام',category:'المحتوى',series:'المسلسل',season:'الحلقات',player:'المشاهدة الآن',continue:'متابعة المشاهدة'};
@@ -985,9 +987,9 @@ function showCustomerView(view){
  document.querySelector('.header-search').hidden=!home||customerSettings.showCatalog===false||activeMediaKind!=='all';
  window.scrollTo({top:0,behavior:'smooth'});
 }
-document.querySelector('#homeNav').addEventListener('click',()=>{activeMediaKind='all';document.querySelectorAll('.media-tab').forEach(x=>x.classList.toggle('active',x.dataset.kind==='all'));showCustomerView('home');document.querySelector('#catalogView').hidden=false;document.querySelector('#catalogToolbar').hidden=false;document.querySelector('#welcomePanel').hidden=false;document.querySelector('#message').hidden=false;renderMediaLibraries();goCatalogHome();applyCustomerSettings();});
+document.querySelector('#homeNav').addEventListener('click',()=>{activeMediaKind='all';document.querySelectorAll('.media-tab').forEach(x=>x.classList.remove('active'));document.querySelector('#mediaLibrary').hidden=true;showCustomerView('home');document.querySelector('#catalogView').hidden=false;goCatalogHome();renderMediaLibraries();applyCustomerSettings();});
 document.querySelector('#contactNav').addEventListener('click',()=>{goCatalogHome();document.querySelector('#sharedAudioPlayer')?.pause();showCustomerView('contact');});
-document.querySelector('#continueNav').addEventListener('click',()=>{showCustomerView('home');document.querySelector('#catalogView').hidden=false;navigateCatalog({type:'continue',title:'متابعة المشاهدة'});});
+document.querySelector('#continueNav').addEventListener('click',()=>{activeMediaKind='all';document.querySelectorAll('.media-tab').forEach(x=>x.classList.remove('active'));document.querySelector('#mediaLibrary').hidden=true;showCustomerView('home');document.querySelector('#catalogView').hidden=false;navigateCatalog({type:'continue',title:'متابعة المشاهدة'});});
 document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener('click',()=>{
  activeMediaKind=button.dataset.kind||'all';
  document.querySelectorAll('.media-tab').forEach(x=>x.classList.toggle('active',x===button));
