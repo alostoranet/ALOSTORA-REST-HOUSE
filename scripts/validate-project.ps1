@@ -203,18 +203,18 @@ if ($html -notmatch 'id="catalogView"' -or
 }
 Write-Host "PASS: customer catalog uses separate navigation pages and a dedicated player view."
 # The landing page has no redundant Home control; inside catalog pages Home and Back remain adjacent and functional.
-if ($html -notmatch 'id="catalogHome"' -or
-    $html -notmatch 'id="catalogBack"' -or
-    $html -notmatch "homeButton.hidden=pageType==='home'" -or
-    $html -notmatch "document.querySelector('#catalogHome').addEventListener('click',goCatalogHome)" -or
-    $html -notmatch "pageHead.hidden=pageType==='home'" -or
-    $html -notmatch "customerNav.hidden=pageType!=='home'" -or
-    $html -notmatch "toolbar.hidden=pageType!=='category'" -or
-    $html -notmatch 'crumb.textContent=catalogPage.title' -or
-    $html -notmatch 'catalog-player-page video|#playerSection video') {
+if (-not $html.Contains('id="catalogHome"') -or
+    -not $html.Contains('id="catalogBack"') -or
+    -not $html.Contains("homeButton.hidden=pageType==='home'") -or
+    -not $html.Contains("document.querySelector('#catalogHome').addEventListener('click',goCatalogHome)") -or
+    -not $html.Contains("pageHead.hidden=pageType==='home'") -or
+    -not $html.Contains("customerNav.hidden=pageType!=='home'") -or
+    -not $html.Contains("toolbar.hidden=pageType!=='category'") -or
+    -not $html.Contains("crumb.textContent=catalogPage.title") -or
+    ($html -notmatch 'catalog-player-page video|#playerSection video')) {
     throw "Customer navigation must hide Home on the landing page and show working Home and Back controls inside catalog pages."
 }
-if ($html -notmatch 'catalog-back' -or $html -notmatch 'catalog-home' -or $html -notmatch 'customer-ad-stage{aspect-ratio:16/7;min-height:95px') {
+if ($html -notmatch 'catalog-back' -or $html -notmatch 'catalog-home' -or $html -notmatch 'customer-ad-stage\{aspect-ratio:16/7;min-height:95px') {
     throw "Mobile catalog controls or compact ad spacing are missing."
 }
 Write-Host "PASS: landing page has no redundant Home control; inner pages expose Home and Back together with compact category filters."
