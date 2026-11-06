@@ -678,3 +678,10 @@ if ($html -notmatch 'announcement-banner p\{display:flex;align-items:center' -or
     throw "Announcement ticker vertical clipping or continuous motion regression detected."
 }
 Write-Host "PASS: announcement ticker text has vertical padding and retains its continuous marquee."
+# The Windows management app exposes a safe placeholder for future official updates.
+if ($xaml -notmatch 'Content="التحديثات" Click="Updates_Click"' -or
+    $code -notmatch 'void Updates_Click\(' -or
+    $code -notmatch 'سيتم توفير خدمة التحديثات قريباً') {
+    throw "The Windows app must expose the prepared updates action without requiring an update URL yet."
+}
+Write-Host "PASS: the Windows app includes a prepared updates button and a clear not-yet-available message."
