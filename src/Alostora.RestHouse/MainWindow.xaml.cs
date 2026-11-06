@@ -342,6 +342,7 @@ public partial class MainWindow : Window
     {
         try
         {
+            HeaderBrandLogo.Source = new BitmapImage(new Uri("pack://application:,,,/Assets/alostora.ico"));
             var profile = await _http.GetFromJsonAsync<RestHouseProfileAdmin>("/api/admin/profile");
             if (profile is null) return;
             RestHouseNameBox.Text = profile.RestHouseName;
@@ -357,6 +358,7 @@ public partial class MainWindow : Window
                 image.EndInit();
                 image.Freeze();
                 BrandLogoPreview.Source = image;
+                HeaderBrandLogo.Source = image;
             }
             BrandProfileStatusText.Text = "تم تحميل هوية الاستراحة والشبكة.";
         }
