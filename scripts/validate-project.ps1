@@ -188,6 +188,20 @@ if ($html -notmatch 'id="catalogView"' -or
     throw "Customer catalog must use separate category, program, season, and player pages."
 }
 Write-Host "PASS: customer catalog uses separate navigation pages and a dedicated player view."
+# Mobile customer pages must keep home free of redundant controls and expose only Back inside sections.
+if ($html -match 'id="catalogHome"' -or
+    $html -notmatch 'id="catalogPageHead"' -or
+    $html -notmatch 'id="catalogToolbar"[^>]*>[\s\S]*?<select id="collection"' -or
+    $html -notmatch 'pageHead\.hidden=pageType===\x27home\x27' -or
+    $html -notmatch 'toolbar\.hidden=pageType!==\x27category\x27' -or
+    $html -notmatch 'crumb\.textContent=catalogPage\.title' -or
+    $html -notmatch 'catalog-player-page video|#playerSection video') {
+    throw "Customer mobile navigation must hide Home on the home page, keep only Back in sections, and scope compact filters to categories."
+}
+if ($html -notmatch 'catalog-back' -or $html -notmatch 'customer-ad-stage\{aspect-ratio:16/6;min-height:82px') {
+    throw "Mobile catalog controls or compact ad spacing are missing."
+}
+Write-Host "PASS: mobile customer navigation has a single Back control in sections, compact category filters, and reduced vertical chrome."
 
 
 # A category may be published without a poster; new category forms default to published.
