@@ -21,6 +21,10 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 .nav-button.active{background:linear-gradient(135deg,#d9bd83,#b89354);border-color:#d9bd83;color:#17283a}
 .continue-nav{font-size:13px;padding-inline:13px}
 .header-search{display:flex;align-items:center;gap:7px;margin-top:11px;width:100%;max-width:680px;min-width:0}
+.catalog-page-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.catalog-content-filters{display:flex;align-items:center;gap:6px;margin-inline-start:auto}
+.catalog-content-filters .header-filter{width:clamp(88px,20vw,116px);height:36px}
+@media(max-width:420px){.catalog-content-filters{gap:5px}.catalog-content-filters .header-filter{width:92px;height:35px;font-size:11px}}
 .search-box{display:flex;flex:1 1 auto;align-items:center;gap:7px;min-width:0;width:auto;height:40px;padding:0 11px;border:1px solid #3b566d;border-radius:22px;background:#0d2031;color:var(--gold);transition:border-color .18s,box-shadow .18s}
 .header-filter{flex:0 0 auto;width:clamp(84px,22vw,116px);height:40px;min-width:0;padding:5px 7px;border:1px solid #3b566d;border-radius:9px;background:#142b40;color:#edf2f6;font-size:12px;font-weight:700}
 .header-filter:focus{outline:2px solid #d6b779;outline-offset:1px}
@@ -232,7 +236,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
  .catalog-hero img,.catalog-hero .poster-empty{width:96px;flex-basis:96px}
 }
 </style></head><body>
-<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="homeNav" class="nav-button compact-top-nav" type="button" hidden>⌂ الرئيسية</button><button id="contactNav" class="nav-button compact-top-nav" type="button">✉ تواصل مع الإدارة</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label><select id="categoryFilter" class="header-filter" aria-label="تصفية حسب القسم"><option value="">كل الأقسام</option></select><select id="sort" class="header-filter" aria-label="ترتيب المحتوى"><option value="title">الاسم</option><option value="year">الأحدث</option><option value="rating">التقييم</option></select></div></header>
+<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="homeNav" class="nav-button compact-top-nav" type="button" hidden>⌂ الرئيسية</button><button id="contactNav" class="nav-button compact-top-nav" type="button">✉ تواصل مع الإدارة</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
 <div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p><span id="announcementMessage"></span></p></div>
 <section id="customerAds" class="customer-ads" aria-label="إعلانات الاستراحة" hidden>
  <div id="customerAdStage" class="customer-ad-stage"></div>
@@ -259,7 +263,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
 <div id="downloadList"></div>
 </section>
 <section id="catalogView" aria-live="polite">
-<div class="catalog-page-head" id="catalogPageHead"><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div></div>
+<div class="catalog-page-head" id="catalogPageHead"><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div><div id="catalogContentFilters" class="catalog-content-filters" hidden><select id="categoryFilter" class="header-filter" aria-label="تصفية حسب القسم"><option value="">كل الأقسام</option></select><select id="sort" class="header-filter" aria-label="ترتيب المحتوى"><option value="title">الاسم</option><option value="year">الأحدث</option><option value="rating">التقييم</option></select></div></div>
 <div class="toolbar" id="catalogToolbar">
 <select id="collection" aria-label="نوع العرض"><option value="">كل المحتوى</option><option value="favorites">المفضلة فقط</option></select>
 </div>
@@ -622,6 +626,8 @@ function renderCatalogPage(){
  const playerSection=document.querySelector('#playerSection');
  if(!content||!catalogPage||!playerSection)return;
  const pageType=catalogPage.type||'home';
+ const contentFilters=document.querySelector('#catalogContentFilters');
+ if(contentFilters)contentFilters.hidden=!(pageType==='category'||pageType==='series'||pageType==='season'||pageType==='continue');
  const categoryFilter=document.querySelector('#categoryFilter');
  if(categoryFilter)categoryFilter.value=(pageType==='main'||pageType==='category')?String(catalogPage.categoryId||''):'';
  const customerNav=document.querySelector('.customer-nav');if(customerNav)customerNav.hidden=false;
