@@ -666,14 +666,14 @@ if ($html -notmatch '<nav class="customer-nav"[^>]*>\s*<button id="homeNav"' -or
     $html -notmatch 'تواصل مع الإدارة للطلب والاستفسار' -or
     $html -notmatch "document\.querySelector\('#contactCta'\)\.addEventListener\('click',openCustomerContact\)" -or
     $html -notmatch 'class="credit-pair"' -or
-    $html -notmatch 'developer-credit strong\{color:#e4d1a8;font-size:12px' -or
+    $html -notmatch 'developer-credit strong\{color:#e4d1a8;font-size:14px' -or
     $html -notmatch 'compact-top-nav') {
     throw "Customer contact buttons or enlarged developer credit layout regressed."
 }
 Write-Host "PASS: contact actions are available in the header and above the developer credit on every customer page."
 # Announcement ticker text must have vertical room and must not replace its continuous marquee animation with an entry animation.
 if ($html -notmatch 'announcement-banner p\{display:flex;align-items:center' -or
-    $html -notmatch 'announcement-message-marquee 30s linear' -or
+    $html -notmatch 'announcement-message-marquee 18s linear .3s infinite' -or
     $html -match 'announcement-banner\.is-entering #announcementMessage\{animation:announcement-message-reveal') {
     throw "Announcement ticker vertical clipping or continuous motion regression detected."
 }
