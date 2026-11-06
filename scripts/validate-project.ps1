@@ -651,15 +651,15 @@ Write-Host "PASS: customer home uses clean primary navigation, named sections, a
 
 
 
-# Customer playback must have a canonical LAN URL fallback, and season detail must retain the series poster and shared hero layout.
+# Customer playback keeps its LAN fallback; season pages show episodes directly without a duplicate hero poster.
 if ($html -notmatch "item=\{\.\.\.item,url:'/media/'\+encodeURIComponent\(item\.id\)\}" -or
-    $html -notmatch "catalogHero\(name,season\.posterPath\|\|show\.posterPath" -or
+if ($html -notmatch "item=\{\.\.\.item,url:'/media/'\+encodeURIComponent\(item\.id\)\}" -or
+    $html -match "catalogHero\(name,season\.posterPath\|\|show\.posterPath" -or
     $html -notmatch "catalogSectionTitle\('حلقات '\+name\)") {
-    throw "Customer playback fallback or season detail layout regression detected."
 }
-Write-Host "PASS: catalog playback has a canonical LAN media URL fallback and season pages reuse the series detail hero."
+    throw "Customer playback fallback or single-poster season layout regression detected."
 # Home is absent only on the landing page; the compact contact button is in the persistent header, not the footer.
-if ($html -notmatch "pageHead.hidden=pageType==='home'" -or
+Write-Host "PASS: catalog playback has a canonical LAN media URL fallback; season pages show episodes without duplicate hero posters."
     $html -notmatch '<nav class="customer-nav"[^>]*>\s*<button id="homeNav"' -or
     $html -notmatch 'id="contactNav"' -or
     $html -notmatch 'class="credit-pair"' -or
