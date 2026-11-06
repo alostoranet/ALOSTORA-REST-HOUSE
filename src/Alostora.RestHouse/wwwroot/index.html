@@ -208,6 +208,9 @@ button:disabled{cursor:not-allowed;opacity:.58}
  .catalog-episode{align-items:flex-start;padding:11px}
  .catalog-episode button{flex:0 0 auto;white-space:nowrap}
  #continueGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ #watchedGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .watched-card{padding:10px}
+ .watched-card button{width:100%;padding:7px 8px;font-size:11px}
  .continue-card{padding:11px}
  .continue-card button{width:100%;padding:7px 8px;font-size:11px}
  #mediaGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -1035,7 +1038,7 @@ document.querySelector('#catalogHome').addEventListener('click',goCatalogHome);
 function goCatalogHome(){if(catalogPage.type==='player'){playbackGeneration++;flushProgress();if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}player.pause();player.onerror=null;player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;}catalogStack=[];catalogPage={type:'home',title:'الرئيسية'};renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});}
 function showCustomerView(view){
  const home=view==='home',homeView=document.querySelector('#homeView'),contactView=document.querySelector('#contactView');
- homeView.hidden=!home;contactView.hidden=home;
+ homeView.hidden=!home;contactView.hidden=home;document.querySelector('#contactCta').hidden=!home||customerSettings.showContact===false;
  document.querySelector('#homeNav').classList.toggle('active',home);
  document.querySelector('#contactNav').classList.toggle('active',!home);
  document.querySelector('#homeNav').setAttribute('aria-pressed',String(home));
