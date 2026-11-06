@@ -393,7 +393,7 @@ if ($series -notmatch 'seasonCount = seasons\.Length' -or
 }
 Write-Host "PASS: series catalog exposes counts and average rating; empty placeholder is absent."
 if ($series -notmatch 'allowedVideoIds is null \|\| allowedVideoIds\.Contains\(videoId\)' -or
-    $html -notmatch 'catalogHero\(show\.title,show\.posterPath,seriesMeta,show\.description\)' -or
+    $html -notmatch 'catalogHero\(show\.title,show\.posterPath,seriesMeta,show\.description,false\)' -or
     $html -notmatch 'episodeCount=seasons\.reduce') {
     throw "Customer series details or public episode publication filtering are incomplete."
 }
