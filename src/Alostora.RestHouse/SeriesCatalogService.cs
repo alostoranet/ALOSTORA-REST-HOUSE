@@ -3,7 +3,7 @@ using System.IO;
 
 namespace Alostora.RestHouse;
 
-public sealed record SeriesRecord(string SeriesId, string Title, string Description, int? Year, string Genre, string? PosterPath, string? FolderPath, string? CategoryId, string Section, bool IsPublished, string OrganizationType);
+public sealed record SeriesRecord(string SeriesId, string Title, string Description, int? Year, string Genre, string? PosterPath, string? FolderPath, string? CategoryId, string Section, bool IsPublished, string OrganizationType, string UpdatedUtc);
 public sealed record SeasonRecord(long SeasonId, string SeriesId, int SeasonNumber, string Title, string? FolderPath);
 public sealed record EpisodeRecord(long EpisodeId, long SeasonId, string VideoId, int EpisodeNumber, string Title);
 public sealed record MissingEpisodeRecord(long EpisodeId, string SeriesId, string SeriesTitle, int SeasonNumber, int EpisodeNumber, string Title, string VideoId);
@@ -67,9 +67,9 @@ public sealed class SeriesCatalogService
     public IReadOnlyList<SeriesRecord> ListSeries()
     {
         using var c=Open(); using var cmd=c.CreateCommand();
-        cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath,CategoryId,Section,IsPublished,OrganizationType FROM SeriesCatalog ORDER BY Title COLLATE NOCASE";
+        cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath,CategoryId,Section,IsPublished,OrganizationType,UpdatedUtc FROM SeriesCatalog ORDER BY Title COLLATE NOCASE";
         using var r=cmd.ExecuteReader(); var rows=new List<SeriesRecord>();
-        while(r.Read()) rows.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetString(7),r.GetString(8),r.GetInt32(9)!=0,r.GetString(10)));
+        while(r.Read()) rows.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetString(7),r.GetString(8),r.GetInt32(9)!=0,r.GetString(10),r.GetString(11)));
         return rows;
     }
     public IReadOnlyList<SeasonRecord> ListSeasons(string seriesId)
@@ -103,8 +103,8 @@ public sealed class SeriesCatalogService
 
     public SeriesRecord? GetSeries(string id)
     {
-        using var c=Open(); using var cmd=c.CreateCommand(); cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath,CategoryId,Section,IsPublished,OrganizationType FROM SeriesCatalog WHERE SeriesId=$id"; cmd.Parameters.AddWithValue("$id",id);
-        using var r=cmd.ExecuteReader(); return r.Read()?new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetString(7),r.GetString(8),r.GetInt32(9)!=0,r.GetString(10)):null;
+        using var c=Open(); using var cmd=c.CreateCommand(); cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath,CategoryId,Section,IsPublished,OrganizationType,UpdatedUtc FROM SeriesCatalog WHERE SeriesId=$id"; cmd.Parameters.AddWithValue("$id",id);
+        using var r=cmd.ExecuteReader(); return r.Read()?new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetString(7),r.GetString(8),r.GetInt32(9)!=0,r.GetString(10),r.GetString(11)):null;
     }
     public void SaveSeries(SaveSeriesRequest x)
     {
@@ -398,8 +398,13 @@ public sealed class SeriesCatalogService
 
                 if (!r.IsDBNull(5))
                 {
-                    seasonMap[seasonId].Episodes.Add(new EpisodeRecord(
-                        r.GetInt64(5), seasonId, r.GetString(6), r.GetInt32(7), r.GetString(8)));
+                    var videoId = r.GetString(6);
+                    // Public viewers must only receive episodes whose source videos are published.
+                    if (allowedVideoIds is null || allowedVideoIds.Contains(videoId))
+                    {
+                        seasonMap[seasonId].Episodes.Add(new EpisodeRecord(
+                            r.GetInt64(5), seasonId, videoId, r.GetInt32(7), r.GetString(8)));
+                    }
                 }
             }
         }

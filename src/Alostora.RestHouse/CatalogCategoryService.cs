@@ -64,25 +64,68 @@ public sealed class CatalogCategoryService
         if(x.ContentKind!="Group"&&string.IsNullOrWhiteSpace(x.ParentId))throw new ArgumentException("اختر القسم الرئيسي أولاً");
         using var c=Open();
         using var transaction=c.BeginTransaction();
-        if(x.ParentId is null && x.ContentKind=="Group" && !x.IsPublished && !string.IsNullOrWhiteSpace(x.CategoryId))
+        var id=string.IsNullOrWhiteSpace(x.CategoryId)?Guid.NewGuid().ToString("N"):x.CategoryId.Trim();
+        var parentId=string.IsNullOrWhiteSpace(x.ParentId)?null:x.ParentId.Trim();
+
+        // The customer catalog supports exactly two levels: a top-level Group and its content subcategories.
+        // Reject malformed API requests here so they cannot create published categories that the customer UI cannot display.
+        if(x.ContentKind!="Group")
+        {
+            if(string.Equals(id,parentId,StringComparison.Ordinal))
+                throw new InvalidOperationException("لا يمكن أن يكون القسم الفرعي تابعاً لنفسه.");
+
+            var parentIsTopLevelGroup=false;
+            using(var parent=c.CreateCommand())
+            {
+                parent.Transaction=transaction;
+                parent.CommandText="SELECT ParentId,ContentKind FROM CatalogCategories WHERE CategoryId=$parent";
+                parent.Parameters.AddWithValue("$parent",parentId!);
+                using var reader=parent.ExecuteReader();
+                if(!reader.Read())
+                    throw new InvalidOperationException("القسم الرئيسي المحدد غير موجود.");
+                parentIsTopLevelGroup=reader.IsDBNull(0)&&string.Equals(reader.GetString(1),"Group",StringComparison.Ordinal);
+            }
+            if(!parentIsTopLevelGroup)
+                throw new InvalidOperationException("يجب ربط القسم الفرعي بقسم رئيسي من المستوى الأول.");
+
+            if(!string.IsNullOrWhiteSpace(x.CategoryId))
+            {
+                using var children=c.CreateCommand();
+                children.Transaction=transaction;
+                children.CommandText="SELECT COUNT(*) FROM CatalogCategories WHERE ParentId=$id";
+                children.Parameters.AddWithValue("$id",id);
+                if(Convert.ToInt32(children.ExecuteScalar())>0)
+                    throw new InvalidOperationException("لا يمكن تحويل قسم رئيسي يحتوي أقساماً فرعية إلى قسم فرعي.");
+            }
+        }
+
+        if(parentId is null && x.ContentKind=="Group" && !x.IsPublished && !string.IsNullOrWhiteSpace(x.CategoryId))
         {
             using var publishedChildren=c.CreateCommand();
             publishedChildren.Transaction=transaction;
             publishedChildren.CommandText="SELECT COUNT(*) FROM CatalogCategories WHERE ParentId=$id AND IsPublished=1";
-            publishedChildren.Parameters.AddWithValue("$id",x.CategoryId.Trim());
+            publishedChildren.Parameters.AddWithValue("$id",id);
+            if(Convert.ToInt32(publishedChildren.ExecuteScalar())>0)
+                throw new InvalidOperationException("لا يمكن إلغاء نشر القسم الرئيسي قبل إلغاء نشر أقسامه الفرعية.");
+        }
+        if(parentId is null && x.ContentKind=="Group" && !x.IsPublished && !string.IsNullOrWhiteSpace(x.CategoryId))
+        {
+            using var publishedChildren=c.CreateCommand();
+            publishedChildren.Transaction=transaction;
+            publishedChildren.CommandText="SELECT COUNT(*) FROM CatalogCategories WHERE ParentId=$id AND IsPublished=1";
+            publishedChildren.Parameters.AddWithValue("$id",id);
             if(Convert.ToInt32(publishedChildren.ExecuteScalar())>0)
                 throw new InvalidOperationException("لا يمكن إلغاء نشر القسم الرئيسي قبل إلغاء نشر أقسامه الفرعية.");
         }
         using var cmd=c.CreateCommand();
         cmd.Transaction=transaction;
-        var id=string.IsNullOrWhiteSpace(x.CategoryId)?Guid.NewGuid().ToString("N"):x.CategoryId.Trim();
         cmd.CommandText="""
         INSERT INTO CatalogCategories(CategoryId,ParentId,Title,ContentKind,PosterPath,IsPublished,CreatedUtc)
         VALUES($id,$parent,$title,$kind,$poster,$published,$created)
         ON CONFLICT(CategoryId) DO UPDATE SET ParentId=excluded.ParentId,Title=excluded.Title,ContentKind=excluded.ContentKind,
         PosterPath=COALESCE(excluded.PosterPath,CatalogCategories.PosterPath),IsPublished=excluded.IsPublished
         """;
-        cmd.Parameters.AddWithValue("$id",id);cmd.Parameters.AddWithValue("$parent",(object?)x.ParentId??DBNull.Value);
+        cmd.Parameters.AddWithValue("$id",id);cmd.Parameters.AddWithValue("$parent",(object?)parentId??DBNull.Value);
         cmd.Parameters.AddWithValue("$title",x.Title.Trim());cmd.Parameters.AddWithValue("$kind",x.ContentKind);
         cmd.Parameters.AddWithValue("$poster",(object?)x.PosterPath??DBNull.Value);cmd.Parameters.AddWithValue("$published",x.IsPublished?1:0);
         cmd.Parameters.AddWithValue("$created",DateTime.UtcNow.ToString("O"));cmd.ExecuteNonQuery();transaction.Commit();

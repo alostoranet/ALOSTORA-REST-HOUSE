@@ -2,7 +2,7 @@ name: Build Windows application
 
 on:
   push:
-    branches: [main]
+    branches: [main, work/no-live-full-audit-20261104]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -30,6 +30,10 @@ jobs:
         shell: pwsh
         run: ./scripts/validate-project.ps1
 
+      - name: Validate Windows installer scripts
+        shell: pwsh
+        run: ./scripts/validate-installer.ps1
+
       - name: Restore SQLite test dependencies
         run: dotnet restore tests/Alostora.RestHouse.Tests/Alostora.RestHouse.Tests.csproj --runtime win-x64
 
@@ -39,24 +43,42 @@ jobs:
       - name: Build
         run: dotnet build src/Alostora.RestHouse/Alostora.RestHouse.csproj --configuration Release --runtime win-x64 --no-restore
 
+      - name: Load the real WPF management window (STA smoke test)
+        run: dotnet run --project tests/Alostora.RestHouse.WpfSmokeTest/Alostora.RestHouse.WpfSmokeTest.csproj --configuration Release --runtime win-x64
+
       - name: Publish self-contained Windows x64 application
         run: dotnet publish src/Alostora.RestHouse/Alostora.RestHouse.csproj --configuration Release --runtime win-x64 --self-contained true --no-restore
 
+      - name: Verify installer scripts are included in publish output
+        shell: pwsh
+        run: |
+          $publish = 'src/Alostora.RestHouse/bin/Release/net8.0-windows/win-x64/publish'
+          if (-not (Test-Path (Join-Path $publish 'Install-ALOSTORA-REST-HOUSE.ps1'))) { throw 'Install script missing from publish output.' }
+          if (-not (Test-Path (Join-Path $publish 'Uninstall-ALOSTORA-REST-HOUSE.ps1'))) { throw 'Uninstall script missing from publish output.' }
+
       - name: Install Inno Setup
         shell: pwsh
-        run: choco install innosetup --yes --no-progress
+        run: choco install innosetup --no-progress -y
 
       - name: Build single-file Windows installer
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force installer-output | Out-Null
-          & "${env:ProgramFiles(x86)}\\Inno Setup 6\\ISCC.exe" installer/ALOSTORA-REST-HOUSE.iss
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $publish = (Resolve-Path 'src/Alostora.RestHouse/bin/Release/net8.0-windows/win-x64/publish').Path
+          $output = Join-Path $env:GITHUB_WORKSPACE 'installer-output'
+          New-Item -ItemType Directory -Path $output -Force | Out-Null
+          $env:ALOSTORA_PUBLISH_DIR = $publish
+          $env:ALOSTORA_OUTPUT_DIR = $output
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (-not (Test-Path $compiler)) { throw 'Inno Setup compiler was not found after installation.' }
+          & $compiler 'installer/ALOSTORA-REST-HOUSE.iss'
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed to build the installer.' }
+          $setup = Join-Path $output 'ALOSTORA-REST-HOUSE-Setup.exe'
+          if (-not (Test-Path $setup)) { throw 'Single-file setup executable was not produced.' }
 
       - name: Upload single-file Windows installer
         uses: actions/upload-artifact@v7
         with:
-          name: ALOSTORA-REST-HOUSE-Installer
+          name: ALOSTORA-REST-HOUSE-Setup
           path: installer-output/ALOSTORA-REST-HOUSE-Setup.exe
           if-no-files-found: error
           retention-days: 14

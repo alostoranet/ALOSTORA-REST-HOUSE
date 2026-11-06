@@ -1,6 +1,7 @@
 using Alostora.RestHouse;
 using Microsoft.Data.Sqlite;
 using Xunit;
+using System.Text.Json;
 
 namespace Alostora.RestHouse.Tests;
 
@@ -18,6 +19,34 @@ public sealed class SeriesCatalogServiceTests : IDisposable
         _series = new SeriesCatalogService(_databasePath);
         _series.SaveSeries(new SaveSeriesRequest(
             "series-test", "مسلسل اختباري", "", 2026, "", null, IsPublished: false));
+    }
+
+    [Fact]
+    public void PublicSeriesCatalogOmitsEpisodesWhoseVideosAreNotPublished()
+    {
+        var libraryRoot = Path.Combine(_root, "public-library");
+        Directory.CreateDirectory(libraryRoot);
+        File.WriteAllBytes(Path.Combine(libraryRoot, "published.mp4"), new byte[] { 1, 2, 3 });
+        File.WriteAllBytes(Path.Combine(libraryRoot, "unpublished.mp4"), new byte[] { 4, 5, 6 });
+
+        using var library = new LibraryService(libraryRoot, _databasePath);
+        var videos = library.List().ToDictionary(x => x.FileName);
+        var seasonId = _series.AddSeason(new SaveSeasonRequest("series-test", 1, "الموسم الأول"));
+        _series.AddEpisode(new SaveEpisodeRequest(seasonId, videos["published.mp4"].Id, 1, "حلقة منشورة"));
+        _series.AddEpisode(new SaveEpisodeRequest(seasonId, videos["unpublished.mp4"].Id, 2, "حلقة غير منشورة"));
+
+        var metadata = new VideoMetadataService(_databasePath);
+        var catalog = _series.GetCatalog(
+            library,
+            metadata,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "series-test" },
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { videos["published.mp4"].Id });
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(catalog));
+        var episodes = document.RootElement[0].GetProperty("seasons")[0].GetProperty("episodes");
+
+        var episode = Assert.Single(episodes.EnumerateArray());
+        Assert.Equal("حلقة منشورة", episode.GetProperty("title").GetString());
+        Assert.Equal(videos["published.mp4"].Id, episode.GetProperty("videoId").GetString());
     }
 
     [Fact]
