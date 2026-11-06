@@ -2455,7 +2455,8 @@ public partial class MainWindow : Window
                 showWelcome = CustomerShowWelcomeBox.IsChecked == true,
                 showAnnouncement = CustomerShowAnnouncementBox.IsChecked == true,
                 showDownloads = CustomerShowDownloadsBox.IsChecked == true,
-                showImageAds = CustomerShowImageAdsBox.IsChecked == true
+                showImageAds = CustomerShowImageAdsBox.IsChecked == true,
+                liveBroadcastUrl = string.IsNullOrWhiteSpace(CustomerLiveBroadcastUrlBox.Text) ? null : CustomerLiveBroadcastUrlBox.Text.Trim()
             };
             var response = await _http.PostAsJsonAsync("/api/admin/customer-settings", request);
             if (!response.IsSuccessStatusCode)
