@@ -11,7 +11,7 @@ function Test-Administrator {
 }
 
 if (-not (Test-Administrator)) {
-    $arguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath, '-InstallPath', $InstallPath)
+    $arguments = '-NoProfile -ExecutionPolicy Bypass -File "' + $PSCommandPath + '" -InstallPath "' + $InstallPath + '"'
     Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList $arguments
     exit
 }
@@ -36,7 +36,8 @@ Get-ChildItem -LiteralPath $sourcePath -Force | Where-Object {
     Copy-Item -LiteralPath $_.FullName -Destination $InstallPath -Recurse -Force
 }
 Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $InstallPath 'Install-ALOSTORA-REST-HOUSE.ps1') -Force
-$uninstallerSource = Join-Path $sourcePath 'Uninstall-ALOSTORA-REST-HOUSE.ps1'`nif (-not (Test-Path -LiteralPath $uninstallerSource -PathType Leaf)) { throw 'لم يتم العثور على ملف إزالة البرنامج داخل الحزمة.' }
+$uninstallerSource = Join-Path $sourcePath 'Uninstall-ALOSTORA-REST-HOUSE.ps1'
+if (-not (Test-Path -LiteralPath $uninstallerSource -PathType Leaf)) { throw 'لم يتم العثور على ملف إزالة البرنامج داخل الحزمة.' }
 Copy-Item -LiteralPath $uninstallerSource -Destination (Join-Path $InstallPath 'Uninstall-ALOSTORA-REST-HOUSE.ps1') -Force
 
 $installedExe = Join-Path $InstallPath 'Alostora.RestHouse.exe'
