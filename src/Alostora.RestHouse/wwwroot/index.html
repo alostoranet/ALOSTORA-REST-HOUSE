@@ -574,6 +574,9 @@ function renderCatalogPage(){
  const playerSection=document.querySelector('#playerSection');
  if(!content||!catalogPage||!playerSection)return;
  const pageType=catalogPage.type||'home';
+ const customerNav=document.querySelector('.customer-nav');if(customerNav)customerNav.hidden=pageType!=='home';
+ const announcement=document.querySelector('#announcementBanner');if(announcement)announcement.hidden=pageType!=='home'||customerSettings.showAnnouncement===false||announcement.dataset.active!=='true';
+ const customerAds=document.querySelector('#customerAds');if(customerAds)customerAds.hidden=pageType!=='home'||customerSettings.showImageAds===false||customerAdItems.length===0;
  const quickNav=document.querySelector('#mediaQuickNav');if(quickNav&&pageType!=='home')quickNav.hidden=true;
  const arrivals=document.querySelector('#newArrivals');if(arrivals&&pageType!=='home')arrivals.hidden=true;
  pageHead.hidden=pageType==='home';
