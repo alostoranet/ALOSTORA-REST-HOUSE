@@ -409,6 +409,9 @@ function renderMediaLibraries(){
  const section=document.querySelector('#mediaLibrary'),grid=document.querySelector('#mediaGrid'),hint=document.querySelector('#mediaPlayerHint');
  const enabledKinds={Audio:customerSettings.showAudio!==false,Books:customerSettings.showBooks!==false,Apps:customerSettings.showApps!==false};
  const rows=mediaItems.filter(x=>(activeMediaKind==='all'||x.kind===activeMediaKind)&&enabledKinds[x.kind]!==false);
+ const quickNav=document.querySelector('#mediaQuickNav');
+ const availableKinds=['Audio','Books','Apps'].filter(kind=>enabledKinds[kind]&&mediaItems.some(x=>x.kind===kind));
+ if(quickNav){quickNav.hidden=availableKinds.length===0;for(const button of quickNav.querySelectorAll('.media-tab')){button.hidden=!availableKinds.includes(button.dataset.kind);button.classList.toggle('active',button.dataset.kind===activeMediaKind);}}
  const titles={all:'الصوتيات والكتب والتطبيقات',Audio:'مكتبة الصوتيات',Books:'مكتبة الكتب',Apps:'مكتبة التطبيقات'};
  document.querySelector('#mediaLibraryTitle').textContent=titles[activeMediaKind]||titles.all;
  section.hidden=activeMediaKind==='all'&&rows.length===0;
@@ -663,7 +666,7 @@ function renderCatalogPage(){
    return children.some(sub=>matchesQuery(sub)||(sub.contentKind==='Series'
     ?seriesItems.some(show=>show.categoryId===sub.categoryId&&show.isPublished===true&&matches(show)&&matchesQuery(show))
     :items.some(video=>video.categoryId===sub.categoryId&&video.isPublished===true&&matches(video)&&matchesQuery(video))));
-  });
+  }).sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'ar',{sensitivity:'base'}));
   content.append(catalogSectionTitle('الأقسام الرئيسية'));
   const grid=document.createElement('div');grid.className='catalog-grid';
   for(const main of mains){
@@ -678,7 +681,7 @@ function renderCatalogPage(){
   const main=categories.find(x=>x.categoryId===catalogPage.categoryId);
   if(!main){content.append(catalogEmpty('القسم غير موجود أو لم يعد منشوراً.'));return;}
   content.append(catalogSectionTitle(main.title));
-  const subs=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true);
+  const subs=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true).sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'ar',{sensitivity:'base'}));
   const grid=document.createElement('div');grid.className='catalog-grid';
   let shown=0;
   for(const sub of subs){
