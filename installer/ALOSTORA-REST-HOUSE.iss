@@ -3,7 +3,7 @@
 #define MyAppExeName "Alostora.RestHouse.exe"
 
 [Setup]
-AppId={{A4B2B5A9-4A7D-4C37-9C6C-ALOSTORA2026}
+AppId={{A4B2B5A9-4A7D-4C37-9C6C-202611060001}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher=ALOSTORA
