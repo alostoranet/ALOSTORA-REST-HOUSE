@@ -78,6 +78,13 @@ main{max-width:1320px;padding:26px 28px 18px}
 .catalog-compact-meta{margin:0 0 12px;line-height:1.6}
 .catalog-section-title{font-size:17px;margin:13px 0 10px}
 
+/* Each catalog tile uses a real button for keyboard and screen-reader access. */
+.catalog-open-button{display:flex;flex-direction:column;align-items:stretch;gap:8px;width:100%;min-width:0;padding:0;border:0;background:transparent;color:inherit;text-align:right;font:inherit;cursor:pointer}
+.catalog-open-button:focus-visible{outline:3px solid #f2c56b;outline-offset:4px;border-radius:10px}
+.catalog-open-button h3{margin:1px 0 0}
+.catalog-open-button small{color:#bdcddd;font-size:12px;line-height:1.55}
+.catalog-open-button .catalog-card-badge{color:#f0b7bb}
+.catalog-card button.secondary{align-self:stretch;min-height:42px}
 /* Unified customer catalog card sizing across every navigation level. */
 .catalog-grid,.catalog-rail{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))!important;gap:14px!important;overflow:visible!important;padding:0!important;scroll-snap-type:none!important}
 .catalog-rail .catalog-card{flex:initial!important;min-width:0!important;width:100%!important}
@@ -454,11 +461,14 @@ function renderCustomerOverview(){
  section.hidden=popular.length===0;
 }
 function catalogCard(title,subtitle,posterPath,action,badge,favoriteItem){
- const card=document.createElement('article');card.className='catalog-card';card.tabIndex=0;card.setAttribute('role','button');card.addEventListener('click',action);card.addEventListener('keydown',event=>{if(event.target===card&&(event.key==='Enter'||event.key===' ')){event.preventDefault();action();}});
- const poster=makePoster(posterPath,title);if(poster){poster.className=poster.tagName==='IMG'?'':'poster-empty';poster.classList.add('catalog-poster');card.append(poster);}
- const heading=document.createElement('h3');heading.textContent=title;card.append(heading);
- if(subtitle){const detail=document.createElement('small');detail.textContent=subtitle;card.append(detail);}
- if(badge){const tag=document.createElement('small');tag.textContent=badge;tag.style.color='#f0b7bb';card.append(tag);}
+ const card=document.createElement('article');card.className='catalog-card';
+ const open=document.createElement('button');open.type='button';open.className='catalog-open-button';open.addEventListener('click',action);
+ open.setAttribute('aria-label',(title||'فتح المحتوى')+(subtitle?' — '+subtitle:''));
+ const poster=makePoster(posterPath,title);if(poster){poster.className=poster.tagName==='IMG'?'':'poster-empty';poster.classList.add('catalog-poster');open.append(poster);}
+ const heading=document.createElement('h3');heading.textContent=title;open.append(heading);
+ if(subtitle){const detail=document.createElement('small');detail.textContent=subtitle;open.append(detail);}
+ if(badge){const tag=document.createElement('small');tag.className='catalog-card-badge';tag.textContent=badge;open.append(tag);}
+ card.append(open);
  if(favoriteItem)addFavoriteButton(card,favoriteItem);
  return card;
 }
