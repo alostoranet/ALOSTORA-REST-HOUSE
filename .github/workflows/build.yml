@@ -30,6 +30,10 @@ jobs:
         shell: pwsh
         run: ./scripts/validate-project.ps1
 
+      - name: Validate Windows installer scripts
+        shell: pwsh
+        run: ./scripts/validate-installer.ps1
+
       - name: Restore SQLite test dependencies
         run: dotnet restore tests/Alostora.RestHouse.Tests/Alostora.RestHouse.Tests.csproj --runtime win-x64
 
@@ -44,6 +48,13 @@ jobs:
 
       - name: Publish self-contained Windows x64 application
         run: dotnet publish src/Alostora.RestHouse/Alostora.RestHouse.csproj --configuration Release --runtime win-x64 --self-contained true --no-restore
+
+      - name: Verify installer scripts are included in publish output
+        shell: pwsh
+        run: |
+          $publish = 'src/Alostora.RestHouse/bin/Release/net8.0-windows/win-x64/publish'
+          if (-not (Test-Path (Join-Path $publish 'Install-ALOSTORA-REST-HOUSE.ps1'))) { throw 'Install script missing from publish output.' }
+          if (-not (Test-Path (Join-Path $publish 'Uninstall-ALOSTORA-REST-HOUSE.ps1'))) { throw 'Uninstall script missing from publish output.' }
 
       - name: Upload Windows x64 package
         uses: actions/upload-artifact@v7
