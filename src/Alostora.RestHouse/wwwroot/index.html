@@ -30,8 +30,8 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 .announcement-banner[hidden]{display:none!important}
 .announcement-banner strong{z-index:1;flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;padding:2px 3px;background:transparent;color:#e4c68f;font-size:12px;font-weight:800;white-space:nowrap;letter-spacing:.15px}
 .announcement-banner strong:before{content:"";width:7px;height:7px;border-radius:50%;background:#d45c61;box-shadow:0 0 0 4px #d45c6120,0 0 10px #d45c61a0}
-.announcement-banner p{display:flex;align-items:center;flex:1 1 auto;min-width:0;max-width:100%;height:100%;min-height:28px;margin:0;overflow:hidden;white-space:nowrap;direction:rtl;padding-block:2px}
-.announcement-banner #announcementMessage{display:inline-block;width:max-content;max-width:none;white-space:nowrap;color:#f7f1e6;font-size:14px;font-weight:650;line-height:1.45;padding-block:3px;vertical-align:middle;text-shadow:0 1px 8px #0004;will-change:transform;animation:announcement-message-marquee 30s linear .8s infinite}
+.announcement-banner p{display:flex;align-items:center;flex:1 1 auto;min-width:0;max-width:100%;height:auto;min-height:34px;margin:0;overflow:hidden;white-space:nowrap;direction:rtl;padding:5px 0;box-sizing:border-box}
+.announcement-banner #announcementMessage{display:inline-block;width:max-content;max-width:none;white-space:nowrap;color:#f7f1e6;font-size:14px;font-weight:650;line-height:1.7;padding:3px 0 5px;vertical-align:middle;text-shadow:0 1px 8px #0004;will-change:transform;animation:announcement-message-marquee 30s linear .8s infinite}
 .announcement-banner:hover p{animation-play-state:paused}
 @keyframes announcement-message-reveal{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
 @keyframes announcement-message-marquee{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
@@ -255,7 +255,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
 <div id="downloadList"></div>
 </section>
 <section id="catalogView" aria-live="polite">
-<div class="catalog-page-head" id="catalogPageHead"><button id="catalogHome" class="catalog-home" type="button" hidden>⌂ الرئيسية</button><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div></div>
+<div class="catalog-page-head" id="catalogPageHead"><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div></div>
 <div class="toolbar" id="catalogToolbar">
 
 <select id="categoryFilter" aria-label="القسم" hidden><option value="">كل الأقسام</option></select>
@@ -617,7 +617,7 @@ function goCatalogBack(){
 }
 function renderCatalogPage(){
  const content=document.querySelector('#catalogContent'),back=document.querySelector('#catalogBack'),crumb=document.querySelector('#catalogBreadcrumb');
- const pageHead=document.querySelector('#catalogPageHead'),homeButton=document.querySelector('#catalogHome'),toolbar=document.querySelector('#catalogToolbar'),continueSection=document.querySelector('#continueSection'),message=document.querySelector('#message');
+ const pageHead=document.querySelector('#catalogPageHead'),toolbar=document.querySelector('#catalogToolbar'),continueSection=document.querySelector('#continueSection'),message=document.querySelector('#message');
  
  const playerSection=document.querySelector('#playerSection');
  if(!content||!catalogPage||!playerSection)return;
@@ -628,7 +628,7 @@ function renderCatalogPage(){
  const quickNav=document.querySelector('#mediaQuickNav');if(quickNav&&pageType!=='home')quickNav.hidden=true;
  const arrivals=document.querySelector('#newArrivals');if(arrivals&&pageType!=='home')arrivals.hidden=true;
  pageHead.hidden=pageType==='home';
- homeButton.hidden=pageType==='home';
+
  toolbar.hidden=pageType!=='category';
  continueSection.hidden=pageType!=='continue'||customerSettings.showContinueWatching===false;
  message.hidden=true;
@@ -823,7 +823,7 @@ function renderCatalogPage(){
   const name=season.title||((show.organizationType==='Parts'?'الجزء ':'الموسم ')+season.seasonNumber);
   const episodes=season.episodes||[];
   const seasonMeta=[show.title,episodes.length+' حلقة',show.year].filter(Boolean).join(' • ');
-  content.append(catalogHero(show.title,show.posterPath||season.posterPath,seasonMeta+' • '+name,show.description,false));
+  content.append(catalogHero(name,season.posterPath||show.posterPath,seasonMeta,show.description,true));
   content.append(catalogSectionTitle('حلقات '+name));
   if(!episodes.length){content.append(catalogEmpty('لا توجد حلقات في هذا الموسم بعد.'));return;}
   const episodeGrid=document.createElement('div');episodeGrid.className='catalog-grid';
@@ -1027,8 +1027,6 @@ async function loadBrandProfile(){
  }catch{}
 }
 document.querySelector('#catalogBack').addEventListener('click',goCatalogBack);
-document.querySelector('#catalogHome').addEventListener('click',goCatalogHome);
-function goCatalogHome(){if(catalogPage.type==='player'){playbackGeneration++;flushProgress();if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}player.pause();player.onerror=null;player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;}catalogStack=[];catalogPage={type:'home',title:'الرئيسية'};renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});}
 function showCustomerView(view){
  const home=view==='home',homeView=document.querySelector('#homeView'),contactView=document.querySelector('#contactView');
  homeView.hidden=!home;contactView.hidden=home;document.querySelector('#contactCta').hidden=!home||customerSettings.showContact===false;
