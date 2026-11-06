@@ -441,7 +441,7 @@ if ($app -notmatch 'viewCount=viewCounts' -or $html -notmatch 'viewCount' -or
     (Get-Content (Join-Path $root "src/Alostora.RestHouse/WatchProgressService.cs") -Raw) -notmatch 'GetViewCounts') {
     throw "Per-video viewer counts are not wired from storage to the customer catalog."
 }
-if ($html -notmatch 'تصميم وبرمجة: محمد النظاري') { throw "Developer attribution footer is missing." }
+if ($html -notmatch 'تصميم وبرمجة الاستراحة' -or $html -notmatch 'م/ أبو عبيدة محمد النظاري' -or $html -notmatch 'https://wa.me/967777824918' -or $html -notmatch '<bdi dir="ltr">777824918</bdi>') { throw "Developer attribution and WhatsApp footer are missing." }
 Write-Host "PASS: hierarchical categories, logo reports, reopenable messages, view counts, and developer attribution are wired."
 
 # The admin media register must support selecting a folder and filtering its videos.
