@@ -398,8 +398,13 @@ public sealed class SeriesCatalogService
 
                 if (!r.IsDBNull(5))
                 {
-                    seasonMap[seasonId].Episodes.Add(new EpisodeRecord(
-                        r.GetInt64(5), seasonId, r.GetString(6), r.GetInt32(7), r.GetString(8)));
+                    var videoId = r.GetString(6);
+                    // Public viewers must only receive episodes whose source videos are published.
+                    if (allowedVideoIds is null || allowedVideoIds.Contains(videoId))
+                    {
+                        seasonMap[seasonId].Episodes.Add(new EpisodeRecord(
+                            r.GetInt64(5), seasonId, videoId, r.GetInt32(7), r.GetString(8)));
+                    }
                 }
             }
         }
