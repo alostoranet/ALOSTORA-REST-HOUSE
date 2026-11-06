@@ -294,6 +294,7 @@
 <TextBox x:Name="EpisodeTitleBox" Grid.Column="0" Padding="8" Margin="0,0,6,8" ToolTip="اسم الحلقة (اختياري)"/>
 <TextBox x:Name="EpisodeNumberBox" Grid.Column="1" Padding="8" Margin="0,0,0,8" Text="1" ToolTip="رقم الحلقة"/>
 </Grid>
+<WrapPanel Margin="0,0,0,8"><Button Content="اختيار صورة خاصة للحلقة" Click="UploadEpisodePoster_Click" Padding="10,7" Margin="0,0,6,0"/><TextBlock x:Name="EpisodePosterStatusText" Text="صورة الحلقة اختيارية؛ عند عدم اختيار صورة سيُستخدم غلاف المسلسل." Foreground="#64748B" VerticalAlignment="Center" TextWrapping="Wrap"/></WrapPanel>
 <WrapPanel HorizontalAlignment="Right"><Button Content="حفظ الحلقة الجديدة" Click="AddEpisode_Click" Padding="12,8" Margin="0,0,6,0"/><Button x:Name="UpdateEpisodeInEditorButton" Content="حفظ تعديل الحلقة" Click="UpdateEpisode_Click" Padding="12,8" Visibility="Collapsed"/></WrapPanel></StackPanel></Expander></StackPanel>
 
 </StackPanel></ScrollViewer></TabItem>
