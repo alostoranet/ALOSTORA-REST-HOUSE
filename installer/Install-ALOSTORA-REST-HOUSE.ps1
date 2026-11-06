@@ -35,7 +35,7 @@ Get-ChildItem -LiteralPath $sourcePath -Force | Where-Object {
 } | ForEach-Object {
     Copy-Item -LiteralPath $_.FullName -Destination $InstallPath -Recurse -Force
 }
-Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $InstallPath 'Install-ALOSTORA-REST-HOUSE.ps1') -Force
+Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $InstallPath 'Install-ALOSTORA-REST-HOUSE.ps1') -Force`n$uninstallerSource = Join-Path $sourcePath 'Uninstall-ALOSTORA-REST-HOUSE.ps1'`nif (-not (Test-Path -LiteralPath $uninstallerSource -PathType Leaf)) { throw 'لم يتم العثور على ملف إزالة البرنامج داخل الحزمة.' }`nCopy-Item -LiteralPath $uninstallerSource -Destination (Join-Path $InstallPath 'Uninstall-ALOSTORA-REST-HOUSE.ps1') -Force
 
 $installedExe = Join-Path $InstallPath 'Alostora.RestHouse.exe'
 if (-not (Test-Path -LiteralPath $installedExe -PathType Leaf)) {
