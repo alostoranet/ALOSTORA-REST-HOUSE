@@ -142,7 +142,10 @@ if (-not $html.Contains('id="watchedSection"') -or
     -not $html.Contains('id="contactNav"') -or
     -not $html.Contains('تواصل مع الإدارة') -or
     -not $html.Contains('class="credit-pair"') -or
-    $html.Contains('id="contactCta"')) {
+    -not $html.Contains('id="contactCta"') -or
+    -not $html.Contains('class="footer-contact-button"') -or
+    $html.IndexOf('id="contactCta"') -gt $html.IndexOf('class="developer-credit"') -or
+    -not $html.Contains("document.querySelector('#contactCta').addEventListener('click',openCustomerContact)")) {
     throw "The customer page must provide a viewer-scoped watched history and compact contact navigation above the content."
 }
 Write-Host "PASS: customer watch hub shows resume and watched videos; compact contact navigation is in the header."
