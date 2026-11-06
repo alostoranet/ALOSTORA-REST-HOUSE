@@ -648,3 +648,27 @@ Write-Host "PASS: customer home uses clean primary navigation, named sections, a
 
 
 
+
+
+# Customer playback must have a canonical LAN URL fallback, and season detail must retain the series poster and shared hero layout.
+if ($html -notmatch "item=\{\.\.\.item,url:'/media/'\+encodeURIComponent\(item\.id\)\}" -or
+    $html -notmatch "catalogHero\(show\.title,show\.posterPath\|\|season\.posterPath" -or
+    $html -notmatch "catalogSectionTitle\('حلقات '\+name\)") {
+    throw "Customer playback fallback or season detail layout regression detected."
+}
+Write-Host "PASS: catalog playback has a canonical LAN media URL fallback and season pages reuse the series detail hero."
+# The home page has no Home navigation item; the inner-page Home shortcut remains scoped to detail navigation.
+if ($html -notmatch "homeButton\.hidden=pageType==='home'" -or
+    $html -notmatch '<nav class="customer-nav"[^>]*>\s*<button id="continueNav"' -or
+    $html -notmatch 'class="credit-pair"' -or
+    $html -notmatch 'class="footer-contact-button"') {
+    throw "Customer navigation or compact contact/developer credit layout regressed."
+}
+Write-Host "PASS: the home landing page omits a redundant Home menu item and compact contact/developer controls share one row group."
+# Announcement ticker text must have vertical room and must not replace its continuous marquee animation with an entry animation.
+if ($html -notmatch 'announcement-banner p\{display:flex;align-items:center' -or
+    $html -notmatch 'announcement-message-marquee 30s linear' -or
+    $html -match 'announcement-banner\.is-entering #announcementMessage\{animation:announcement-message-reveal') {
+    throw "Announcement ticker vertical clipping or continuous motion regression detected."
+}
+Write-Host "PASS: announcement ticker text has vertical padding and retains its continuous marquee."
