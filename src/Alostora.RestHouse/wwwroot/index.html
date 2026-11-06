@@ -300,6 +300,7 @@ button.secondary:hover,.watched-card button:hover,.download-remove:hover,.custom
 
 #homeNav{background:linear-gradient(135deg,#f0c96b,#b9852d);border-color:#ffe09a;color:#17283a}
 #homeNav:hover,#homeNav.active{background:linear-gradient(135deg,#ffdc82,#c18e36);border-color:#fff0bd;color:#17283a}
+#liveBroadcastNav{background:linear-gradient(135deg,#a52b35,#74202b);border-color:#e35b63;color:#fff;text-decoration:none}#liveBroadcastNav:hover{background:linear-gradient(135deg,#c93640,#8e202b);border-color:#ff9da3;color:#fff;text-decoration:none}
 #contactNav{background:linear-gradient(135deg,#c93640,#8e202b);border-color:#e35b63;color:#fff}
 #contactNav:hover,#contactNav.active{background:linear-gradient(135deg,#e04b55,#a92834);border-color:#ff9da3;color:#fff}
 .catalog-card:hover{border-color:#d6aa3b}
@@ -307,7 +308,7 @@ button.secondary:hover,.watched-card button:hover,.download-remove:hover,.custom
 #playerSection{border-color:#42617e;box-shadow:0 10px 26px #0003}
 @media(max-width:600px){.nav-button{padding:10px 13px;font-size:13px}}
 </style></head><body>
-<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="homeNav" class="nav-button compact-top-nav" type="button" hidden>⌂ الرئيسية</button><button id="contactNav" class="nav-button compact-top-nav" type="button">✉ تواصل مع الإدارة</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
+<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="homeNav" class="nav-button compact-top-nav" type="button" hidden>⌂ الرئيسية</button><a id="liveBroadcastNav" class="nav-button compact-top-nav" href="#" target="_blank" rel="noopener noreferrer" hidden>▶ البث المباشر</a><button id="contactNav" class="nav-button compact-top-nav" type="button">✉ تواصل مع الإدارة</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
 <div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p><span id="announcementMessage"></span></p></div>
 <section id="customerAds" class="customer-ads" aria-label="إعلانات الاستراحة" hidden>
  <div id="customerAdStage" class="customer-ad-stage"></div>
@@ -386,6 +387,7 @@ function applyCustomerSettings(refreshMedia=false){
   const kind=button.dataset.kind||'all';
   button.hidden=kind==='all'?!customerSettings.showCatalog&&!enabled.Audio&&!enabled.Books&&!enabled.Apps:!enabled[kind];
  });
+ const liveBroadcastNav=document.querySelector('#liveBroadcastNav');if(liveBroadcastNav){const liveUrl=String(customerSettings.liveBroadcastUrl||'').trim();const validLiveUrl=/^https?:\/\//i.test(liveUrl);liveBroadcastNav.hidden=!validLiveUrl;liveBroadcastNav.href=validLiveUrl?liveUrl:'#';}
  const contactNav=document.querySelector('#contactNav');if(contactNav)contactNav.hidden=customerSettings.showContact===false;
  document.querySelector('#continueNav').hidden=customerSettings.showContinueWatching===false;
  if(customerSettings.showContact===false&&!document.querySelector('#contactView').hidden)showCustomerView('home');
