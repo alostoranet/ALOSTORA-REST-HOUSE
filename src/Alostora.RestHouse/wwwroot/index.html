@@ -229,7 +229,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
  .catalog-hero img,.catalog-hero .poster-empty{width:96px;flex-basis:96px}
 }
 </style></head><body>
-<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
+<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
 <div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p><span id="announcementMessage"></span></p></div>
 <section id="customerAds" class="customer-ads" aria-label="إعلانات الاستراحة" hidden>
  <div id="customerAdStage" class="customer-ad-stage"></div>
@@ -310,7 +310,7 @@ function applyCustomerSettings(refreshMedia=false){
   const kind=button.dataset.kind||'all';
   button.hidden=kind==='all'?!customerSettings.showCatalog&&!enabled.Audio&&!enabled.Books&&!enabled.Apps:!enabled[kind];
  });
- document.querySelector('#contactNav').hidden=customerSettings.showContact===false;
+ const contactNav=document.querySelector('#contactNav');if(contactNav)contactNav.hidden=customerSettings.showContact===false;
  document.querySelector('#continueNav').hidden=customerSettings.showContinueWatching===false;
  document.querySelector('#contactCta').hidden=customerSettings.showContact===false;
  if(customerSettings.showContact===false&&!document.querySelector('#contactView').hidden)showCustomerView('home');
@@ -1038,15 +1038,13 @@ function goCatalogHome(){if(catalogPage.type==='player'){playbackGeneration++;fl
 function showCustomerView(view){
  const home=view==='home',homeView=document.querySelector('#homeView'),contactView=document.querySelector('#contactView');
  homeView.hidden=!home;contactView.hidden=home;document.querySelector('#contactCta').hidden=!home||customerSettings.showContact===false;
- document.querySelector('#contactNav').classList.toggle('active',!home);
- document.querySelector('#contactNav').setAttribute('aria-pressed',String(!home));
+ const contactNav=document.querySelector('#contactNav');if(contactNav){contactNav.classList.toggle('active',!home);contactNav.setAttribute('aria-pressed',String(!home));}
  document.querySelector('#customerAds').hidden=!home||customerSettings.showImageAds===false||customerAdItems.length===0;
  const announcement=document.querySelector('#announcementBanner');if(announcement)announcement.hidden=!home||customerSettings.showAnnouncement===false||announcement.dataset.active!=='true';
  document.querySelector('.header-search').hidden=!home||customerSettings.showCatalog===false||activeMediaKind!=='all';
  window.scrollTo({top:0,behavior:'smooth'});
 }
 function openCustomerContact(){goCatalogHome();document.querySelector('#sharedAudioPlayer')?.pause();showCustomerView('contact');}
-document.querySelector('#contactNav').addEventListener('click',openCustomerContact);
 document.querySelector('#contactCta').addEventListener('click',openCustomerContact);
 document.querySelector('#continueNav').addEventListener('click',()=>{activeMediaKind='all';document.querySelectorAll('.media-tab').forEach(x=>x.classList.remove('active'));document.querySelector('#mediaLibrary').hidden=true;showCustomerView('home');document.querySelector('#catalogView').hidden=false;navigateCatalog({type:'continue',title:'متابعة المشاهدة'});});
 document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener('click',()=>{
