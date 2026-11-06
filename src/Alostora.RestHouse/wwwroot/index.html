@@ -500,14 +500,26 @@ function isRecentlyAdded(value){if(!value)return false;const date=new Date(value
 function renderNewArrivals(){
  const section=document.querySelector('#newArrivals'),grid=document.querySelector('#newArrivalsGrid'),count=document.querySelector('#newArrivalsCount');
  if(!section||!grid||!count)return;
- const recentVideos=items.filter(x=>x.isPublished===true&&x.kind!=='Series'&&isRecentlyAdded(x.updatedUtc)).map(x=>({...x,_arrivalType:'فيلم أو فيديو'}));
- const recentSeries=seriesItems.filter(x=>x.isPublished===true&&isRecentlyAdded(x.updatedUtc)).map(x=>({...x,_arrivalType:'مسلسل أو برنامج'}));
- const rows=[...recentVideos,...recentSeries].sort((a,b)=>new Date(b.updatedUtc)-new Date(a.updatedUtc)).slice(0,8);
+ const recentVideos=items.filter(x=>x.isPublished===true&&x.kind!=='Series'&&isRecentlyAdded(x.updatedUtc)).map(x=>({...x,_arrivalType:'فيلم أو فيديو',_arrivalKind:'video'}));
+ const recentSeries=seriesItems.filter(x=>x.isPublished===true&&isRecentlyAdded(x.updatedUtc)).map(x=>({...x,_arrivalType:'مسلسل أو برنامج',_arrivalKind:'series'}));
+ const videoById=new Map(items.map(x=>[x.id,x]));
+ const recentEpisodes=[];
+ for(const show of seriesItems.filter(x=>x.isPublished===true)){
+  for(const season of show.seasons||[])for(const episode of season.episodes||[]){
+   const video=videoById.get(episode.videoId);
+   if(video&&video.isPublished===true&&isRecentlyAdded(video.updatedUtc))
+    recentEpisodes.push({...video,_arrivalType:'حلقة جديدة • '+show.title,_arrivalKind:'video',_arrivalOrder:video.updatedUtc});
+  }
+ }
+ const rows=[...recentVideos,...recentSeries,...recentEpisodes].sort((a,b)=>new Date(b._arrivalOrder||b.updatedUtc)-new Date(a._arrivalOrder||a.updatedUtc)).slice(0,8);
  grid.replaceChildren();
  for(const item of rows){
-  const isSeries=!!item.seriesId;
+  const type=item._arrivalKind;
   const subtitle=[item._arrivalType,item.year,item.genre].filter(Boolean).join(' • ');
-  grid.append(catalogCard(item.title,subtitle,item.posterPath,()=>navigateCatalog(isSeries?{type:'series',seriesId:item.seriesId,title:item.title}:{type:'category',categoryId:item.categoryId,title:item.title}), 'جديد', isSeries?null:item));
+  const action=type==='series'
+   ?()=>navigateCatalog({type:'series',seriesId:item.seriesId,title:item.title})
+   :()=>play({id:item.id,url:item.url,title:item.title});
+  grid.append(catalogCard(item.title,subtitle,item.posterPath,action,'جديد',type==='video'?item:null));
  }
  count.textContent=rows.length?rows.length.toLocaleString('ar')+' إضافات جديدة':'';
  section.hidden=rows.length===0;
