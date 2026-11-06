@@ -499,9 +499,7 @@ public sealed class LibraryService : IDisposable
                 throw new InvalidOperationException("توجد ملفات خارج المجلد المحدد أو ليست ملفات فيديو صالحة.");
         }
 
-        var allFiles = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
-            .Where(path => ContentTypes.ContainsKey(Path.GetExtension(path)))
-            .Select(Path.GetFullPath).ToArray();
+        var allFiles = PreviewFolder(root).Select(file => file.FullPath).ToArray();
         var selectedSet = new HashSet<string>(selected, StringComparer.OrdinalIgnoreCase);
         using (var connection = new SqliteConnection(_connectionString))
         {
