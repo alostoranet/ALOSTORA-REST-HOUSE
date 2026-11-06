@@ -656,15 +656,18 @@ if ($html -notmatch "item=\{\.\.\.item,url:'/media/'\+encodeURIComponent\(item\.
     throw "Customer playback fallback or single-poster season layout regression detected."
 }
 Write-Host "PASS: catalog playback has a canonical LAN media URL fallback; season pages show episodes without duplicate hero posters."
-# Home is absent only on the landing page; the compact contact button is in the persistent header, not the footer.
+# Contact is available in the header and again on every customer page directly above the enlarged developer credit.
 if ($html -notmatch '<nav class="customer-nav"[^>]*>\s*<button id="homeNav"' -or
     $html -notmatch 'id="contactNav"' -or
+    $html -notmatch 'id="contactCta" class="footer-contact-button"' -or
+    $html -notmatch 'تواصل مع الإدارة للطلب والاستفسار' -or
+    $html -notmatch 'contactCta.*?openCustomerContact' -or
     $html -notmatch 'class="credit-pair"' -or
-    $html -match 'id="contactCta"' -or
+    $html -notmatch 'developer-credit strong\{color:#e4d1a8;font-size:12px' -or
     $html -notmatch 'compact-top-nav') {
-    throw "Customer navigation or compact header contact/developer credit layout regressed."
+    throw "Customer contact buttons or enlarged developer credit layout regressed."
 }
-Write-Host "PASS: Home is hidden only on the landing page; compact contact navigation is in the persistent header."
+Write-Host "PASS: contact actions are available in the header and above the developer credit on every customer page."
 # Announcement ticker text must have vertical room and must not replace its continuous marquee animation with an entry animation.
 if ($html -notmatch 'announcement-banner p\{display:flex;align-items:center' -or
     $html -notmatch 'announcement-message-marquee 30s linear' -or
