@@ -40,7 +40,7 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 .announcement-banner strong:before{content:"";width:7px;height:7px;border-radius:50%;background:#d3232d;box-shadow:0 0 0 3px #d3232d20,0 0 8px #d3232d80}
 .announcement-banner p{display:flex;align-items:center;justify-content:center;flex:1 1 auto;min-width:0;max-width:100%;height:auto;min-height:32px;margin:0;overflow:hidden;white-space:nowrap;direction:rtl;padding:2px 0;box-sizing:border-box}
 .announcement-banner #announcementMessage{display:inline-block;width:max-content;max-width:none;white-space:nowrap;color:#fff;font-size:14px;font-weight:800;line-height:1.55;padding:4px 0;vertical-align:middle;text-align:center;text-shadow:0 1px 3px #650a10;will-change:transform;animation:announcement-message-marquee 30s linear .8s infinite}
-.announcement-banner:hover #announcementMessage{animation-play-state:paused}
+/* Keep the urgent announcement moving continuously, including while the pointer is over it. */
 @keyframes announcement-message-reveal{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
 @keyframes announcement-message-marquee{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.announcement-banner #announcementMessage{animation:none;white-space:normal;transform:none;text-align:center}.announcement-banner p{white-space:normal}.announcement-banner.is-entering #announcementMessage{animation:none!important}}
