@@ -7,6 +7,7 @@ public sealed record WatchProgressRequest(string ViewerId, string VideoId, doubl
 public sealed record WatchProgressItem(string VideoId, double PositionSeconds, double DurationSeconds, DateTime UpdatedUtc);
 public sealed record WatchPlaybackRequest(string ViewerId, string VideoId, string PlaybackId);
 public sealed record WatchPlaybackItem(string VideoId, string ViewerId, DateTime StartedUtc);
+public sealed record WatchHistoryItem(string VideoId, DateTime StartedUtc);
 
 public sealed class WatchProgressService
 {
@@ -105,6 +106,30 @@ public sealed class WatchProgressService
         while (reader.Read())
             rows.Add(new(reader.GetString(0), reader.GetString(1),
                 DateTime.Parse(reader.GetString(2), null, System.Globalization.DateTimeStyles.RoundtripKind)));
+        return rows;
+    }
+
+    public IReadOnlyList<WatchHistoryItem> GetViewerHistory(string viewerId, int limit = 200)
+    {
+        if (string.IsNullOrWhiteSpace(viewerId) || viewerId.Length > 80) return [];
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT VideoId, MAX(StartedUtc) AS LastStartedUtc
+            FROM WatchHistory
+            WHERE ViewerId = $viewer
+            GROUP BY VideoId
+            ORDER BY LastStartedUtc DESC
+            LIMIT $limit;
+            """;
+        command.Parameters.AddWithValue("$viewer", viewerId.Trim());
+        command.Parameters.AddWithValue("$limit", Math.Clamp(limit, 1, 500));
+        using var reader = command.ExecuteReader();
+        var rows = new List<WatchHistoryItem>();
+        while (reader.Read())
+            rows.Add(new(reader.GetString(0),
+                DateTime.Parse(reader.GetString(1), null, System.Globalization.DateTimeStyles.RoundtripKind)));
         return rows;
     }
 
