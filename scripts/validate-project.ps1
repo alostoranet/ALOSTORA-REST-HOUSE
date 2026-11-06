@@ -246,14 +246,10 @@ if ($html -notmatch 'catalog-back' -or $html -notmatch 'catalog-home' -or $html 
 }
 Write-Host "PASS: Home is hidden on landing only; inner pages expose Home and Back together with compact category filters."
 
-if ($html.Contains('content.append(catalogSectionTitle(main.title))') -or
-    $html.Contains('content.append(catalogSectionTitle(category.title))') -or
-    $html.Contains('content.append(catalogSectionTitle(name))' -and $html.Contains("catalogPage.type==='series'") -or
-    $html.Contains('catalogHero(show.title,show.posterPath,seriesMeta,show.description,false)') -or
-    $html.Contains('catalogHero(name,season.posterPath||show.posterPath,seasonMeta,show.description,true)') -or
-    -not $html.Contains("categoryFilter.value=(pageType==='main'||pageType==='category')") -or
-    -not $html.Contains('id="categoryFilter" class="header-filter"') -or
-    -not $html.Contains('id="sort" class="header-filter"')) {
+$hasDuplicateSeriesHeading = $html.Contains('content.append(catalogSectionTitle(main.title))') -or $html.Contains('content.append(catalogSectionTitle(category.title))')
+$hasSeriesHero = $html.Contains('catalogHero(show.title,show.posterPath,seriesMeta,show.description,false)') -or $html.Contains('catalogHero(name,season.posterPath||show.posterPath,seasonMeta,show.description,true)')
+$hasCompactFilters = $html.Contains('id="categoryFilter" class="header-filter"') -and $html.Contains('id="sort" class="header-filter"')
+if ($hasDuplicateSeriesHeading -or $hasSeriesHero -or -not $hasCompactFilters -or -not $html.Contains("categoryFilter.value=(pageType==='main'||pageType==='category')")) {
     throw "Series/season pages must show only their season or episode cards, and compact category/sort controls must remain beside search."
 }
 Write-Host "PASS: series and season pages avoid duplicate hero posters; compact category/sort selectors sit beside search."
