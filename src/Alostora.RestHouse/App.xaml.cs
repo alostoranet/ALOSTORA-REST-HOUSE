@@ -945,6 +945,7 @@ public partial class App : Application
     return Results.Conflict(new{error="حذف ملفات الفيديو الأصلية معطّل حفاظاً على مكتبتك. استخدم «إزالة من المكتبة فقط» لإخفائها دون حذفها من القرص."});
    });
    _server.MapGet("/api/progress/{viewerId}",(string viewerId,WatchProgressService db)=>viewerId.Length<=80?Results.Ok(db.Get(viewerId)):Results.BadRequest());
+   _server.MapGet("/api/watch-history/{viewerId}",(string viewerId,WatchProgressService db)=>viewerId.Length is >0 and <=80?Results.Ok(db.GetViewerHistory(viewerId,500)):Results.BadRequest());
    _server.MapGet("/api/admin/watch-history",(HttpContext c,WatchProgressService db)=>IsAdmin(c)?Results.Ok(db.GetRecentPlayback(200)):Results.NotFound());
    _server.MapGet("/api/admin/watch-counts",(HttpContext c,WatchProgressService db)=>IsAdmin(c)?Results.Ok(new{total=db.GetTotalPlaybackCount(),viewCounts=db.GetViewCounts()}):Results.NotFound());
    _server.MapPost("/api/watch-events",(WatchPlaybackRequest request,WatchProgressService db,LibraryService svc,PublicCatalogAccessService publicCatalog)=>{if(string.IsNullOrWhiteSpace(request.ViewerId)||request.ViewerId.Length>80||string.IsNullOrWhiteSpace(request.PlaybackId)||request.PlaybackId.Length>80||string.IsNullOrWhiteSpace(request.VideoId)||svc.Resolve(request.VideoId) is null||!publicCatalog.IsVideoPublished(request.VideoId))return Results.BadRequest();db.RecordPlayback(request);return Results.Ok(new{recorded=true});});
