@@ -666,8 +666,17 @@ function renderCatalogPage(){
   const show=seriesItems.find(x=>x.seriesId===catalogPage.seriesId&&x.isPublished===true);
   if(!show){content.append(catalogEmpty('البرنامج أو المسلسل غير متاح حالياً.'));return;}
   const seasons=show.seasons||[],direct=show.directVideos||[];
-  content.append(catalogSectionTitle(show.title));
-  const summary=document.createElement('p');summary.className='catalog-compact-meta';summary.textContent=[show.year,show.genre].filter(Boolean).join(' • ');content.append(summary);
+  const episodeCount=seasons.reduce((total,season)=>total+(season.episodes||[]).length,0);
+  const seasonLabel=show.organizationType==='Parts'?'جزء':'موسم';
+  const seriesMeta=[
+   show.year,
+   show.genre,
+   seasons.length+' '+seasonLabel,
+   episodeCount+' حلقة',
+   direct.length?direct.length+' فيديو مباشر':'',
+   Number.isFinite(Number(show.rating))?'التقييم '+Number(show.rating).toFixed(1)+'/10':''
+  ].filter(Boolean).join(' • ');
+  content.append(catalogHero(show.title,show.posterPath,seriesMeta,show.description));
   if(direct.length){
    content.append(catalogSectionTitle('حلقات أو فيديوهات مباشرة'));
    const directGrid=document.createElement('div');directGrid.className='catalog-grid';
