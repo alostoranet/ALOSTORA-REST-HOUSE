@@ -101,8 +101,10 @@ if ($html -notmatch 'id="customerOverview"' -or
     throw "Customer home overview and popularity discovery are incomplete."
 }
 Write-Host "PASS: customer home shows published library counts and popular titles from real view counts."
-if ($html -notmatch "customerOverview'\)\.hidden=pageType!=='home'" -or
-    $html -notmatch "welcomePanel'\)\.hidden=pageType!=='home'") {
+if (($html -notmatch "customerOverview'\\)\\.hidden=pageType!=='home'" -and
+     $html -notmatch "customerOverview'\\)\\.hidden=true") -or
+    ($html -notmatch "welcomePanel'\\)\\.hidden=pageType!=='home'" -and
+     $html -notmatch "welcomePanel'\\)\\.hidden=true")){
     throw "Customer home discovery panels must not remain visible on detail or player pages."
 }
 Write-Host "PASS: customer home discovery panels are scoped to the home page."
