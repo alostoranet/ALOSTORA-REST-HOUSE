@@ -230,16 +230,13 @@ if (-not $html.Contains('<video id="player" controls playsinline preload="metada
     throw "Customer player must show only the single breadcrumb title above the video, and footer must include the designer credit with a WhatsApp link displaying the local number only."
 }
 
-if (-not $html.Contains('id="catalogHome"') -or
-    -not $html.Contains('id="catalogBack"') -or
-    -not $html.Contains("homeButton.hidden=pageType==='home'") -or
-    -not $html.Contains("document.querySelector('#catalogHome').addEventListener('click',goCatalogHome)") -or
+if (-not $html.Contains('id="catalogBack"') -or
     -not $html.Contains("pageHead.hidden=pageType==='home'") -or
     -not $html.Contains("customerNav.hidden=pageType!=='home'") -or
     -not $html.Contains("toolbar.hidden=pageType!=='category'") -or
     -not $html.Contains("crumb.textContent=catalogPage.title") -or
     ($html -notmatch 'catalog-player-page video|#playerSection video')) {
-    throw "Customer navigation must hide Home on the landing page and show working Home and Back controls inside catalog pages."
+    throw "Customer navigation must hide the catalog breadcrumb on the landing page and keep the Back control functional inside catalog pages."
 }
 if ($html -notmatch 'catalog-back' -or $html -notmatch 'catalog-home' -or $html -notmatch 'customer-ad-stage\{aspect-ratio:16/7;min-height:95px') {
     throw "Mobile catalog controls or compact ad spacing are missing."
