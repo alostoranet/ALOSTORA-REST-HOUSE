@@ -128,6 +128,24 @@ if ($html -notmatch 'id="continueNav"' -or
 }
 Write-Host "PASS: continue watching opens from a compact navigation entry; the home page stays focused on main categories."
 
+$watchService = Get-Content (Join-Path $root "src/Alostora.RestHouse/WatchProgressService.cs") -Raw
+$appSource = Get-Content (Join-Path $root "src/Alostora.RestHouse/App.xaml.cs") -Raw
+if (-not $html.Contains('id="watchedSection"') -or
+    -not $html.Contains('id="watchedGrid"') -or
+    -not $html.Contains('مشاهداتي') -or
+    -not $html.Contains('أكمل المشاهدة') -or
+    -not $html.Contains('شاهدتها مؤخرًا') -or
+    -not $html.Contains('watchHistoryRows') -or
+    -not $watchService.Contains('GetViewerHistory') -or
+    -not $appSource.Contains('"/api/watch-history/{viewerId}"') -or
+    -not $html.Contains('id="contactCta"') -or
+    -not $html.Contains('تواصل مع الإدارة للطلب والاستفسار') -or
+    $html.IndexOf('id="contactCta"') -gt $html.IndexOf('<footer class="developer-credit"')) {
+    throw "The customer page must provide a viewer-scoped watched history, a clear resume section, and a contact button above the developer footer."
+}
+Write-Host "PASS: customer watch hub shows resume and watched videos; contact CTA appears above the footer."
+
+
 
 
 
