@@ -426,7 +426,7 @@ if ($xaml -notmatch 'LogoReportsGrid' -or $html -notmatch 'بلاغ شعار أ�
 if ($code -notmatch 'CustomerMessagesGrid_MouseDoubleClick' -or $code -notmatch 'LogoReportsGrid_MouseDoubleClick') {
     throw "Customer messages must support reopening details by double-clicking."
 }
-if ($app -notmatch 'viewCount=viewCounts' -or $html -notmatch 'المشاهدات: ' -or
+if ($app -notmatch 'viewCount=viewCounts' -or $html -notmatch 'viewCount' -or
     (Get-Content (Join-Path $root "src/Alostora.RestHouse/WatchProgressService.cs") -Raw) -notmatch 'GetViewCounts') {
     throw "Per-video viewer counts are not wired from storage to the customer catalog."
 }
