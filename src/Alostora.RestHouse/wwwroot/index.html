@@ -231,8 +231,9 @@ button:disabled{cursor:not-allowed;opacity:.58}
  #playerSection h2{font-size:16px}
  #playerSection video{max-height:58vh}
 }
+.continue-nav{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:7px 12px;font-size:13px;border-radius:10px}.continue-nav:focus-visible{outline:3px solid #f2c56b;outline-offset:3px}#continueSection{margin:12px 0 20px;padding:0;border:0;background:transparent}#continueSection h2{font-size:20px;margin:8px 0 14px}#continueGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}@media(max-width:640px){.continue-nav{font-size:12px;padding:6px 9px;min-height:34px}#continueGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}}
 </style></head><body>
-<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><div class="header-search"><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل أو قسم..."></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
+<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><div class="header-search"><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل أو قسم..."></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح الفيديوهات التي بدأت مشاهدتها">▶ متابعة المشاهدة</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
 <div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p id="announcementMessage"></p></div>
 <section id="customerAds" class="customer-ads" aria-label="إعلانات الاستراحة" hidden>
  <div id="customerAdStage" class="customer-ad-stage"></div>
@@ -561,15 +562,16 @@ function renderCatalogPage(){
  const pageType=catalogPage.type||'home';
  pageHead.hidden=pageType==='home';
   toolbar.hidden=pageType!=='category';
-  continueSection.hidden=pageType!=='home';
+  continueSection.hidden=pageType!=='continue';
  message.hidden=pageType!=='home';
  back.hidden=pageType==='home'||catalogStack.length===0;
  back.textContent='رجوع';
- const titles={home:'الرئيسية',main:'الأقسام الداخلية',category:'المحتوى',series:'تفاصيل البرنامج',season:'الحلقات',player:'المشاهدة الآن'};
+ const titles={home:'الأقسام الرئيسية',main:'الأقسام الداخلية',category:'المحتوى',series:'تفاصيل البرنامج',season:'الحلقات',player:'المشاهدة الآن',continue:'متابعة المشاهدة'};
  crumb.textContent=catalogPage.title||titles[pageType]||'المكتبة';
  const query=(document.querySelector('#search')?.value||'').trim().toLocaleLowerCase('ar');
- document.querySelector('#welcomePanel').hidden=pageType!=='home'||customerSettings.showWelcome===false;
- document.querySelector('#customerOverview').hidden=pageType!=='home'||customerSettings.showWelcome===false||!!query;
+ // Keep the landing page focused on the main content categories.
+ document.querySelector('#welcomePanel').hidden=true;
+ document.querySelector('#customerOverview').hidden=true;
  const collection=document.querySelector('#collection')?.value||'';
  const sort=document.querySelector('#sort')?.value||'title';
  const matches=item=>!collection||(collection==='favorites'&&favorites.has(favoriteKey(item)));
@@ -644,8 +646,11 @@ function renderCatalogPage(){
   if(!content.children.length)content.append(catalogEmpty('لم نعثر على نتائج مطابقة. جرّب اسماً آخر أو جزءاً من العنوان.'));
   return;
  }
+ if(pageType==='continue'){
+  renderContinue();
+  return;
+ }
  if(pageType==='home'){
-  renderCustomerOverview();
   const mains=categories.filter(x=>x.parentId==null&&x.isPublished===true).filter(main=>{
    if(matchesQuery(main))return true;
    const children=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true);
@@ -976,6 +981,7 @@ function showCustomerView(view){
 }
 document.querySelector('#homeNav').addEventListener('click',()=>{activeMediaKind='all';document.querySelectorAll('.media-tab').forEach(x=>x.classList.toggle('active',x.dataset.kind==='all'));showCustomerView('home');document.querySelector('#catalogView').hidden=false;document.querySelector('#catalogToolbar').hidden=false;document.querySelector('#welcomePanel').hidden=false;document.querySelector('#message').hidden=false;renderMediaLibraries();goCatalogHome();applyCustomerSettings();});
 document.querySelector('#contactNav').addEventListener('click',()=>{goCatalogHome();document.querySelector('#sharedAudioPlayer')?.pause();showCustomerView('contact');});
+document.querySelector('#continueNav').addEventListener('click',()=>{showCustomerView('home');document.querySelector('#catalogView').hidden=false;navigateCatalog({type:'continue',title:'متابعة المشاهدة'});});
 document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener('click',()=>{
  activeMediaKind=button.dataset.kind||'all';
  document.querySelectorAll('.media-tab').forEach(x=>x.classList.toggle('active',x===button));
