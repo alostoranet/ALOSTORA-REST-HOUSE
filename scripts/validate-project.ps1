@@ -194,7 +194,7 @@ if (-not (Test-Path $customerSettingsTestsPath) -or
     $html -notmatch 'customerSettings\.showAudio') {
     throw "Customer page section visibility controls are incomplete."
 }
-if ($html -notmatch 'announcement-marquee' -or
+if ($html -notmatch 'announcement-message-marquee' -or
     $html -notmatch 'animationDuration' -or
     $xaml -notmatch 'الشريط الإعلاني المتحرك للعملاء') {
     throw "The customer announcement must be a styled scrolling banner managed by the admin."
@@ -614,7 +614,7 @@ Write-Host "PASS: published videos cannot be saved without a customer-facing sub
 
 # Announcement ticker uses a broadcast-style label without a gold filled badge, and scrolls smoothly only when active.
 if ($html -notmatch 'announcement-message-reveal' -or
-    $html -notmatch 'announcement-marquee' -or
+    $html -notmatch 'announcement-message-marquee' -or
     $html -notmatch 'const changed=banner.dataset.contentKey!==contentKey' -or
     $html -notmatch 'prefers-reduced-motion:reduce' -or
     $html -notmatch '<span id="announcementMessage"></span>' -or
