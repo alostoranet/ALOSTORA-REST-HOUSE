@@ -153,6 +153,14 @@ foreach ($testName in @("CreatesAndListsNestedManagedFolders", "RejectsPathTrave
 }
 Write-Host "PASS: nested folder management, path traversal protection, and non-destructive copy controls are wired."
 
+# Permanent video deletion is intentionally unavailable; the UI must not present a working destructive action.
+if ($xaml -notmatch 'Content="الحذف النهائي معطّل حفاظاً على الملفات"[^>]*IsEnabled="False"' -or
+    $xaml -match 'Click="DeleteVideo_Click"' -or
+    $xaml -notmatch 'الحذف النهائي لملفات الفيديو معطّل حالياً حفاظاً على ملفاتك') {
+    throw "The disabled permanent-delete action must be clearly labelled and must not be wired as an active button."
+}
+Write-Host "PASS: permanent video deletion is visibly disabled and the non-destructive library removal remains available."
+
 # Public catalog and media routes must enforce publication on the server, not only in browser JavaScript.
 $publicAccessPath = Join-Path $root "src/Alostora.RestHouse/PublicCatalogAccessService.cs"
 $publicAccess = Get-Content $publicAccessPath -Raw
