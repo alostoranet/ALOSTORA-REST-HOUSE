@@ -107,6 +107,15 @@ public partial class MainWindow : Window
         Closed += (_, _) => _messageRefreshTimer.Stop();
     }
 
+    private void Updates_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            "سيتم توفير خدمة التحديثات قريباً. سيتم ربط زر التحديث بموقع التحديث الرسمي عند إضافته من الإدارة.",
+            "تحديثات ALOSTORA REST HOUSE",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
     private async void RefreshMultiMediaLibrary_Click(object sender, RoutedEventArgs e)
     {
         await RefreshMultiMediaLibraryAsync();
