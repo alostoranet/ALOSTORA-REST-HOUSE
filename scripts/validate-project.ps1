@@ -326,6 +326,15 @@ if ($series -notmatch 'seasonCount = seasons\.Length' -or
     throw "Series cards are missing their season count, episode count, or average episode rating."
 }
 Write-Host "PASS: series catalog exposes counts and average rating; empty placeholder is absent."
+if ($series -notmatch 'allowedVideoIds is null \|\| allowedVideoIds\.Contains\(videoId\)' -or
+    $html -notmatch 'catalogHero\(show\.title,show\.posterPath,seriesMeta,show\.description\)' -or
+    $html -notmatch 'episodeCount=seasons\.reduce') {
+    throw "Customer series details or public episode publication filtering are incomplete."
+}
+if ($seriesTests -notmatch 'PublicSeriesCatalogOmitsEpisodesWhoseVideosAreNotPublished') {
+    throw "Public series episode visibility regression test is missing."
+}
+Write-Host "PASS: series details show useful metadata and public catalogs omit unpublished episodes."
 
 # The admin experience must expose separate editable registers for videos, series, and categories.
 if ($xaml -notmatch '<DataGrid x:Name="VideosGrid"' -or
