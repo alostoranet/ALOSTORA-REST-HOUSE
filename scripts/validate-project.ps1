@@ -83,15 +83,17 @@ foreach ($match in $scripts) {
 }
 Write-Host ("PASS: {0} inline viewer script block(s) passed Node.js syntax validation." -f $scripts.Count)
 
-# The customer home opens directly on the catalog; contact is a separate hidden view and the header has no redundant Home item.
+# The Home control is hidden only on the home page; internal pages retain Home and a compact contact entry in the persistent header.
 if ($html -notmatch 'id="homeView"' -or
     $html -notmatch 'id="contactView"[^>]*hidden' -or
-    $html -notmatch '<nav class="customer-nav"[^>]*>\s*<button id="continueNav"' -or
-    $html -notmatch "showCustomerView\('contact'\)" -or
-    $html -match '<nav class="customer-nav"[^>]*>[^<]*<button[^>]*>[^<]*الرئيسية') {
-    throw "Customer navigation must open on the catalog, keep contact separate, and omit a redundant Home item."
+    $html -notmatch 'id="homeNav"[^>]*hidden' -or
+    $html -notmatch 'id="contactNav"' -or
+    $html -notmatch 'id="continueNav"' -or
+    $html -notmatch 'function goCatalogHome\(' -or
+    $html -notmatch "showCustomerView\('contact'\)") {
+    throw "Customer navigation must hide Home only on the landing page and retain Home/contact controls on inner pages."
 }
-Write-Host "PASS: customer home opens directly on the catalog and contact remains a separate view."
+Write-Host "PASS: Home is hidden only on the landing page; internal pages retain Home and contact navigation."
 # The customer home must summarize published library content and surface genuinely popular titles.
 if ($html -notmatch 'id="customerOverview"' -or
     $html -notmatch 'id="overviewCategoryCount"' -or
@@ -137,13 +139,13 @@ if (-not $html.Contains('id="watchedSection"') -or
     -not $html.Contains('watchHistoryRows') -or
     -not $watchService.Contains('GetViewerHistory') -or
     -not $appSource.Contains('"/api/watch-history/{viewerId}"') -or
-    -not $html.Contains('id="contactCta"') -or
+    -not $html.Contains('id="contactNav"') -or
     -not $html.Contains('تواصل مع الإدارة') -or
     -not $html.Contains('class="credit-pair"') -or
-    $html.IndexOf('id="contactCta"') -lt $html.IndexOf('<footer class="developer-credit"')) {
-    throw "The customer page must provide a viewer-scoped watched history, a clear resume section, and a contact button above the developer footer."
+    $html.Contains('id="contactCta"')) {
+    throw "The customer page must provide a viewer-scoped watched history and compact contact navigation above the content."
 }
-Write-Host "PASS: customer watch hub shows resume and watched videos; contact CTA appears above the footer."
+Write-Host "PASS: customer watch hub shows resume and watched videos; compact contact navigation is in the header."
 
 
 
@@ -609,17 +611,16 @@ if ($code -notmatch 'PublishBox\.IsChecked\s*==\s*true\s*&&\s*selectedCategory\s
 }
 Write-Host "PASS: published videos cannot be saved without a customer-facing subcategory."
 
-# Announcement ticker uses a broadcast-style label without a gold filled badge, and scrolls smoothly only when active.
-if ($html -notmatch 'announcement-message-reveal' -or
-    $html -notmatch 'announcement-message-marquee' -or
+# Announcement ticker is a centered, red breaking-news strip with continuous readable motion.
+if ($html -notmatch 'announcement-message-marquee 30s linear' -or
+    $html -notmatch 'background:linear-gradient\(100deg,#9f1420,#d3232d 52%,#a91420\)' -or
+    $html -notmatch 'text-align:center' -or
     $html -notmatch 'const changed=banner.dataset.contentKey!==contentKey' -or
     $html -notmatch 'prefers-reduced-motion:reduce' -or
-    $html -notmatch '<span id="announcementMessage"></span>' -or
-    $html -notmatch 'background:transparent;color:#e4c68f' -or
-    $html -notmatch 'box-shadow:0 0 0 4px #d45c6120') {
-    throw "Customer broadcast-style announcement ticker, refresh behavior, or reduced-motion support is incomplete."
+    $html -notmatch '<span id="announcementMessage"></span>') {
+    throw "Customer red breaking-news ticker, refresh behavior, or reduced-motion support is incomplete."
 }
-Write-Host "PASS: announcement ticker uses a clean broadcast label, elegant scrolling text, and respects reduced-motion."
+Write-Host "PASS: announcement ticker uses a red breaking-news strip with centered scrolling text and reduced-motion support."
 
 
 # Customer search stays below navigation and new arrivals appear only when recently updated content exists.
