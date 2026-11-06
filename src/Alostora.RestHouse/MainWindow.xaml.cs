@@ -2976,7 +2976,11 @@ public partial class MainWindow : Window
             ContactTab.Header = fresh > 0 ? $"✉️ التواصل ({fresh})" : "✉️ التواصل";
             CustomerMessageStatusText.Text = $"إجمالي الرسائل: {rows.Length} — رسائل جديدة: {fresh}. اضغط على الرسالة لفتح تفاصيلها.";
             if (newlyArrived.Length > 0)
+            {
+                try { System.Media.SystemSounds.Exclamation.Play(); }
+                catch (Exception soundError) { App.LogDiagnostic("MainWindow.CustomerMessageNotificationSound", soundError); }
                 ShowNewCustomerMessageToast(newlyArrived[^1], newlyArrived.Length);
+            }
         }
         catch (Exception ex)
         {
