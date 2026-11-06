@@ -114,6 +114,16 @@ if ($html -notmatch "className='catalog-open-button'" -or
     throw "Customer catalog cards must use accessible native buttons with visible keyboard focus."
 }
 Write-Host "PASS: customer catalog cards use accessible native buttons and visible keyboard focus."
+# Continue watching is a compact navigation entry and a dedicated page, never an inline home-page shelf.
+if ($html -notmatch 'id="continueNav"' -or
+    $html -notmatch "continueSection\.hidden=pageType!=='continue'" -or
+    $html -notmatch "if\(pageType==='continue'\)" -or
+    $html -notmatch "navigateCatalog\(\{type:'continue'" -or
+    $html -notmatch "document\.querySelector\('#customerOverview'\)\.hidden=true") {
+    throw "Continue watching must open as a separate page and the home page must stay focused on main categories."
+}
+Write-Host "PASS: continue watching opens from a compact navigation entry; the home page stays focused on main categories."
+
 
 
 
