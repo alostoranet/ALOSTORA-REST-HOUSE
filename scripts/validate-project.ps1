@@ -588,16 +588,26 @@ if ($xaml -notmatch 'MediaStorageRootsGrid' -or
 }
 Write-Host "PASS: each registered media folder reports its own size and availability status."
 
-# This product build intentionally excludes all live-broadcast routes, controls, and player assets.
+# The optional live entry is URL-only: admin stores an external HTTP(S) link and customers open it in a new tab.
+if ($xaml -notmatch 'CustomerLiveBroadcastUrlBox' -or
+    $code -notmatch 'CustomerLiveBroadcastUrlBox\.Text = settings\.LiveBroadcastUrl' -or
+    $code -notmatch 'liveBroadcastUrl = ' -or
+    $app -notmatch 'request\.LiveBroadcastUrl' -or
+    $html -notmatch 'id="liveBroadcastNav"' -or
+    $html -notmatch 'liveBroadcastNav\.href=validLiveUrl\?liveUrl') {
+    throw "The optional external live URL setting is not fully wired from admin to customer page."
+}
+# Do not add an in-app live server, stream routes, player page, or HLS playback assets.
 if ($app -match 'MapGet\("/live"' -or
+    $app -match 'Map(Get|Post)\("/api/live' -or
     $xaml -match 'CopyLiveAddress_Click|LiveUrlText' -or
     $code -match 'CopyLiveAddress_Click|LiveUrlText' -or
     (Test-Path (Join-Path $root "src/Alostora.RestHouse/wwwroot/live.html")) -or
     (Test-Path (Join-Path $root "src/Alostora.RestHouse/wwwroot/hls.min.js")) -or
     (Test-Path (Join-Path $root "src/Alostora.RestHouse/wwwroot/HLSJS-LICENSE.txt"))) {
-    throw "Live broadcast routes, controls, or assets must not be included in this ALOSTORA REST HOUSE build."
+    throw "In-app live streaming routes, player controls, or HLS assets must not be included."
 }
-Write-Host "PASS: no live-broadcast route, admin control, player page, or HLS assets are included."
+Write-Host "PASS: external live URL only; no in-app live server, player, or HLS assets."
 # Series cover selection must preview immediately, after upload/lookup, and when an existing series is selected.
 if ($xaml -notmatch 'x:Name="SeriesPosterPreview"' -or
     $code -notmatch 'UpdateSeriesPosterPreview\(s\.PosterPath\)' -or
