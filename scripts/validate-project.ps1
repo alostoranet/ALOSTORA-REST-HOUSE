@@ -615,7 +615,7 @@ if ($code -notmatch 'PublishBox\.IsChecked\s*==\s*true\s*&&\s*selectedCategory\s
 Write-Host "PASS: published videos cannot be saved without a customer-facing subcategory."
 
 # Announcement ticker is a centered, red breaking-news strip with continuous readable motion.
-if ($html -notmatch 'announcement-message-marquee 30s linear' -or
+if ($html -notmatch 'announcement-message-marquee 18s linear .3s infinite' -or
     $html -notmatch 'background:linear-gradient\(100deg,#9f1420,#d3232d 52%,#a91420\)' -or
     $html -notmatch 'text-align:center' -or
     $html -notmatch 'const changed=banner.dataset.contentKey!==contentKey' -or
