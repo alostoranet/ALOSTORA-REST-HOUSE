@@ -222,7 +222,7 @@ if ($html -notmatch 'id="catalogView"' -or
     throw "Customer catalog must use separate category, program, season, and player pages."
 }
 Write-Host "PASS: customer catalog uses separate navigation pages and a dedicated player view."
-# The landing page has no redundant Home control; inside catalog pages Home and Back remain adjacent and functional.
+# The landing page hides Home; inside catalog pages Home and Back remain adjacent and functional.
 if (-not $html.Contains('<video id="player" controls playsinline preload="metadata"></video>') -or
     $html.Contains('id="nowPlayingTitle"') -or
     -not $html.Contains('تصميم وبرمجة الاستراحة') -or
@@ -234,16 +234,17 @@ if (-not $html.Contains('<video id="player" controls playsinline preload="metada
 
 if (-not $html.Contains('id="catalogBack"') -or
     -not $html.Contains("pageHead.hidden=pageType==='home'") -or
-    -not $html.Contains("customerNav.hidden=pageType!=='home'") -or
+    -not $html.Contains("customerNav.hidden=false") -or
+    -not $html.Contains("homeNav.hidden=pageType==='home'&&document.querySelector('#contactView').hidden") -or
     -not $html.Contains("toolbar.hidden=pageType!=='category'") -or
     -not $html.Contains("crumb.textContent=catalogPage.title") -or
     ($html -notmatch 'catalog-player-page video|#playerSection video')) {
-    throw "Customer navigation must hide the catalog breadcrumb on the landing page and keep the Back control functional inside catalog pages."
+    throw "Customer navigation must hide Home only on the landing page and keep Home/Back controls functional inside catalog pages."
 }
 if ($html -notmatch 'catalog-back' -or $html -notmatch 'catalog-home' -or $html -notmatch 'customer-ad-stage\{aspect-ratio:16/7;min-height:95px') {
     throw "Mobile catalog controls or compact ad spacing are missing."
 }
-Write-Host "PASS: landing page has no redundant Home control; inner pages expose Home and Back together with compact category filters."
+Write-Host "PASS: Home is hidden on landing only; inner pages expose Home and Back together with compact category filters."
 
 if ($html.Contains('content.append(catalogSectionTitle(main.title))') -or
     $html.Contains('content.append(catalogSectionTitle(category.title))') -or
