@@ -22,7 +22,7 @@ if (-not $installerItem) {
     throw 'Installer scripts are not configured for publish output.'
 }
 $uninstallerText = Get-Content -LiteralPath $paths[1] -Raw
-if ($uninstallerText -notmatch 'ProgramData' -or $uninstallerText -notmatch 'لم تُحذف') {
+if ($uninstallerText -notmatch 'ProgramData' -or $uninstallerText -notmatch 'ستبقى كما هي') {
     throw 'Uninstaller must explicitly preserve application data.'
 }
 Write-Host 'PASS: installer and uninstaller PowerShell syntax and publish inclusion validated.'
