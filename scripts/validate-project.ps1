@@ -4,11 +4,15 @@ $xamlPath = Join-Path $root "src/Alostora.RestHouse/MainWindow.xaml"
 $codePath = Join-Path $root "src/Alostora.RestHouse/MainWindow.xaml.cs"
 $appPath = Join-Path $root "src/Alostora.RestHouse/App.xaml.cs"
 $htmlPath = Join-Path $root "src/Alostora.RestHouse/wwwroot/index.html"
+$metadataPath = Join-Path $root "src/Alostora.RestHouse/VideoMetadataService.cs"
+$seriesPath = Join-Path $root "src/Alostora.RestHouse/SeriesCatalogService.cs"
 
 $xaml = Get-Content $xamlPath -Raw
 $code = Get-Content $codePath -Raw
 $app = Get-Content $appPath -Raw
 $html = Get-Content $htmlPath -Raw
+$metadata = Get-Content $metadataPath -Raw
+$series = Get-Content $seriesPath -Raw
 
 # Every event wired in XAML must have a real code-behind handler.
 $events = [regex]::Matches($xaml, '\b(?:Click|SelectionChanged|Loaded|Checked|Unchecked|TextChanged|Drop|DragOver)="([A-Za-z_]\w*)"') |
