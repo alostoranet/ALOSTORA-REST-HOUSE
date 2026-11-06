@@ -3261,6 +3261,7 @@ public partial class MainWindow : Window
         public bool ShowAnnouncement { get; set; } = true;
         public bool ShowDownloads { get; set; } = true;
         public bool ShowImageAds { get; set; } = true;
+        public string? LiveBroadcastUrl { get; set; }
     }
 
     private sealed class AnnouncementAdmin
