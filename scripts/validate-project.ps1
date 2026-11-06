@@ -207,6 +207,7 @@ if ($html -match 'id="catalogHome"' -or
     $html -notmatch 'id="catalogPageHead"' -or
     $html -notmatch 'id="catalogToolbar"[^>]*>[\s\S]*?<select id="collection"' -or
     $html -notmatch 'pageHead\.hidden=pageType===\x27home\x27' -or
+    $html -notmatch 'customerNav\.hidden=pageType!==\x27home\x27' -or
     $html -notmatch 'toolbar\.hidden=pageType!==\x27category\x27' -or
     $html -notmatch 'crumb\.textContent=catalogPage\.title' -or
     $html -notmatch 'catalog-player-page video|#playerSection video') {
