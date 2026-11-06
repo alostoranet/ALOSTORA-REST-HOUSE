@@ -661,7 +661,7 @@ if ($html -notmatch '<nav class="customer-nav"[^>]*>\s*<button id="homeNav"' -or
     $html -notmatch 'id="contactNav"' -or
     $html -notmatch 'id="contactCta" class="footer-contact-button"' -or
     $html -notmatch 'تواصل مع الإدارة للطلب والاستفسار' -or
-    $html -notmatch 'contactCta.*?openCustomerContact' -or
+    $html -notmatch "document\.querySelector\('#contactCta'\)\.addEventListener\('click',openCustomerContact\)" -or
     $html -notmatch 'class="credit-pair"' -or
     $html -notmatch 'developer-credit strong\{color:#e4d1a8;font-size:12px' -or
     $html -notmatch 'compact-top-nav') {
