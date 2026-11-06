@@ -85,6 +85,55 @@ public partial class MainWindow : Window
     private bool _customerMessagesInitialized;
     private bool _suppressVideoSeriesPickerEvent;
     private readonly DispatcherTimer _messageRefreshTimer = new() { Interval = TimeSpan.FromSeconds(30) };
+    private bool _isRefreshingCustomerMessages;
+
+    private async System.Threading.Tasks.Task InitializeManagementWindowSafelyAsync()
+    {
+        var steps = new (string Name, Func<System.Threading.Tasks.Task> Run)[]
+        {
+            ("ملف تعريف الاستراحة", LoadBrandProfileAsync),
+            ("الأقسام والتصنيفات", LoadCategoriesAsync),
+            ("مكتبة الفيديوهات", LoadVideosAsync),
+            ("المسلسلات", LoadSeriesAsync),
+            ("الحلقات الناقصة", LoadMissingEpisodesAsync),
+            ("رسائل العملاء", LoadCustomerMessagesAsync),
+            ("الإعلانات والتنبيهات", LoadAnnouncementAsync),
+            ("الإعلانات المصورة", LoadCustomerAdsAsync),
+            ("إعدادات صفحة العملاء ورابط البث", LoadCustomerPageSettingsAsync),
+            ("حد سرعة التنزيل", LoadDownloadSpeedLimitAsync),
+            ("أدوات الوسائط", CheckMediaToolsAsync),
+            ("المكتبات الإضافية", RefreshMultiMediaLibraryAsync),
+            ("مسارات تخزين الوسائط", RefreshMediaLibraryRootsAsync)
+        };
+
+        foreach (var step in steps)
+        {
+            try { await step.Run(); }
+            catch (Exception ex)
+            {
+                App.LogDiagnostic("MainWindow.Loaded / " + step.Name, ex);
+                try
+                {
+                    CustomerPageSettingsStatusText.Text = $"تعذر تحميل {step.Name}. بقيت بقية أقسام الإدارة قيد التحميل؛ راجع سجل الأخطاء.";
+                }
+                catch { }
+            }
+        }
+    }
+
+    private async System.Threading.Tasks.Task RefreshCustomerMessagesSafelyAsync()
+    {
+        if (_isRefreshingCustomerMessages) return;
+        _isRefreshingCustomerMessages = true;
+        try { await LoadCustomerMessagesAsync(); }
+        catch (Exception ex)
+        {
+            App.LogDiagnostic("MainWindow.CustomerMessagesTimer", ex);
+            try { CustomerPageSettingsStatusText.Text = "تعذر تحديث رسائل العملاء مؤقتاً. سيُعاد المحاولة تلقائياً."; }
+            catch { }
+        }
+        finally { _isRefreshingCustomerMessages = false; }
+    }
 
     public MainWindow(string root, string library, string posters, string? ffmpegPath)
         : this(root, library, posters, ffmpegPath, 8097)
@@ -113,8 +162,8 @@ public partial class MainWindow : Window
         DashboardPopularGrid.ItemsSource = _popularPlaybackRows;
         DashboardRecentGrid.ItemsSource = _recentPlaybackRows;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await LoadAnnouncementAsync(); await LoadCustomerAdsAsync(); await LoadCustomerPageSettingsAsync(); await LoadDownloadSpeedLimitAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); await RefreshMediaLibraryRootsAsync(); };
-        _messageRefreshTimer.Tick += async (_, _) => await LoadCustomerMessagesAsync();
+        Loaded += async (_, _) => await InitializeManagementWindowSafelyAsync();
+        _messageRefreshTimer.Tick += async (_, _) => await RefreshCustomerMessagesSafelyAsync();
         _messageRefreshTimer.Start();
         Closed += (_, _) => _messageRefreshTimer.Stop();
     }

@@ -105,7 +105,7 @@ public static class BackupService
             // Restore local branding and customer announcements when they exist in the archive.
             // Older archives without these files leave the current local settings untouched.
             Directory.CreateDirectory(applicationRoot);
-            foreach (var configName in new[] { "profile.json", "announcement.json", "customer-page-settings.json", "download-speed-settings.json", "customer-ads.json" })
+            foreach (var configName in new[] { "profile.json", "announcement.json", "customer-page-settings.json", "download-speed-settings.json", "customer-ads.json", "settings.json" })
             {
                 var extractedConfig = Path.Combine(tempDirectory, configName);
                 if (!File.Exists(extractedConfig)) continue;
@@ -162,7 +162,7 @@ public static class BackupService
         }
         finally
         {
-            foreach (var configName in new[] { "profile.json", "announcement.json", "customer-page-settings.json", "download-speed-settings.json", "customer-ads.json" })
+            foreach (var configName in new[] { "profile.json", "announcement.json", "customer-page-settings.json", "download-speed-settings.json", "customer-ads.json", "settings.json" })
                 try { var staged = Path.Combine(applicationRoot, configName + ".restore.tmp"); if (File.Exists(staged)) File.Delete(staged); } catch { }
             try { if (File.Exists(stagedDatabase)) File.Delete(stagedDatabase); } catch { }
             try { if (Directory.Exists(stagedPosters)) Directory.Delete(stagedPosters, recursive: true); } catch { }
@@ -265,7 +265,7 @@ public static class BackupService
             }
 
             var applicationRoot = Path.GetDirectoryName(Path.GetFullPath(databasePath))!;
-            foreach (var configName in new[] { "profile.json", "announcement.json", "customer-page-settings.json", "download-speed-settings.json", "customer-ads.json" })
+            foreach (var configName in new[] { "profile.json", "announcement.json", "customer-page-settings.json", "download-speed-settings.json", "customer-ads.json", "settings.json" })
             {
                 var sourceConfig = Path.Combine(applicationRoot, configName);
                 if (File.Exists(sourceConfig))
@@ -275,7 +275,7 @@ public static class BackupService
             File.WriteAllText(
                 Path.Combine(tempDirectory, "backup-info.txt"),
                 "ALOSTORA REST HOUSE backup\nCreated UTC: " + DateTime.UtcNow.ToString("O") +
-                "\nContains: SQLite database, poster images, local branding, customer announcement settings, customer page visibility settings, download speed settings, and customer image-ad metadata. Original media files (videos, audio, books, and apps) are not included.");
+                "\nContains: SQLite database, poster images, local branding, customer announcement settings, customer page visibility settings, download speed settings, application settings (library/poster paths, FFmpeg path, and server port), and customer image-ad metadata. Original media files (videos, audio, books, and apps) are not included.");
 
             var archiveDirectory = Path.GetDirectoryName(Path.GetFullPath(archivePath));
             if (string.IsNullOrEmpty(archiveDirectory))

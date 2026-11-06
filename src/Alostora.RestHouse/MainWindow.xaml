@@ -364,7 +364,7 @@
 <CheckBox x:Name="CustomerShowAnnouncementBox" Content="السماح بعرض شريط الإعلانات والتنبيهات" IsChecked="True"/>
 <CheckBox x:Name="CustomerShowDownloadsBox" Content="إظهار مركز التنزيلات للعميل" IsChecked="True" Margin="0,10,0,0"/>
 <CheckBox x:Name="CustomerShowImageAdsBox" Content="إظهار الإعلانات المصورة للعملاء" IsChecked="True" Margin="0,10,0,0"/>
-<TextBlock Text="رابط البث المباشر الخارجي (اختياري)" FontWeight="Bold" Foreground="#142D4A" Margin="0,14,0,4"/><TextBox x:Name="CustomerLiveBroadcastUrlBox" Padding="8" FlowDirection="LeftToRight" ToolTip="الصق رابط البث الخارجي الذي تريد إظهاره للعملاء"/><TextBlock Text="أدخل رابط http أو https فقط. سيظهر زر للعميل يفتح هذا الرابط خارج التطبيق، ولا يقوم البرنامج ببث الفيديو أو استضافته." Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
+<TextBlock Text="رابط البث المباشر الخارجي (اختياري)" FontWeight="Bold" Foreground="#142D4A" Margin="0,14,0,4"/><TextBox x:Name="CustomerLiveBroadcastUrlBox" Padding="8" FlowDirection="LeftToRight" MaxLength="2048" ToolTip="الصق رابط البث الخارجي الذي تريد إظهاره للعملاء"/><TextBlock Text="أدخل رابط http أو https فقط. سيظهر زر للعميل يفتح هذا الرابط خارج التطبيق، ولا يقوم البرنامج ببث الفيديو أو استضافته." Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
 </StackPanel>
 </Border>
 <WrapPanel Margin="0,0,0,10">

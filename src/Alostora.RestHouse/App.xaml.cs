@@ -10,6 +10,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace Alostora.RestHouse;
 
@@ -32,8 +33,49 @@ public partial class App : Application
 {
  private WebApplication? _server;
  private static readonly HttpClient SupabaseAuthHttpClient = new();
+ private static readonly object DiagnosticLogLock = new();
+
+ internal static void LogDiagnostic(string area, Exception exception)
+ {
+  try
+  {
+   var logPath=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+    "AlostoraRestHouse","logs","application-errors.log");
+   lock(DiagnosticLogLock)
+   {
+    Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+    File.AppendAllText(logPath,$"[{DateTimeOffset.Now:O}] [{area}] {exception}{Environment.NewLine}{exception.StackTrace}{Environment.NewLine}{Environment.NewLine}");
+   }
+  }
+  catch { }
+ }
+
+ private static void InstallGlobalExceptionLogging()
+ {
+  Current.DispatcherUnhandledException += (_, e) =>
+  {
+   LogDiagnostic("WPF Dispatcher",e.Exception);
+   e.Handled=true;
+   try
+   {
+    MessageBox.Show("حدث خطأ غير متوقع، وتم حفظ تفاصيله في سجل الأخطاء. سيُغلق التطبيق لحماية البيانات.",
+     "استراحة الأسطورة",MessageBoxButton.OK,MessageBoxImage.Error);
+   }
+   catch { }
+   Current.Shutdown(1);
+  };
+  AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+   LogDiagnostic("AppDomain"+(e.IsTerminating?" (terminating)":""),e.ExceptionObject as Exception ?? new Exception(e.ExceptionObject?.ToString() ?? "Unknown exception"));
+  TaskScheduler.UnobservedTaskException += (_, e) =>
+  {
+   LogDiagnostic("Unobserved Task",e.Exception);
+   e.SetObserved();
+  };
+ }
+
  private async void OnStartup(object sender, StartupEventArgs e)
  {
+  InstallGlobalExceptionLogging();
   var configuredPort = 8097;
   try {
    var root=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"AlostoraRestHouse");

@@ -37,6 +37,7 @@ public sealed class BackupServiceTests : IDisposable
         Directory.CreateDirectory(adImages);
         File.WriteAllBytes(Path.Combine(adImages, "sample.png"), new byte[] { 1, 2, 3 });
         File.WriteAllText(Path.Combine(_root, "download-speed-settings.json"), "{\"LimitMbps\":6}");
+        File.WriteAllText(Path.Combine(_root, "settings.json"), "{\"LibraryPath\":\"C:\\\\Media\\\\Library\",\"PostersPath\":\"C:\\\\Media\\\\Posters\",\"FfmpegPath\":\"C:\\\\Tools\\\\ffmpeg.exe\",\"Port\":8097}");
         var archive = Path.Combine(_root, "Backups", "test.zip");
         BackupService.CreateArchive(database, posters, archive);
 
@@ -47,6 +48,7 @@ public sealed class BackupServiceTests : IDisposable
             Assert.Contains(zip.Entries, x => x.FullName == "customer-page-settings.json");
             Assert.Contains(zip.Entries, x => x.FullName == "download-speed-settings.json");
             Assert.Contains(zip.Entries, x => x.FullName == "customer-ads.json");
+            Assert.Contains(zip.Entries, x => x.FullName == "settings.json");
             Assert.Contains(zip.Entries, x => x.FullName == "posters/customer-ads/sample.png");
             var manifest = zip.GetEntry("backup-info.txt");
             Assert.NotNull(manifest);
@@ -61,6 +63,7 @@ public sealed class BackupServiceTests : IDisposable
         File.WriteAllText(Path.Combine(_root, "customer-page-settings.json"), "{\"ShowApps\":true}");
         File.WriteAllText(Path.Combine(_root, "customer-ads.json"), "[{\"Id\":\"before-restore\"}]");
         File.WriteAllText(Path.Combine(_root, "download-speed-settings.json"), "{\"LimitMbps\":12}");
+        File.WriteAllText(Path.Combine(_root, "settings.json"), "{\"LibraryPath\":\"D:\\\\Changed\",\"PostersPath\":\"D:\\\\ChangedPosters\",\"Port\":9000}");
         BackupService.RestoreArchive(database, posters, archive, _root);
 
         Assert.Contains("قبل النسخة", File.ReadAllText(Path.Combine(_root, "profile.json")));
@@ -69,6 +72,10 @@ public sealed class BackupServiceTests : IDisposable
         Assert.Equal("[]", File.ReadAllText(Path.Combine(_root, "customer-ads.json")));
         Assert.True(File.Exists(Path.Combine(posters, "customer-ads", "sample.png")));
         Assert.Contains("\"LimitMbps\":6", File.ReadAllText(Path.Combine(_root, "download-speed-settings.json")));
+        var restoredSettings = File.ReadAllText(Path.Combine(_root, "settings.json"));
+        Assert.Contains("C:", restoredSettings);
+        Assert.Contains("ffmpeg.exe", restoredSettings);
+        Assert.Contains("\"Port\":8097", restoredSettings);
     }
 
     public void Dispose()
