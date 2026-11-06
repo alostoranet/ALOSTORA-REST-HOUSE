@@ -205,7 +205,7 @@ Write-Host "PASS: customer catalog uses separate navigation pages and a dedicate
 # The landing page has no redundant Home control; inside catalog pages Home and Back remain adjacent and functional.
 if ($html -notmatch 'id="catalogHome"' -or
     $html -notmatch 'id="catalogBack"' -or
-    $html -notmatch 'homeButton.hidden=pageType==='home'' -or
+    $html -notmatch "homeButton.hidden=pageType==='home'" -or
     $html -notmatch "document.querySelector('#catalogHome').addEventListener('click',goCatalogHome)" -or
     $html -notmatch 'pageHead.hidden=pageType==='home'' -or
     $html -notmatch 'customerNav.hidden=pageType!=='home'' -or
