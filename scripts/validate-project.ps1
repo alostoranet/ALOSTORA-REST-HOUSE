@@ -250,7 +250,7 @@ $hasDuplicateSeriesHeading = $html.Contains('content.append(catalogSectionTitle(
 $hasSeriesHero = $html.Contains('catalogHero(show.title,show.posterPath,seriesMeta,show.description,false)') -or $html.Contains('catalogHero(name,season.posterPath||show.posterPath,seasonMeta,show.description,true)')
 $hasCompactFilters = $html.Contains('id="categoryFilter" class="header-filter"') -and $html.Contains('id="sort" class="header-filter"')
 $filtersOutsideSearch = $html.Contains('<div class="header-search">') -and $html.Substring($html.IndexOf('<div class="header-search">'), $html.IndexOf('</header>') - $html.IndexOf('<div class="header-search">')).Contains('id="sort"')
-$filtersInContentHeader = $html.Contains('id="catalogContentFilters"') -and $html.Contains('contentFilters.hidden=!(pageType===\'category\'||pageType===\'series\'||pageType===\'season\'||pageType===\'continue\')')
+$filtersInContentHeader = $html.Contains('id="catalogContentFilters"') -and $html.Contains("contentFilters.hidden=!(pageType==='category'||pageType==='series'||pageType==='season'||pageType==='continue')")
 if ($hasDuplicateSeriesHeading -or $hasSeriesHero -or -not $hasCompactFilters -or $filtersOutsideSearch -or -not $filtersInContentHeader -or -not $html.Contains("categoryFilter.value=(pageType==='main'||pageType==='category')")) {
     throw "Filters must be outside search, inside the content header only, and hidden on the main sections page; series/season pages must not repeat hero posters."
 }
