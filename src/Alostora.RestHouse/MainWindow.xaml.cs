@@ -2250,12 +2250,32 @@ public partial class MainWindow : Window
                     : row.EpisodeNumber is null or <= 0 ? "لم يتم التعرف على الرقم"
                     : row.IsNumberUsed ? "رقم مكرر"
                     : "جاهز للمراجعة";
-                row.Selected = !row.IsAlreadyLinked && !row.IsNumberUsed && row.EpisodeNumber is > 0;
+                row.Selected = false;
                 _episodeCandidates.Add(row);
             }
             SeriesStatusText.Text = $"تم العثور على {rows.Length} ملفاً. راجع أرقام الحلقات قبل اعتماد الربط.";
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر فحص الموسم: " + ex.Message; }
+    }
+
+    private void SelectAllEpisodeCandidates_Click(object sender, RoutedEventArgs e)
+    {
+        EpisodeCandidatesGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+        EpisodeCandidatesGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        foreach (var row in _episodeCandidates)
+            row.Selected = !row.IsAlreadyLinked && !row.IsNumberUsed &&
+                row.EpisodeNumber is > 0 and <= 10000;
+        EpisodeCandidatesGrid.Items.Refresh();
+        EpisodeSelectionSummaryText.Text = $"تم تحديد {_episodeCandidates.Count(x => x.Selected)} حلقة صالحة للربط.";
+    }
+
+    private void ClearEpisodeCandidatesSelection_Click(object sender, RoutedEventArgs e)
+    {
+        EpisodeCandidatesGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+        EpisodeCandidatesGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        foreach (var row in _episodeCandidates) row.Selected = false;
+        EpisodeCandidatesGrid.Items.Refresh();
+        EpisodeSelectionSummaryText.Text = "تم إلغاء تحديد جميع الحلقات. اختر ما تريد ربطه يدوياً.";
     }
 
     private async void LinkDetectedEpisodes_Click(object sender, RoutedEventArgs e)
@@ -2313,7 +2333,7 @@ public partial class MainWindow : Window
                     : row.EpisodeNumber is null or <= 0 ? "لم يتم التعرف على الرقم"
                     : row.IsNumberUsed ? "رقم مكرر"
                     : "جاهز للمراجعة";
-                row.Selected = !row.IsAlreadyLinked && !row.IsNumberUsed && row.EpisodeNumber is > 0;
+                row.Selected = false;
                 _episodeCandidates.Add(row);
             }
             SeriesStatusText.Text = $"تم ربط {result?.LinkedCount ?? 0} حلقة، وتخطي {result?.Skipped ?? 0} ملف.";
@@ -2348,7 +2368,7 @@ public partial class MainWindow : Window
                     : row.EpisodeNumber is null or <= 0 ? "لم يتم التعرف على الرقم"
                     : row.IsNumberUsed ? "رقم مكرر"
                     : "جاهز للمراجعة";
-                row.Selected = !row.IsAlreadyLinked && !row.IsNumberUsed && row.EpisodeNumber is > 0;
+                row.Selected = false;
                 _episodeCandidates.Add(row);
             }
             await LoadEpisodesAsync(season.SeasonId);
