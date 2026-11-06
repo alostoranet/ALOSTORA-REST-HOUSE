@@ -656,14 +656,16 @@ if ($html -notmatch "item=\{\.\.\.item,url:'/media/'\+encodeURIComponent\(item\.
     throw "Customer playback fallback or season detail layout regression detected."
 }
 Write-Host "PASS: catalog playback has a canonical LAN media URL fallback and season pages reuse the series detail hero."
-# The home page has no Home navigation item; the inner-page Home shortcut remains scoped to detail navigation.
+# Home is absent only on the landing page; the compact contact button is in the persistent header, not the footer.
 if ($html -notmatch "pageHead.hidden=pageType==='home'" -or
-    $html -notmatch '<nav class="customer-nav"[^>]*>\s*<button id="continueNav"' -or
+    $html -notmatch '<nav class="customer-nav"[^>]*>\s*<button id="homeNav"' -or
+    $html -notmatch 'id="contactNav"' -or
     $html -notmatch 'class="credit-pair"' -or
-    $html -notmatch 'class="footer-contact-button"') {
-    throw "Customer navigation or compact contact/developer credit layout regressed."
+    $html -match 'id="contactCta"' -or
+    $html -notmatch 'compact-top-nav') {
+    throw "Customer navigation or compact header contact/developer credit layout regressed."
 }
-Write-Host "PASS: the home landing page omits a redundant Home menu item and compact contact/developer controls share one row group."
+Write-Host "PASS: Home is hidden only on the landing page; compact contact navigation is in the persistent header."
 # Announcement ticker text must have vertical room and must not replace its continuous marquee animation with an entry animation.
 if ($html -notmatch 'announcement-banner p\{display:flex;align-items:center' -or
     $html -notmatch 'announcement-message-marquee 30s linear' -or
