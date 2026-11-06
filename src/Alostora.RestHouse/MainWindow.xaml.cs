@@ -2317,11 +2317,19 @@ public partial class MainWindow : Window
     {
         EpisodeCandidatesGrid.CommitEdit(DataGridEditingUnit.Cell, true);
         EpisodeCandidatesGrid.CommitEdit(DataGridEditingUnit.Row, true);
+
+        // Select every file that is not already linked. Do not silently skip
+        // files whose episode number still needs manual correction.
         foreach (var row in _episodeCandidates)
-            row.Selected = !row.IsAlreadyLinked && !row.IsNumberUsed &&
-                row.EpisodeNumber is > 0 and <= 10000;
+            row.Selected = !row.IsAlreadyLinked;
+
         EpisodeCandidatesGrid.Items.Refresh();
-        EpisodeSelectionSummaryText.Text = $"تم تحديد {_episodeCandidates.Count(x => x.Selected)} حلقة صالحة للربط.";
+        var selectedCount = _episodeCandidates.Count(x => x.Selected);
+        var needsReview = _episodeCandidates.Count(x => x.Selected &&
+            (x.EpisodeNumber is null or < 1 or > 10000 || x.IsNumberUsed));
+        EpisodeSelectionSummaryText.Text = needsReview == 0
+            ? $"تم تحديد {selectedCount} ملف حلقة غير مربوط."
+            : $"تم تحديد {selectedCount} ملفاً؛ منها {needsReview} يحتاج مراجعة رقم الحلقة قبل الربط.";
     }
 
     private void ClearEpisodeCandidatesSelection_Click(object sender, RoutedEventArgs e)
@@ -3328,17 +3336,40 @@ public partial class MainWindow : Window
         public string Title { get; set; } = "";
         public string VideoId { get; set; } = "";
     }
-    private sealed class EpisodeCandidate
+    private sealed class EpisodeCandidate : INotifyPropertyChanged
     {
+        private int? _episodeNumber;
+        private bool _selected;
+
         public string VideoId { get; set; } = "";
         public string FilePath { get; set; } = "";
         public string FileName { get; set; } = "";
         public string Title { get; set; } = "";
-        public int? EpisodeNumber { get; set; }
+        public int? EpisodeNumber
+        {
+            get => _episodeNumber;
+            set
+            {
+                if (_episodeNumber == value) return;
+                _episodeNumber = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EpisodeNumber)));
+            }
+        }
         public bool IsAlreadyLinked { get; set; }
         public bool IsNumberUsed { get; set; }
-        public bool Selected { get; set; }
+        public bool Selected
+        {
+            get => _selected;
+            set
+            {
+                if (_selected == value) return;
+                _selected = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Selected)));
+            }
+        }
         public string Status { get; set; } = "";
+
+        public event PropertyChangedEventHandler? PropertyChanged;
     }
     private sealed class FolderScanResult { public bool Registered { get; set; } public int VideoCount { get; set; } }
     private sealed class RegisterFilesResult { public bool Registered { get; set; } public int VideoCount { get; set; } public string? Message { get; set; } }
