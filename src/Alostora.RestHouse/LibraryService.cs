@@ -442,19 +442,46 @@ public sealed class LibraryService : IDisposable
     {
         if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
             throw new DirectoryNotFoundException("مجلد الفيديو غير موجود أو لا يمكن الوصول إليه.");
+
         var root = Path.GetFullPath(folderPath);
         var files = new List<VideoFileCandidate>();
-        foreach (var path in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
+        var pending = new Stack<string>();
+        pending.Push(root);
+        while (pending.Count > 0)
         {
-            if (!ContentTypes.ContainsKey(Path.GetExtension(path))) continue;
+            var current = pending.Pop();
             try
             {
-                var info = new FileInfo(path);
-                if (info.Exists) files.Add(new VideoFileCandidate(Path.GetFullPath(path), info.Name, info.Length));
+                foreach (var path in Directory.EnumerateFiles(current, "*", SearchOption.TopDirectoryOnly))
+                {
+                    if (!ContentTypes.ContainsKey(Path.GetExtension(path))) continue;
+                    try
+                    {
+                        var info = new FileInfo(path);
+                        if (info.Exists && (info.Attributes & FileAttributes.ReparsePoint) == 0)
+                            files.Add(new VideoFileCandidate(Path.GetFullPath(path), info.Name, info.Length));
+                    }
+                    catch (UnauthorizedAccessException) { }
+                    catch (IOException) { }
+                }
+
+                foreach (var directory in Directory.EnumerateDirectories(current, "*", SearchOption.TopDirectoryOnly))
+                {
+                    try
+                    {
+                        if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) == 0)
+                            pending.Push(Path.GetFullPath(directory));
+                    }
+                    catch (UnauthorizedAccessException) { }
+                    catch (IOException) { }
+                }
             }
-            catch { }
+            catch (UnauthorizedAccessException) { }
+            catch (IOException) { }
         }
-        return files.OrderBy(x => x.FileName, StringComparer.CurrentCultureIgnoreCase).ToArray();
+
+        return files.OrderBy(x => x.FileName, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(x => x.FullPath, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
     public int RegisterSelectedFiles(string folderPath, IEnumerable<string> selectedPaths)
