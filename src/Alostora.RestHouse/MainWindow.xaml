@@ -37,6 +37,10 @@
   <Setter Property="FontSize" Value="13"/>
   <Setter Property="VerticalContentAlignment" Value="Center"/>
  </Style>
+ <Style TargetType="{x:Type Border}">
+  <Setter Property="BorderBrush" Value="#D7E0EA"/>
+  <Setter Property="BorderThickness" Value="1"/>
+ </Style>
  <Style TargetType="{x:Type ComboBox}">
   <Setter Property="Padding" Value="8"/>
   <Setter Property="Background" Value="#FFFFFF"/>
@@ -475,7 +479,7 @@
   <DockPanel LastChildFill="True">
    <Button DockPanel.Dock="Left" Click="OpenWhatsApp_Click" Padding="8,2" Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="فتح محادثة واتساب">
     <StackPanel Orientation="Horizontal" FlowDirection="LeftToRight">
-     <Border Background="#25D366" Width="21" Height="21" CornerRadius="11" Margin="0,0,6,0"><TextBlock Text="◉" Foreground="White" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+     <Border Background="#25D366" BorderThickness="0" Width="21" Height="21" CornerRadius="11" Margin="0,0,6,0"><TextBlock Text="◉" Foreground="White" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
      <TextBlock Text="777824918" Foreground="#142D4A" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
     </StackPanel>
    </Button>
