@@ -2127,9 +2127,64 @@ public partial class MainWindow : Window
         if (EpisodesGrid.SelectedItem is not EpisodeAdmin episode) return;
         EpisodeNumberBox.Text = episode.EpisodeNumber.ToString();
         EpisodeTitleBox.Text = episode.Title;
+        EpisodePosterStatusText.Text = string.IsNullOrWhiteSpace(episode.PosterPath)
+            ? "لا توجد صورة خاصة؛ سيظهر غلاف المسلسل تلقائياً."
+            : "للحلقة صورة خاصة محفوظة. يمكنك اختيار صورة أخرى لتحديثها.";
         SeriesStatusText.Text = $"تم تحديد الحلقة رقم {episode.EpisodeNumber}. عدّل الرقم أو الاسم ثم اضغط حفظ التعديل.";
         UpdateEpisodeInEditorButton.Visibility = Visibility.Visible;
         OpenDedicatedEditor(EpisodeEditorExpander, "تعديل بيانات الحلقة");
+    }
+
+    private async void UploadEpisodePoster_Click(object sender, RoutedEventArgs e)
+    {
+        if (EpisodesGrid.SelectedItem is not EpisodeAdmin episode)
+        {
+            EpisodePosterStatusText.Text = "حدد الحلقة من جدول حلقات الموسم أولاً، ثم اختر صورتها.";
+            return;
+        }
+
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختر صورة خاصة للحلقة",
+            Filter = "صور مدعومة|*.jpg;*.jpeg;*.png;*.webp",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        if (!ValidateSeriesPoster(dialog.FileName, out var error))
+        {
+            EpisodePosterStatusText.Text = error;
+            return;
+        }
+
+        var ext = Path.GetExtension(dialog.FileName).ToLowerInvariant();
+        var contentType = ext switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            _ => ""
+        };
+        try
+        {
+            EpisodePosterStatusText.Text = "جارٍ رفع صورة الحلقة...";
+            using var bytes = new ByteArrayContent(await File.ReadAllBytesAsync(dialog.FileName));
+            bytes.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            var response = await _http.PostAsync("/api/admin/episode-poster/" + episode.EpisodeId, bytes);
+            if (!response.IsSuccessStatusCode)
+            {
+                EpisodePosterStatusText.Text = "تعذر حفظ صورة الحلقة: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+
+            EpisodePosterStatusText.Text = "تم حفظ الصورة الخاصة للحلقة. ستظهر بدلاً من غلاف المسلسل.";
+            await LoadEpisodesAsync(episode.SeasonId);
+            SeriesStatusText.Text = "تم تحديث صورة الحلقة بنجاح.";
+        }
+        catch (Exception ex)
+        {
+            EpisodePosterStatusText.Text = "تعذر رفع صورة الحلقة: " + ex.Message;
+        }
     }
 
     private async void UpdateEpisode_Click(object sender, RoutedEventArgs e)
@@ -3259,6 +3314,7 @@ public partial class MainWindow : Window
         public string VideoId { get; set; } = "";
         public int EpisodeNumber { get; set; }
         public string Title { get; set; } = "";
+        public string? PosterPath { get; set; }
     }
     private sealed class PosterUploadResult { public string? PosterPath { get; set; } }
     private sealed class LinkDetectedResult { public int LinkedCount { get; set; } public int Skipped { get; set; } }
