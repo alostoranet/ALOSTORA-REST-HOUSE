@@ -32,7 +32,11 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 .announcement-banner strong:before{content:"◆";font-size:7px}
 .announcement-banner p{flex:1;min-width:0;margin:0;white-space:nowrap;direction:rtl;animation:announcement-marquee 30s linear .6s infinite}
 .announcement-banner #announcementMessage{display:inline-block;color:#f8f4eb;font-size:14px;font-weight:600;line-height:1.8}
+.announcement-banner.is-entering strong{animation:announcement-label-drop .58s cubic-bezier(.2,.8,.25,1) both}
+.announcement-banner.is-entering #announcementMessage{animation:announcement-message-reveal .65s .25s cubic-bezier(.2,.75,.25,1) both}
 .announcement-banner:hover p{animation-play-state:paused}
+@keyframes announcement-label-drop{0%{opacity:0;transform:translateY(-130%) scale(.94)}72%{opacity:1;transform:translateY(4px) scale(1.02)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes announcement-message-reveal{from{opacity:0;clip-path:inset(0 0 100% 0);transform:translateY(-7px)}to{opacity:1;clip-path:inset(0 0 0 0);transform:translateY(0)}}
 @keyframes announcement-marquee{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.announcement-banner p{animation:none;white-space:normal}}
 .customer-ads{max-width:1280px;margin:13px auto 0;padding:0 14px}
@@ -471,7 +475,9 @@ function isRecentlyAdded(value){if(!value)return false;const date=new Date(value
 function renderNewArrivals(){
  const section=document.querySelector('#newArrivals'),grid=document.querySelector('#newArrivalsGrid'),count=document.querySelector('#newArrivalsCount');
  if(!section||!grid||!count)return;
- const recentVideos=items.filter(x=>x.isPublished===true&&x.kind!=='Series'&&isRecentlyAdded(x.updatedUtc)).map(x=>({...x,_arrivalType:'فيلم أو فيديو',_arrivalKind:'video'}));
+ const linkedVideoIds=new Set();
+ for(const show of seriesItems.filter(x=>x.isPublished===true)){for(const video of show.directVideos||[])if(video.videoId)linkedVideoIds.add(video.videoId);for(const season of show.seasons||[])for(const episode of season.episodes||[])if(episode.videoId)linkedVideoIds.add(episode.videoId);}
+ const recentVideos=items.filter(x=>x.isPublished===true&&x.kind!=='Series'&&!linkedVideoIds.has(x.id)&&isRecentlyAdded(x.updatedUtc)).map(x=>({...x,_arrivalType:'فيلم أو فيديو',_arrivalKind:'video'}));
  const recentSeries=seriesItems.filter(x=>x.isPublished===true&&isRecentlyAdded(x.updatedUtc)).map(x=>({...x,_arrivalType:'مسلسل أو برنامج',_arrivalKind:'series'}));
  const videoById=new Map(items.map(x=>[x.id,x]));
  const recentEpisodes=[];
@@ -579,6 +585,7 @@ function renderCatalogPage(){
  const titles={home:'الرئيسية',main:'الأقسام',category:'المحتوى',series:'المسلسل',season:'الحلقات',player:'المشاهدة الآن',continue:'متابعة المشاهدة'};
  crumb.textContent=catalogPage.title||titles[pageType]||'المكتبة';
  const query=(document.querySelector('#search')?.value||'').trim().toLocaleLowerCase('ar');
+ if(arrivals&&query)arrivals.hidden=true;
  // Keep the landing page focused on the main content categories.
  document.querySelector('#welcomePanel').hidden=true;
  document.querySelector('#customerOverview').hidden=true;
