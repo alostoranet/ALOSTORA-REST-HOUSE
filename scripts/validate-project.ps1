@@ -207,9 +207,9 @@ if ($html -notmatch 'id="catalogHome"' -or
     $html -notmatch 'id="catalogBack"' -or
     $html -notmatch "homeButton.hidden=pageType==='home'" -or
     $html -notmatch "document.querySelector('#catalogHome').addEventListener('click',goCatalogHome)" -or
-    $html -notmatch 'pageHead.hidden=pageType==='home'' -or
-    $html -notmatch 'customerNav.hidden=pageType!=='home'' -or
-    $html -notmatch 'toolbar.hidden=pageType!=='category'' -or
+    $html -notmatch "pageHead.hidden=pageType==='home'" -or
+    $html -notmatch "customerNav.hidden=pageType!=='home'" -or
+    $html -notmatch "toolbar.hidden=pageType!=='category'" -or
     $html -notmatch 'crumb.textContent=catalogPage.title' -or
     $html -notmatch 'catalog-player-page video|#playerSection video') {
     throw "Customer navigation must hide Home on the landing page and show working Home and Back controls inside catalog pages."
