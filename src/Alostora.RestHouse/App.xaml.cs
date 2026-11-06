@@ -727,7 +727,6 @@ public partial class App : Application
     {
      var root=Path.GetFullPath(season.FolderPath);
      var linked=series.ListEpisodes(seasonId);
-     var linkedIds=linked.Select(x=>x.VideoId).ToHashSet(StringComparer.OrdinalIgnoreCase);
      var usedNumbers=linked.Select(x=>x.EpisodeNumber).ToHashSet();
      var knownFiles=files.List().Select(video=>(video,resolved:files.Resolve(video.Id)))
       .Where(x=>x.resolved is not null)
@@ -742,7 +741,7 @@ public partial class App : Application
        fileName=file.FileName,
        title=known?.Title??Path.GetFileNameWithoutExtension(file.FileName),
        episodeNumber=number,
-       isAlreadyLinked=known is not null&&linkedIds.Contains(known.Id),
+       isAlreadyLinked=known is not null&&series.GetVideoPlacement(known.Id) is not null,
        isNumberUsed=number is int n&&usedNumbers.Contains(n)
       };
      }).ToArray();
