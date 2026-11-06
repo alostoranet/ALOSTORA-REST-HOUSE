@@ -6,6 +6,10 @@
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -20%,#1a3852 0,#0c1c2b 45%,var(--bg) 78%);color:var(--text);font-family:system-ui,"Segoe UI",Tahoma,Arial,sans-serif;font-size:15px;line-height:1.65}
+/* Official rest-house logo watermark: visible behind customer-page content. */
+body{isolation:isolate}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background-image:var(--brand-watermark,none);background-repeat:no-repeat;background-position:center 58%;background-size:min(46vw,440px);opacity:.22;filter:drop-shadow(0 10px 26px #d6ad5844)}
+header,main{position:relative;z-index:1}
 button,input,select,textarea{font:inherit}
 button{cursor:pointer}
 [hidden]{display:none!important}
@@ -1107,8 +1111,8 @@ async function loadBrandProfile(){
   document.querySelector('#brandNetwork').textContent=network+' — مكتبة المشاهدة';
   document.title=restHouse+' | مكتبة المشاهدة';
   const logo=document.querySelector('#brandLogo');
-  if(profile.logoPath){logo.src=profile.logoPath;logo.hidden=false;logo.onerror=()=>{logo.hidden=true;};}
-  else{logo.hidden=true;logo.removeAttribute('src');}
+  if(profile.logoPath){logo.src=profile.logoPath;logo.hidden=false;document.documentElement.style.setProperty('--brand-watermark','url('+JSON.stringify(profile.logoPath)+')');logo.onerror=()=>{logo.hidden=true;document.documentElement.style.removeProperty('--brand-watermark');};}
+  else{logo.hidden=true;logo.removeAttribute('src');document.documentElement.style.removeProperty('--brand-watermark');}
  }catch{}
 }
 document.querySelector('#catalogBack').addEventListener('click',goCatalogBack);
