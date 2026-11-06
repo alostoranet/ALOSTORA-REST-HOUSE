@@ -174,6 +174,38 @@ public sealed class MultiMediaLibraryServiceTests : IDisposable
         Assert.Throws<ArgumentException>(() => library.AddRoot("Audio", nested));
     }
 
+
+    [Fact]
+    public void ExternalDriveCanDisappearAndReconnectWithoutLosingItsRegistrationOrFileIdentity()
+    {
+        var mediaRoot = Path.Combine(_root, "media");
+        var library = new MultiMediaLibraryService(mediaRoot, _databasePath);
+        var external = Path.Combine(_root, "removable-drive", "Music");
+        Directory.CreateDirectory(external);
+        var song = Path.Combine(external, "concert.mp3");
+        File.WriteAllBytes(song, [1, 2, 3, 4]);
+
+        var root = library.AddRoot("Audio", external);
+        Assert.Equal(1, library.Scan("Audio"));
+        var original = Assert.Single(library.List("Audio"));
+        Assert.Equal(root.Id, Assert.Single(library.ListRoots("Audio").Where(x => !x.IsDefault)).Id);
+
+        // Simulate a disconnected removable drive. The registration and catalog row
+        // must remain so reconnecting the same path can restore playback without re-adding it.
+        Directory.Delete(Path.Combine(_root, "removable-drive"), recursive: true);
+        Assert.Empty(library.List("Audio"));
+        Assert.Contains(library.ListRoots("Audio"), x => x.Id == root.Id && x.Path == external);
+        Assert.Equal(0, library.Scan("Audio"));
+
+        Directory.CreateDirectory(external);
+        File.WriteAllBytes(song, [1, 2, 3, 4]);
+        Assert.Equal(1, library.Scan("Audio"));
+        var reconnected = Assert.Single(library.List("Audio"));
+        Assert.Equal(original.Id, reconnected.Id);
+        Assert.Equal(song, library.ResolveById(original.Id));
+        Assert.Equal(4, reconnected.SizeBytes);
+    }
+
     public void Dispose()
     {
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
