@@ -2220,29 +2220,14 @@ public partial class MainWindow : Window
                 return;
             }
 
-            int? videoCount = null;
-            if (folder is not null)
-            {
-                var scan = await _http.PostAsJsonAsync("/api/admin/scan-folder", new { folderPath = folder });
-                if (!scan.IsSuccessStatusCode)
-                {
-                    SeriesStatusText.Text = "تم حفظ المسار، لكن تعذر فحص المجلد.";
-                    await LoadSeasonsAsync(season.SeriesId);
-                    return;
-                }
-                var result = await scan.Content.ReadFromJsonAsync<FolderScanResult>();
-                videoCount = result?.VideoCount ?? 0;
-            }
-
             await LoadSeasonsAsync(season.SeriesId);
-            await LoadVideosAsync();
             SeriesStatusText.Text = folder is null
-                ? "تم مسح مسار الموسم. لم يتم حذف أي ملفات من المكتبة."
-                : $"تم حفظ مسار الموسم وفحصه. عدد ملفات الفيديو التي عُثر عليها: {videoCount ?? 0}.";
+                ? "تم مسح مسار الموسم. لم يتم حذف أي ملفات من القرص أو المكتبة."
+                : "تم حفظ مجلد الموسم. لم تُضف ملفاته إلى المكتبة تلقائياً؛ اضغط «اكتشاف حلقات الموسم» لمراجعة الملفات ثم اختر الحلقات التي تريد ربطها.";
         }
         catch (Exception ex)
         {
-            SeriesStatusText.Text = "تعذر حفظ أو فحص مجلد الموسم: " + ex.Message;
+            SeriesStatusText.Text = "تعذر حفظ مجلد الموسم: " + ex.Message;
         }
     }
 
