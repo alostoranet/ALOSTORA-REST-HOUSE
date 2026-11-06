@@ -882,7 +882,7 @@ async function play(item){
   if(playbackRecorded||generation!==playbackGeneration)return;
   playbackRecorded=true;
   fetch("/api/watch-events",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({viewerId,videoId:item.id,playbackId})})
-   .then(response=>{if(!response.ok)throw new Error('تعذر تسجيل المشاهدة');if(viewsElement)viewsElement.textContent='👁 عدد المشاهدات: '+(initialViews+1).toLocaleString('ar');return loadWatchHistory();})
+   .then(async response=>{if(!response.ok)throw new Error('تعذر تسجيل المشاهدة');const countResponse=await fetch('/api/view-count/'+encodeURIComponent(item.id));if(countResponse.ok){const countData=await countResponse.json();if(viewsElement)viewsElement.textContent='👁 عدد المشاهدات: '+Number(countData.viewCount||0).toLocaleString('ar');}return loadWatchHistory();})
    .catch(()=>{playbackRecorded=false;});
  };
  const schedulePlaybackCount=()=>{cancelPlaybackCount();if(!playbackRecorded&&generation===playbackGeneration)playbackCountTimer=setTimeout(recordPlayback,10000);};
