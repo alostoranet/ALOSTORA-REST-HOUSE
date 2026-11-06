@@ -30,13 +30,13 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 .announcement-banner[hidden]{display:none!important}
 .announcement-banner strong{z-index:1;flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;padding:2px 3px;background:transparent;color:#e4c68f;font-size:12px;font-weight:800;white-space:nowrap;letter-spacing:.15px}
 .announcement-banner strong:before{content:"";width:7px;height:7px;border-radius:50%;background:#d45c61;box-shadow:0 0 0 4px #d45c6120,0 0 10px #d45c61a0}
-.announcement-banner p{flex:1;min-width:0;margin:0;white-space:nowrap;direction:rtl;animation:announcement-marquee 34s linear .4s infinite}
-.announcement-banner #announcementMessage{display:inline-block;color:#f7f1e6;font-size:14px;font-weight:650;line-height:1.8;text-shadow:0 1px 8px #0004}
+.announcement-banner p{flex:1 1 auto;min-width:0;max-width:100%;margin:0;overflow:hidden;white-space:nowrap;direction:rtl}
+.announcement-banner #announcementMessage{display:inline-block;width:max-content;max-width:none;white-space:nowrap;color:#f7f1e6;font-size:14px;font-weight:650;line-height:1.8;text-shadow:0 1px 8px #0004;will-change:transform;animation:announcement-message-marquee 30s linear .8s infinite}
 .announcement-banner.is-entering #announcementMessage{animation:announcement-message-reveal .7s ease-out both}
 .announcement-banner:hover p{animation-play-state:paused}
 @keyframes announcement-message-reveal{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
-@keyframes announcement-marquee{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.announcement-banner p{animation:none;white-space:normal}.announcement-banner.is-entering #announcementMessage{animation:none!important}}
+@keyframes announcement-message-marquee{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.announcement-banner #announcementMessage{animation:none;white-space:normal;transform:none}.announcement-banner p{white-space:normal}.announcement-banner.is-entering #announcementMessage{animation:none!important}}
 .customer-ads{max-width:1280px;margin:13px auto 0;padding:0 14px}
 .customer-ads[hidden]{display:none!important}
 .customer-ad-stage{position:relative;aspect-ratio:16/5;min-height:110px;max-height:250px;overflow:hidden;border:1px solid #344e65;border-radius:15px;background:#142b40;box-shadow:0 9px 24px #0003}
@@ -165,7 +165,7 @@ main{width:min(100%,1280px);margin:0 auto;padding:22px 24px 32px}
 .contact-form button{justify-self:start;min-height:42px;padding:9px 18px;border:0;border-radius:9px;background:linear-gradient(135deg,#d9bd83,#b89155);color:#17283a;font-weight:850}
 .contact-form button:disabled{opacity:.6;cursor:wait}
 #contactFeedback{min-height:20px;margin:8px 0 0;font-weight:700}
-.developer-credit{max-width:1100px;margin:24px auto 14px;padding:15px 12px;border-top:1px solid #263e54;color:#91a4b6;text-align:center;font-size:12px;display:flex;align-items:center;justify-content:center;gap:7px 11px;flex-wrap:wrap}.developer-credit strong{color:#e4d1a8;font-weight:800}.developer-credit a{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid #315b50;border-radius:20px;background:#102d2a;color:#a9e3c7;text-decoration:none;font-weight:800;direction:ltr;transition:background .2s,border-color .2s}.developer-credit a:hover{background:#174238;border-color:#4b9678}.whatsapp-mark{font-size:13px;color:#7bd6a6}
+.developer-credit{max-width:1100px;margin:20px auto 10px;padding:10px 8px;border-top:1px solid #263e54;color:#91a4b6;text-align:center;font-size:11px;display:flex;align-items:center;justify-content:center;gap:6px 10px;flex-wrap:wrap}.developer-credit strong{color:#e4d1a8;font-weight:800}.developer-label{display:inline-flex;align-items:center;gap:4px;color:#91a4b6;font-size:10px}.developer-icon{display:inline-grid;place-items:center;width:17px;height:17px;border:1px solid #536b7e;border-radius:50%;color:#d9bd83;font-size:10px}.footer-contact-button{display:inline-flex;align-items:center;gap:5px;min-height:29px;padding:4px 9px;border:1px solid #526b80;border-radius:8px;background:#142b40;color:#e7d3aa;font-size:11px;font-weight:750;white-space:nowrap}.footer-contact-button span{font-size:12px;color:#d9bd83}.developer-credit a{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border:1px solid #315b50;border-radius:16px;background:#102d2a;color:#a9e3c7;text-decoration:none;font-weight:800;direction:ltr;transition:background .2s,border-color .2s}.developer-credit a:hover{background:#174238;border-color:#4b9678}.whatsapp-mark{font-size:12px;color:#7bd6a6}
 .app-toast{position:fixed;z-index:9999;right:18px;bottom:18px;max-width:min(92vw,420px);padding:13px 17px;border-radius:11px;background:#176b3a;color:#fff;box-shadow:0 12px 34px #0006;font-weight:700;line-height:1.7;opacity:0;transform:translateY(14px);pointer-events:none;transition:opacity .2s,transform .2s}
 .app-toast.visible{opacity:1;transform:translateY(0)}
 .app-toast[data-kind="error"]{background:#9f2630}
@@ -229,7 +229,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
  .catalog-hero img,.catalog-hero .poster-empty{width:96px;flex-basis:96px}
 }
 </style></head><body>
-<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
+<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
 <div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p><span id="announcementMessage"></span></p></div>
 <section id="customerAds" class="customer-ads" aria-label="إعلانات الاستراحة" hidden>
  <div id="customerAdStage" class="customer-ad-stage"></div>
@@ -265,6 +265,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
 </div>
 <section id="newArrivals" class="new-arrivals" hidden aria-label="المضاف حديثاً"><div class="new-arrivals-heading"><div><span class="new-kicker">اكتشف الآن</span><h2>أُضيف حديثاً</h2></div><span class="new-count" id="newArrivalsCount"></span></div><div id="newArrivalsGrid" class="new-arrivals-grid"></div></section><div id="catalogContent"></div>
 <section id="playerSection" aria-live="polite" hidden>
+<h2 id="nowPlayingTitle">المشاهدة الآن</h2>
 <video id="player" controls playsinline preload="metadata"></video>
 <div id="audioControls" hidden><label for="audioTrack">المسار الصوتي:</label><select id="audioTrack"></select><button id="applyAudio" type="button">تشغيل بالصوت المحدد</button></div>
 <p id="playbackHint"></p><p id="subtitleHint" class="meta">تُكتشف الترجمات الخارجية تلقائياً بجانب ملف الفيديو.</p>
@@ -275,7 +276,6 @@ button:disabled{cursor:not-allowed;opacity:.58}
  <section id="watchedSection"><div class="watch-section-heading"><h2>شاهدتها مؤخرًا</h2></div><p id="watchedEmpty">جارٍ تحميل سجل المشاهدة...</p><div id="watchedGrid"></div></section>
 </section>
 </section>
-<div id="contactCta" class="contact-cta-wrap"><button class="contact-cta-button" type="button">تواصل مع الإدارة للطلب والاستفسار</button></div>
 <section id="contactView" class="contact-box" aria-labelledby="contactTitle" hidden>
 <h2 id="contactTitle">تواصل مع إدارة الاستراحة</h2>
 <p>اختر نوع الرسالة، واكتب طلبك أو ملاحظتك، وستصل مباشرة إلى برنامج إدارة الاستراحة.</p>
@@ -290,7 +290,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
 </form>
 <p id="contactFeedback" role="status" aria-live="polite"></p>
 </section><div id="appToast" class="app-toast" role="status" aria-live="polite"></div></main>
-<footer class="developer-credit"><span>تصميم وبرمجة الاستراحة</span><strong>م/ أبو عبيدة محمد النظاري</strong><a href="https://wa.me/967777824918" target="_blank" rel="noopener noreferrer" aria-label="تواصل عبر واتساب على الرقم 777824918"><span class="whatsapp-mark" aria-hidden="true">◉</span><bdi dir="ltr">777824918</bdi></a></footer>
+<footer class="developer-credit"><button id="contactCta" class="footer-contact-button" type="button"><span aria-hidden="true">✉</span> تواصل مع الإدارة</button><span class="developer-label"><span class="developer-icon" aria-hidden="true">✦</span> تصميم وبرمجة</span><strong>م/ أبو عبيدة محمد النظاري</strong><a href="https://wa.me/967777824918" target="_blank" rel="noopener noreferrer" aria-label="تواصل عبر واتساب على الرقم 777824918"><span class="whatsapp-mark" aria-hidden="true">◉</span><bdi dir="ltr">777824918</bdi></a></footer>
 <script>
 const defaultCustomerSettings={showCatalog:true,showContinueWatching:true,showAudio:true,showBooks:true,showApps:true,showContact:true,showWelcome:true,showAnnouncement:true,showDownloads:true,showImageAds:true};
 let customerSettings={...defaultCustomerSettings};
@@ -822,8 +822,9 @@ function renderCatalogPage(){
   const season=show?.seasons?.find(x=>String(x.seasonId)===String(catalogPage.seasonId));
   if(!show||!season){content.append(catalogEmpty('الموسم أو الجزء غير موجود.'));return;}
   const name=season.title||((show.organizationType==='Parts'?'الجزء ':'الموسم ')+season.seasonNumber);
-  const parent=document.createElement('p');parent.className='catalog-compact-meta';parent.textContent=show.title;content.append(parent);
   const episodes=season.episodes||[];
+  const seasonMeta=[show.title,episodes.length+' حلقة',show.year].filter(Boolean).join(' • ');
+  content.append(catalogHero(name,season.posterPath||show.posterPath,seasonMeta,show.description,true));
   if(!episodes.length){content.append(catalogEmpty('لا توجد حلقات في هذا الموسم بعد.'));return;}
   const episodeGrid=document.createElement('div');episodeGrid.className='catalog-grid';
   for(const ep of episodes){
@@ -1037,16 +1038,13 @@ function goCatalogHome(){if(catalogPage.type==='player'){playbackGeneration++;fl
 function showCustomerView(view){
  const home=view==='home',homeView=document.querySelector('#homeView'),contactView=document.querySelector('#contactView');
  homeView.hidden=!home;contactView.hidden=home;document.querySelector('#contactCta').hidden=!home||customerSettings.showContact===false;
- document.querySelector('#homeNav').classList.toggle('active',home);
  document.querySelector('#contactNav').classList.toggle('active',!home);
- document.querySelector('#homeNav').setAttribute('aria-pressed',String(home));
  document.querySelector('#contactNav').setAttribute('aria-pressed',String(!home));
  document.querySelector('#customerAds').hidden=!home||customerSettings.showImageAds===false||customerAdItems.length===0;
  const announcement=document.querySelector('#announcementBanner');if(announcement)announcement.hidden=!home||customerSettings.showAnnouncement===false||announcement.dataset.active!=='true';
  document.querySelector('.header-search').hidden=!home||customerSettings.showCatalog===false||activeMediaKind!=='all';
  window.scrollTo({top:0,behavior:'smooth'});
 }
-document.querySelector('#homeNav').addEventListener('click',()=>{activeMediaKind='all';document.querySelectorAll('.media-tab').forEach(x=>x.classList.remove('active'));document.querySelector('#mediaLibrary').hidden=true;showCustomerView('home');document.querySelector('#catalogView').hidden=false;goCatalogHome();renderMediaLibraries();applyCustomerSettings();});
 function openCustomerContact(){goCatalogHome();document.querySelector('#sharedAudioPlayer')?.pause();showCustomerView('contact');}
 document.querySelector('#contactNav').addEventListener('click',openCustomerContact);
 document.querySelector('#contactCta').addEventListener('click',openCustomerContact);
