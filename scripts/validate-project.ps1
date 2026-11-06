@@ -202,21 +202,22 @@ if ($html -notmatch 'id="catalogView"' -or
     throw "Customer catalog must use separate category, program, season, and player pages."
 }
 Write-Host "PASS: customer catalog uses separate navigation pages and a dedicated player view."
-# Mobile customer pages must keep home free of redundant controls and expose only Back inside sections.
-if ($html -match 'id="catalogHome"' -or
-    $html -notmatch 'id="catalogPageHead"' -or
-    $html -notmatch 'id="catalogToolbar"[^>]*>[\s\S]*?<select id="collection"' -or
-    $html -notmatch 'pageHead\.hidden=pageType===\x27home\x27' -or
-    $html -notmatch 'customerNav\.hidden=pageType!==\x27home\x27' -or
-    $html -notmatch 'toolbar\.hidden=pageType!==\x27category\x27' -or
-    $html -notmatch 'crumb\.textContent=catalogPage\.title' -or
+# The landing page has no redundant Home control; inside catalog pages Home and Back remain adjacent and functional.
+if ($html -notmatch 'id="catalogHome"' -or
+    $html -notmatch 'id="catalogBack"' -or
+    $html -notmatch 'homeButton.hidden=pageType==='home'' -or
+    $html -notmatch "document.querySelector('#catalogHome').addEventListener('click',goCatalogHome)" -or
+    $html -notmatch 'pageHead.hidden=pageType==='home'' -or
+    $html -notmatch 'customerNav.hidden=pageType!=='home'' -or
+    $html -notmatch 'toolbar.hidden=pageType!=='category'' -or
+    $html -notmatch 'crumb.textContent=catalogPage.title' -or
     $html -notmatch 'catalog-player-page video|#playerSection video') {
-    throw "Customer mobile navigation must hide Home on the home page, keep only Back in sections, and scope compact filters to categories."
+    throw "Customer navigation must hide Home on the landing page and show working Home and Back controls inside catalog pages."
 }
-if ($html -notmatch 'catalog-back' -or $html -notmatch 'customer-ad-stage\{aspect-ratio:16/7;min-height:95px') {
+if ($html -notmatch 'catalog-back' -or $html -notmatch 'catalog-home' -or $html -notmatch 'customer-ad-stage{aspect-ratio:16/7;min-height:95px') {
     throw "Mobile catalog controls or compact ad spacing are missing."
 }
-Write-Host "PASS: mobile customer navigation has a single Back control in sections, compact category filters, and reduced vertical chrome."
+Write-Host "PASS: landing page has no redundant Home control; inner pages expose Home and Back together with compact category filters."
 
 
 # A category may be published without a poster; new category forms default to published.
@@ -575,16 +576,18 @@ if ($code -notmatch 'PublishBox\.IsChecked\s*==\s*true\s*&&\s*selectedCategory\s
 }
 Write-Host "PASS: published videos cannot be saved without a customer-facing subcategory."
 
-# Announcement ticker must animate its label and message elegantly, only when content changes.
-if ($html -notmatch 'announcement-label-drop' -or
-    $html -notmatch 'announcement-message-reveal' -or
+# Announcement ticker uses a broadcast-style label without a gold filled badge, and scrolls smoothly only when active.
+if ($html -notmatch 'announcement-message-reveal' -or
     $html -notmatch 'announcement-marquee' -or
-    $html -notmatch 'const changed=banner\.dataset\.contentKey!==contentKey' -or
+    $html -notmatch 'const changed=banner.dataset.contentKey!==contentKey' -or
     $html -notmatch 'prefers-reduced-motion:reduce' -or
-    $html -notmatch '<span id="announcementMessage"></span>') {
-    throw "Customer announcement ticker entrance, reveal, refresh behavior, or reduced-motion support is incomplete."
+    $html -notmatch '<span id="announcementMessage"></span>' -or
+    $html -notmatch 'background:transparent;color:#e4c68f' -or
+    $html -notmatch 'box-shadow:0 0 0 4px #d45c6120') {
+    throw "Customer broadcast-style announcement ticker, refresh behavior, or reduced-motion support is incomplete."
 }
-Write-Host "PASS: announcement label drops in, message reveals smoothly, ticker scrolls, and reduced-motion is respected."
+Write-Host "PASS: announcement ticker uses a clean broadcast label, elegant scrolling text, and respects reduced-motion."
+
 
 # Customer search stays below navigation and new arrivals appear only when recently updated content exists.
 if ($html.IndexOf('id="continueNav"') -gt $html.IndexOf('class="header-search"') -or
