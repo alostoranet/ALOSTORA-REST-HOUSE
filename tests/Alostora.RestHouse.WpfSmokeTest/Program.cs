@@ -52,9 +52,11 @@ internal static class Program
             var app = new Application();
             var window = new MainWindow(root, library, posters, null, port);
 
-            var enterAndSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            var enterAndSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
             enterAndSaveTimer.Tick += (_, _) =>
             {
+                var settingsStatus = window.FindName("CustomerPageSettingsStatusText") as TextBlock;
+                if (settingsStatus?.Text != "تم تحميل إعدادات ظهور أقسام صفحة العملاء.") return;
                 enterAndSaveTimer.Stop();
                 if (window.FindName("CustomerLiveBroadcastUrlBox") is not TextBox liveUrlBox)
                     throw new InvalidOperationException("The external live URL field was not found.");
