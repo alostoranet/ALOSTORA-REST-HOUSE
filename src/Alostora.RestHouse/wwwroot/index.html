@@ -30,9 +30,8 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 .announcement-banner[hidden]{display:none!important}
 .announcement-banner strong{z-index:1;flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;padding:2px 3px;background:transparent;color:#e4c68f;font-size:12px;font-weight:800;white-space:nowrap;letter-spacing:.15px}
 .announcement-banner strong:before{content:"";width:7px;height:7px;border-radius:50%;background:#d45c61;box-shadow:0 0 0 4px #d45c6120,0 0 10px #d45c61a0}
-.announcement-banner p{flex:1 1 auto;min-width:0;max-width:100%;margin:0;overflow:hidden;white-space:nowrap;direction:rtl}
-.announcement-banner #announcementMessage{display:inline-block;width:max-content;max-width:none;white-space:nowrap;color:#f7f1e6;font-size:14px;font-weight:650;line-height:1.8;text-shadow:0 1px 8px #0004;will-change:transform;animation:announcement-message-marquee 30s linear .8s infinite}
-.announcement-banner.is-entering #announcementMessage{animation:announcement-message-reveal .7s ease-out both}
+.announcement-banner p{display:flex;align-items:center;flex:1 1 auto;min-width:0;max-width:100%;height:100%;min-height:28px;margin:0;overflow:hidden;white-space:nowrap;direction:rtl;padding-block:2px}
+.announcement-banner #announcementMessage{display:inline-block;width:max-content;max-width:none;white-space:nowrap;color:#f7f1e6;font-size:14px;font-weight:650;line-height:1.45;padding-block:3px;vertical-align:middle;text-shadow:0 1px 8px #0004;will-change:transform;animation:announcement-message-marquee 30s linear .8s infinite}
 .announcement-banner:hover p{animation-play-state:paused}
 @keyframes announcement-message-reveal{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
 @keyframes announcement-message-marquee{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
@@ -165,7 +164,7 @@ main{width:min(100%,1280px);margin:0 auto;padding:22px 24px 32px}
 .contact-form button{justify-self:start;min-height:42px;padding:9px 18px;border:0;border-radius:9px;background:linear-gradient(135deg,#d9bd83,#b89155);color:#17283a;font-weight:850}
 .contact-form button:disabled{opacity:.6;cursor:wait}
 #contactFeedback{min-height:20px;margin:8px 0 0;font-weight:700}
-.developer-credit{max-width:1100px;margin:20px auto 10px;padding:10px 8px;border-top:1px solid #263e54;color:#91a4b6;text-align:center;font-size:11px;display:flex;align-items:center;justify-content:center;gap:6px 10px;flex-wrap:wrap}.developer-credit strong{color:#e4d1a8;font-weight:800}.developer-label{display:inline-flex;align-items:center;gap:4px;color:#91a4b6;font-size:10px}.developer-icon{display:inline-grid;place-items:center;width:17px;height:17px;border:1px solid #536b7e;border-radius:50%;color:#d9bd83;font-size:10px}.footer-contact-button{display:inline-flex;align-items:center;gap:5px;min-height:29px;padding:4px 9px;border:1px solid #526b80;border-radius:8px;background:#142b40;color:#e7d3aa;font-size:11px;font-weight:750;white-space:nowrap}.footer-contact-button span{font-size:12px;color:#d9bd83}.developer-credit a{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border:1px solid #315b50;border-radius:16px;background:#102d2a;color:#a9e3c7;text-decoration:none;font-weight:800;direction:ltr;transition:background .2s,border-color .2s}.developer-credit a:hover{background:#174238;border-color:#4b9678}.whatsapp-mark{font-size:12px;color:#7bd6a6}
+.developer-credit{max-width:1100px;margin:14px auto 8px;padding:8px 6px;border-top:1px solid #263e54;color:#91a4b6;text-align:center;font-size:10px;display:flex;align-items:center;justify-content:center;gap:4px 7px;flex-wrap:wrap}.developer-credit strong{color:#e4d1a8;font-size:10px;font-weight:800}.credit-pair{display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap}.developer-label{display:inline-flex;align-items:center;gap:3px;color:#91a4b6;font-size:9px}.developer-icon{display:inline-grid;place-items:center;width:15px;height:15px;border:1px solid #536b7e;border-radius:50%;color:#d9bd83;font-size:9px}.footer-contact-button{display:inline-flex;align-items:center;gap:4px;min-height:27px;padding:3px 7px;border:1px solid #526b80;border-radius:7px;background:#142b40;color:#e7d3aa;font-size:10px;font-weight:750;white-space:nowrap;flex:0 0 auto}.footer-contact-button span{font-size:12px;color:#d9bd83}.developer-credit a{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid #315b50;border-radius:16px;background:#102d2a;color:#a9e3c7;text-decoration:none;font-size:10px;font-weight:800;direction:ltr;white-space:nowrap;flex:0 0 auto;transition:background .2s,border-color .2s}.developer-credit a:hover{background:#174238;border-color:#4b9678}.whatsapp-mark{font-size:12px;color:#7bd6a6}
 .app-toast{position:fixed;z-index:9999;right:18px;bottom:18px;max-width:min(92vw,420px);padding:13px 17px;border-radius:11px;background:#176b3a;color:#fff;box-shadow:0 12px 34px #0006;font-weight:700;line-height:1.7;opacity:0;transform:translateY(14px);pointer-events:none;transition:opacity .2s,transform .2s}
 .app-toast.visible{opacity:1;transform:translateY(0)}
 .app-toast[data-kind="error"]{background:#9f2630}
@@ -184,7 +183,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
  .search-box{height:38px}
  .announcement-banner{min-height:42px;margin:10px 10px 0;padding:7px 9px;gap:8px}
  .announcement-banner strong{padding:5px 8px;font-size:10px}
- .announcement-banner #announcementMessage{font-size:12px}
+ .announcement-banner #announcementMessage{font-size:12px;line-height:1.4;padding-block:4px}
  .customer-ads{margin:10px 0 0;padding:0 10px}
  .customer-ad-stage{aspect-ratio:16/7;min-height:95px;max-height:170px}
  main{padding:15px 13px 25px}
@@ -290,7 +289,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
 </form>
 <p id="contactFeedback" role="status" aria-live="polite"></p>
 </section><div id="appToast" class="app-toast" role="status" aria-live="polite"></div></main>
-<footer class="developer-credit"><button id="contactCta" class="footer-contact-button" type="button"><span aria-hidden="true">✉</span> تواصل مع الإدارة</button><span class="developer-label"><span class="developer-icon" aria-hidden="true">✦</span> تصميم وبرمجة</span><strong>م/ أبو عبيدة محمد النظاري</strong><a href="https://wa.me/967777824918" target="_blank" rel="noopener noreferrer" aria-label="تواصل عبر واتساب على الرقم 777824918"><span class="whatsapp-mark" aria-hidden="true">◉</span><bdi dir="ltr">777824918</bdi></a></footer>
+<footer class="developer-credit"><span class="credit-pair"><button id="contactCta" class="footer-contact-button" type="button"><span aria-hidden="true">✉</span> تواصل مع الإدارة</button><span class="developer-label"><span class="developer-icon" aria-hidden="true">✦</span> تصميم وبرمجة</span></span><strong>م/ أبو عبيدة محمد النظاري</strong><a href="https://wa.me/967777824918" target="_blank" rel="noopener noreferrer" aria-label="تواصل عبر واتساب على الرقم 777824918"><span class="whatsapp-mark" aria-hidden="true">◉</span><bdi dir="ltr">777824918</bdi></a></footer>
 <script>
 const defaultCustomerSettings={showCatalog:true,showContinueWatching:true,showAudio:true,showBooks:true,showApps:true,showContact:true,showWelcome:true,showAnnouncement:true,showDownloads:true,showImageAds:true};
 let customerSettings={...defaultCustomerSettings};
@@ -824,7 +823,8 @@ function renderCatalogPage(){
   const name=season.title||((show.organizationType==='Parts'?'الجزء ':'الموسم ')+season.seasonNumber);
   const episodes=season.episodes||[];
   const seasonMeta=[show.title,episodes.length+' حلقة',show.year].filter(Boolean).join(' • ');
-  content.append(catalogHero(name,season.posterPath||show.posterPath,seasonMeta,show.description,true));
+  content.append(catalogHero(show.title,show.posterPath||season.posterPath,seasonMeta+' • '+name,show.description,false));
+  content.append(catalogSectionTitle('حلقات '+name));
   if(!episodes.length){content.append(catalogEmpty('لا توجد حلقات في هذا الموسم بعد.'));return;}
   const episodeGrid=document.createElement('div');episodeGrid.className='catalog-grid';
   for(const ep of episodes){
@@ -863,14 +863,8 @@ async function startTranscodedPlayback(item,audioIndex,generation,saved){
 }
 async function play(item){
  if(!item||!item.id)return;
- if(!item.url){
-  navigateCatalog({type:'player',title:item.title||'الفيديو'});
-  const playerSection=document.querySelector('#playerSection');
-  playerSection.hidden=false;playerSection.style.display='block';
-  document.querySelector('#nowPlayingTitle').textContent='تعذر تشغيل: '+(item.title||'الفيديو المحدد');
-  document.querySelector('#playbackHint').textContent='لا يوجد رابط صالح لملف الفيديو في المكتبة. افتح لوحة الإدارة وتأكد من أن الملف مسجل ومربوط بشكل صحيح.';
-  return;
- }
+ // Use the canonical local media endpoint if a catalog item omitted its playback URL.
+ if(typeof item.url!=='string'||!item.url.trim())item={...item,url:'/media/'+encodeURIComponent(item.id)};
  navigateCatalog({type:'player',title:item.title});
  const playerSection=document.querySelector('#playerSection');
  playerSection.hidden=false;playerSection.style.display='block';
