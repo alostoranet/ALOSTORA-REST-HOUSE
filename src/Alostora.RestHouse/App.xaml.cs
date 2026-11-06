@@ -966,6 +966,34 @@ public partial class App : Application
     meta.Save(new SaveVideoMetadataRequest(videoId,old?.Title??(librarySvc.List().First(x=>x.Id==videoId).Title),old?.Description??"",old?.Year,old?.Genre??"",old?.Kind??"Movie","/posters/"+fileName,old?.Director,old?.Cast,old?.Rating,old?.RuntimeMinutes,old?.ReleaseDate,old?.Tags,old?.Section??"عام",old?.IsPublished??false,old?.CategoryId));
     return Results.Ok(new{posterPath="/posters/"+fileName});
    });
+   _server.MapPost("/api/admin/episode-poster/{episodeId:long}",async (HttpContext c,long episodeId,SeriesCatalogService series)=>
+   {
+    if(!IsAdmin(c)) return Results.NotFound();
+    if(series.GetEpisodePoster(episodeId) is null && !series.ListSeries().Any(s=>series.GetCatalog(
+       c.RequestServices.GetRequiredService<LibraryService>(),
+       c.RequestServices.GetRequiredService<VideoMetadataService>()) is not null))
+    {
+     // The update below is the authoritative existence check; a null poster is valid.
+    }
+    if(c.Request.ContentLength is > 5_242_880) return Results.StatusCode(413);
+    var type=c.Request.ContentType?.Split(';')[0].Trim().ToLowerInvariant();
+    var ext=type switch {"image/jpeg"=>".jpg","image/png"=>".png","image/webp"=>".webp",_=>null};
+    if(ext is null) return Results.BadRequest(new{error="الصيغ المسموحة JPG وPNG وWEBP فقط"});
+    await using var ms=new MemoryStream(); await c.Request.Body.CopyToAsync(ms);
+    var bytes=ms.ToArray();
+    var valid=type switch {
+     "image/jpeg"=>bytes.Length>=3&&bytes[0]==255&&bytes[1]==216&&bytes[2]==255,
+     "image/png"=>bytes.Length>=8&&bytes.Take(8).SequenceEqual(new byte[]{137,80,78,71,13,10,26,10}),
+     "image/webp"=>bytes.Length>=12&&System.Text.Encoding.ASCII.GetString(bytes,0,4)=="RIFF"&&System.Text.Encoding.ASCII.GetString(bytes,8,4)=="WEBP",
+     _=>false
+    };
+    if(!valid||bytes.Length==0||bytes.Length>5_242_880) return Results.BadRequest(new{error="الصورة غير صالحة أو تجاوزت 5 ميجابايت"});
+    var fileName="episode-"+episodeId+"-"+Guid.NewGuid().ToString("N")+ext;
+    await File.WriteAllBytesAsync(Path.Combine(posters,fileName),bytes);
+    var path="/posters/"+fileName;
+    try { series.SetEpisodePoster(episodeId,path); return Results.Ok(new{posterPath=path}); }
+    catch(KeyNotFoundException ex) { try{File.Delete(Path.Combine(posters,fileName));}catch{} return Results.NotFound(new{error=ex.Message}); }
+   });
    _server.MapPost("/api/admin/series-poster/{seriesId}",async (HttpContext c,string seriesId,SeriesCatalogService series)=>{
     if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(seriesId)||seriesId.Length>80) return Results.BadRequest(new{error="معرّف المسلسل غير صالح"});
