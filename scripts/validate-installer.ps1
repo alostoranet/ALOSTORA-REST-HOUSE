@@ -26,3 +26,24 @@ if ($uninstallerText -notmatch 'ProgramData' -or $uninstallerText -notmatch 'Ø³Ø
     throw 'Uninstaller must explicitly preserve application data.'
 }
 Write-Host 'PASS: installer and uninstaller PowerShell syntax and publish inclusion validated.'
+
+$issPath = Join-Path $root 'installer/ALOSTORA-REST-HOUSE.iss'
+if (-not (Test-Path -LiteralPath $issPath -PathType Leaf)) {
+    throw 'Single-file Inno Setup definition is missing.'
+}
+$iss = Get-Content -LiteralPath $issPath -Raw
+if ($iss -notmatch 'OutputBaseFilename=ALOSTORA-REST-HOUSE-Setup' -or
+    $iss -notmatch 'ArchitecturesAllowed=x64' -or
+    $iss -notmatch 'commonappdata.*AlostoraRestHouse' -or
+    $iss -notmatch 'users-modify' -or
+    $iss -notmatch 'Alostora.RestHouse.exe' -or
+    $iss -match 'UninstallDelete.*commonappdata') {
+    throw 'Single-file installer must target Windows x64 and preserve the local application data directory.'
+}
+$workflow = Get-Content -LiteralPath (Join-Path $root '.github/workflows/build.yml') -Raw
+if ($workflow -notmatch 'Install Inno Setup' -or
+    $workflow -notmatch 'Build single-file Windows installer' -or
+    $workflow -notmatch 'ALOSTORA-REST-HOUSE-Setup.exe') {
+    throw 'Windows CI must compile and publish the single-file Setup.exe.'
+}
+Write-Host 'PASS: single-file Windows Setup.exe definition, x64 target, data preservation, and CI packaging are configured.'
