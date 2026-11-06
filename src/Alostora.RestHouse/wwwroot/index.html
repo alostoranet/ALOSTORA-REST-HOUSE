@@ -19,10 +19,14 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 .nav-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:8px 17px;border:1px solid #405970;border-radius:11px;background:#1b344b;color:#edf2f6;font-size:14px;font-weight:700;white-space:nowrap;transition:background .18s,border-color .18s,transform .18s}
 .nav-button:hover{border-color:var(--gold);background:#24435d}
 .nav-button.active{background:linear-gradient(135deg,#d9bd83,#b89354);border-color:#d9bd83;color:#17283a}
-/* Keep the Home action visibly red; reserve gold for restrained premium accents. */
-#homeNav{background:linear-gradient(135deg,#b51220,#e12b35);border-color:#f05a61;color:#fff;box-shadow:0 3px 10px #a10d1d55}
-#homeNav:hover,#homeNav.active{background:linear-gradient(135deg,#d21d2b,#a90f1c);border-color:#ff7378;color:#fff}
-:root{--gold:#c99b43}
+/* Distinct, coordinated colors for the three compact header actions. */
+:root{--gold:#d6ad58}
+#homeNav{background:linear-gradient(135deg,#f0c96b,#b9852d);border-color:#ffe09a;color:#17283a;box-shadow:0 3px 11px #b9852d55}
+#homeNav:hover,#homeNav.active{background:linear-gradient(135deg,#ffdc82,#c18e36);border-color:#fff0bd;color:#17283a}
+#contactNav{background:linear-gradient(135deg,#176b70,#104c59);border-color:#3b9a9a;color:#f3ffff;box-shadow:0 3px 10px #0d596055}
+#contactNav:hover,#contactNav.active{background:linear-gradient(135deg,#21858a,#145d68);border-color:#72c5c2;color:#fff}
+#continueNav{background:linear-gradient(135deg,#4b477f,#302e60);border-color:#7772b5;color:#f7f5ff;box-shadow:0 3px 10px #28265355}
+#continueNav:hover,#continueNav.active{background:linear-gradient(135deg,#625da0,#3b3875);border-color:#aaa5e0;color:#fff}
 .developer-credit,.developer-credit strong,.developer-label{color:#d4aa55}
 .developer-icon{border-color:#8e6a2d;color:#e0b85f}
 .footer-contact-button{border-color:#c99b43;background:linear-gradient(110deg,#17364b,#244b60);color:#f2d99e}
