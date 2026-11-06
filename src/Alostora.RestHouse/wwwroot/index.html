@@ -574,7 +574,7 @@ function renderCatalogPage(){
  message.hidden=pageType!=='home';
  back.hidden=pageType==='home'||catalogStack.length===0;
  back.textContent='رجوع';
- const titles={home:'الأقسام الرئيسية',main:'الأقسام الداخلية',category:'المحتوى',series:'تفاصيل البرنامج',season:'الحلقات',player:'المشاهدة الآن',continue:'متابعة المشاهدة'};
+ const titles={home:'الرئيسية',main:'الأقسام',category:'المحتوى',series:'المسلسل',season:'الحلقات',player:'المشاهدة الآن',continue:'متابعة المشاهدة'};
  crumb.textContent=catalogPage.title||titles[pageType]||'المكتبة';
  const query=(document.querySelector('#search')?.value||'').trim().toLocaleLowerCase('ar');
  // Keep the landing page focused on the main content categories.
@@ -613,7 +613,7 @@ function renderCatalogPage(){
   const matchedCategories=categories.filter(x=>x.isPublished===true&&matchesQuery(x))
    .sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'ar',{sensitivity:'base'}));
   addResults('الأقسام والتصنيفات',matchedCategories.map(category=>catalogCard(
-   category.title,category.contentKind==='Series'?'قسم مسلسلات':'قسم فيديوهات',category.posterPath,
+   category.title,'',category.posterPath,
    ()=>navigateCatalog({type:category.parentId==null?'main':'category',categoryId:category.categoryId,title:category.title})
   )));
   const matchedSeries=sorted(seriesItems.filter(x=>x.isPublished===true));
