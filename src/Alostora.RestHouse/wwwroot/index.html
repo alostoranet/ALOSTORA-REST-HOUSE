@@ -38,7 +38,7 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 @keyframes announcement-label-drop{0%{opacity:0;transform:translateY(-130%) scale(.94)}72%{opacity:1;transform:translateY(4px) scale(1.02)}100%{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes announcement-message-reveal{from{opacity:0;clip-path:inset(0 0 100% 0);transform:translateY(-7px)}to{opacity:1;clip-path:inset(0 0 0 0);transform:translateY(0)}}
 @keyframes announcement-marquee{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.announcement-banner p{animation:none;white-space:normal}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.announcement-banner p{animation:none;white-space:normal}.announcement-banner.is-entering strong,.announcement-banner.is-entering #announcementMessage{animation:none!important}}
 .customer-ads{max-width:1280px;margin:13px auto 0;padding:0 14px}
 .customer-ads[hidden]{display:none!important}
 .customer-ad-stage{position:relative;aspect-ratio:16/5;min-height:110px;max-height:250px;overflow:hidden;border:1px solid #344e65;border-radius:15px;background:#142b40;box-shadow:0 9px 24px #0003}
@@ -714,14 +714,14 @@ function renderCatalogPage(){
    const grid=document.createElement('div');grid.className='catalog-grid';
    for(const show of shows){
     const seasons=show.seasons||[];
-    grid.append(catalogCard(show.title,seasons.length+(show.organizationType==='Parts'?' جزء':' موسم'),show.posterPath,()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title})));
+    grid.append(catalogCard(show.title,'',show.posterPath,()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title})));
    }
    if(shows.length)content.append(grid);else content.append(catalogEmpty('لا توجد مسلسلات منشورة في هذا القسم بعد.'));
   }else{
    const movies=sorted(items.filter(x=>x.isPublished===true&&x.kind!=='Series'&&x.categoryId===category.categoryId));
    const grid=document.createElement('div');grid.className='catalog-grid';
    for(const movie of movies){
-    const summary=[movie.year,movie.genre,movie.runtimeMinutes?movie.runtimeMinutes+' دقيقة':'','المشاهدات: '+(movie.viewCount||0)].filter(Boolean).join(' • ');
+    const summary=[movie.year,movie.genre].filter(Boolean).join(' • ');
     grid.append(catalogCard(movie.title,summary,movie.posterPath,()=>play({id:movie.id,url:movie.url,title:movie.title}),null,movie));
    }
    content.append(grid);
