@@ -622,6 +622,8 @@ function renderCatalogPage(){
  const playerSection=document.querySelector('#playerSection');
  if(!content||!catalogPage||!playerSection)return;
  const pageType=catalogPage.type||'home';
+ const categoryFilter=document.querySelector('#categoryFilter');
+ if(categoryFilter)categoryFilter.value=(pageType==='main'||pageType==='category')?String(catalogPage.categoryId||''):'';
  const customerNav=document.querySelector('.customer-nav');if(customerNav)customerNav.hidden=false;
  const homeNav=document.querySelector('#homeNav');if(homeNav)homeNav.hidden=pageType==='home'&&document.querySelector('#contactView').hidden;
  const announcement=document.querySelector('#announcementBanner');if(announcement)announcement.hidden=pageType!=='home'||customerSettings.showAnnouncement===false||announcement.dataset.active!=='true';
