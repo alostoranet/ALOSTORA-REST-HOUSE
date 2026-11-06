@@ -2303,6 +2303,7 @@ public partial class MainWindow : Window
                 episodes = selected.Select(x => new
                 {
                     videoId = x.VideoId,
+                    filePath = x.FilePath,
                     episodeNumber = x.EpisodeNumber,
                     title = x.Title,
                     selected = true
@@ -3265,6 +3266,7 @@ public partial class MainWindow : Window
     private sealed class EpisodeCandidate
     {
         public string VideoId { get; set; } = "";
+        public string FilePath { get; set; } = "";
         public string FileName { get; set; } = "";
         public string Title { get; set; } = "";
         public int? EpisodeNumber { get; set; }
