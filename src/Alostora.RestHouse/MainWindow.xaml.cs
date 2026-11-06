@@ -98,7 +98,7 @@ public partial class MainWindow : Window
             ("الحلقات الناقصة", LoadMissingEpisodesAsync),
             ("رسائل العملاء", LoadCustomerMessagesAsync),
             ("الإعلانات والتنبيهات", LoadAnnouncementAsync),
-            ("الإعلانات المصورة", LoadCustomerAdsAsync),
+            ("الإعلانات المصورة", () => LoadCustomerAdsAsync()),
             ("إعدادات صفحة العملاء ورابط البث", LoadCustomerPageSettingsAsync),
             ("حد سرعة التنزيل", LoadDownloadSpeedLimitAsync),
             ("أدوات الوسائط", CheckMediaToolsAsync),
