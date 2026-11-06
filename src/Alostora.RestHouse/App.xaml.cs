@@ -220,7 +220,13 @@ public partial class App : Application
    {
     if(!IsAdmin(c))return Results.NotFound();
     if(request is null)return Results.BadRequest(new{error="إعدادات واجهة العميل غير صالحة."});
-    return Results.Ok(new{saved=true,settings=settings.Save(request)});
+    if(!string.IsNullOrWhiteSpace(request.LiveBroadcastUrl) &&
+       (!Uri.TryCreate(request.LiveBroadcastUrl.Trim(),UriKind.Absolute,out var liveUri) ||
+        (liveUri.Scheme!=Uri.UriSchemeHttp && liveUri.Scheme!=Uri.UriSchemeHttps) ||
+        string.IsNullOrWhiteSpace(liveUri.Host)))
+     return Results.BadRequest(new{error="رابط البث يجب أن يبدأ بـ http:// أو https://"});
+    var normalized=request with{LiveBroadcastUrl=string.IsNullOrWhiteSpace(request.LiveBroadcastUrl)?null:request.LiveBroadcastUrl.Trim()};
+    return Results.Ok(new{saved=true,settings=settings.Save(normalized)});
    });
    _server.MapGet("/api/admin/download-speed-limit",(HttpContext c,DownloadSpeedLimitService speedLimit)=>
     IsAdmin(c)?Results.Ok(speedLimit.GetSettings()):Results.NotFound());
