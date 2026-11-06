@@ -83,16 +83,15 @@ foreach ($match in $scripts) {
 }
 Write-Host ("PASS: {0} inline viewer script block(s) passed Node.js syntax validation." -f $scripts.Count)
 
-# The customer page must open on the accommodation catalog and show contact only on demand.
-if ($html -notmatch 'id="homeNav"' -or
-    $html -notmatch 'id="contactNav"' -or
-    $html -notmatch 'id="homeView"' -or
+# The customer home opens directly on the catalog; contact is a separate hidden view and the header has no redundant Home item.
+if ($html -notmatch 'id="homeView"' -or
     $html -notmatch 'id="contactView"[^>]*hidden' -or
+    $html -notmatch '<nav class="customer-nav"[^>]*>\s*<button id="continueNav"' -or
     $html -notmatch "showCustomerView\('contact'\)" -or
-    $html -notmatch "showCustomerView\('home'\)") {
-    throw "Customer navigation must separate the home catalog from the contact form."
+    $html -match '<nav class="customer-nav"[^>]*>[^<]*<button[^>]*>[^<]*الرئيسية') {
+    throw "Customer navigation must open on the catalog, keep contact separate, and omit a redundant Home item."
 }
-Write-Host "PASS: customer home and contact form have separate navigation states."
+Write-Host "PASS: customer home opens directly on the catalog and contact remains a separate view."
 # The customer home must summarize published library content and surface genuinely popular titles.
 if ($html -notmatch 'id="customerOverview"' -or
     $html -notmatch 'id="overviewCategoryCount"' -or
@@ -139,8 +138,9 @@ if (-not $html.Contains('id="watchedSection"') -or
     -not $watchService.Contains('GetViewerHistory') -or
     -not $appSource.Contains('"/api/watch-history/{viewerId}"') -or
     -not $html.Contains('id="contactCta"') -or
-    -not $html.Contains('تواصل مع الإدارة للطلب والاستفسار') -or
-    $html.IndexOf('id="contactCta"') -gt $html.IndexOf('<footer class="developer-credit"')) {
+    -not $html.Contains('تواصل مع الإدارة') -or
+    -not $html.Contains('class="credit-pair"') -or
+    $html.IndexOf('id="contactCta"') -lt $html.IndexOf('<footer class="developer-credit"')) {
     throw "The customer page must provide a viewer-scoped watched history, a clear resume section, and a contact button above the developer footer."
 }
 Write-Host "PASS: customer watch hub shows resume and watched videos; contact CTA appears above the footer."
