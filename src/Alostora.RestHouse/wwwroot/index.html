@@ -264,7 +264,6 @@ button:disabled{cursor:not-allowed;opacity:.58}
 </div>
 <section id="newArrivals" class="new-arrivals" hidden aria-label="المضاف حديثاً"><div class="new-arrivals-heading"><div><span class="new-kicker">اكتشف الآن</span><h2>أُضيف حديثاً</h2></div><span class="new-count" id="newArrivalsCount"></span></div><div id="newArrivalsGrid" class="new-arrivals-grid"></div></section><div id="catalogContent"></div>
 <section id="playerSection" aria-live="polite" hidden>
-<h2 id="nowPlayingTitle">المشاهدة الآن</h2>
 <p id="nowPlayingViews" class="meta" aria-live="polite">👁 عدد المشاهدات: —</p>
 <video id="player" controls playsinline preload="metadata"></video>
 <div id="audioControls" hidden><label for="audioTrack">المسار الصوتي:</label><select id="audioTrack"></select><button id="applyAudio" type="button">تشغيل بالصوت المحدد</button></div>
@@ -654,7 +653,6 @@ function renderCatalogPage(){
  if(pageType==='player'){
   content.hidden=true;
   playerSection.hidden=false;playerSection.style.display='block';
-  document.querySelector('#nowPlayingTitle').textContent='يتم تشغيل: '+(catalogPage.title||'الفيديو المحدد');
   return;
  }
  content.hidden=false;
@@ -869,7 +867,6 @@ async function play(item){
  navigateCatalog({type:'player',title:item.title});
  const playerSection=document.querySelector('#playerSection');
  playerSection.hidden=false;playerSection.style.display='block';
- document.querySelector('#nowPlayingTitle').textContent='يتم تشغيل: '+(item.title||'الفيديو المحدد');
  playerSection.scrollIntoView({behavior:'smooth',block:'start'});
  const generation=++playbackGeneration,previous=activeVideo;
  const playbackId=(globalThis.crypto?.randomUUID?.()||(`${Date.now()}-${Math.random().toString(16).slice(2)}`));
