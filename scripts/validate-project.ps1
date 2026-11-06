@@ -617,6 +617,7 @@ if ($html -notmatch 'announcement-message-marquee 30s linear' -or
     $html -notmatch 'text-align:center' -or
     $html -notmatch 'const changed=banner.dataset.contentKey!==contentKey' -or
     $html -notmatch 'prefers-reduced-motion:reduce' -or
+    $html -match 'announcement-banner:hover #announcementMessage\\{animation-play-state:paused\\}' -or
     $html -notmatch '<span id="announcementMessage"></span>') {
     throw "Customer red breaking-news ticker, refresh behavior, or reduced-motion support is incomplete."
 }
