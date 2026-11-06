@@ -247,6 +247,54 @@ button:disabled{cursor:not-allowed;opacity:.58}
  .catalog-card img.catalog-poster,.catalog-card .catalog-poster,.catalog-card .poster-empty{border-radius:9px}
  .catalog-hero img,.catalog-hero .poster-empty{width:96px;flex-basis:96px}
 }
+
+/* Unified premium visual finish: deep navy, restrained champagne gold, teal and violet accents. */
+:root{--bg:#071321;--bg2:#0b1b2b;--panel:#11263a;--panel2:#18334a;--line:#304b62;--gold:#d8b66d;--gold-soft:#f0dba9;--text:#f8f5ee;--muted:#b9c7d3;--soft:#8fa3b6}
+body{background:radial-gradient(ellipse at 50% -18%,#1a3852 0,#0b1b2b 48%,#071321 82%);color:var(--text)}
+header{border-bottom:1px solid #3a5369;box-shadow:0 12px 34px #0005}
+main{isolation:isolate}
+.catalog-card,.watched-card,.continue-card,.contact-box,#downloadCenter,#playerSection{border-color:#34516a;background:linear-gradient(150deg,#173149 0%,#10263a 58%,#0d2032 100%);box-shadow:0 8px 22px #0003}
+.catalog-card{border-radius:15px;padding:8px}
+.catalog-card:hover{border-color:#d0ad66;box-shadow:0 12px 26px #0005,0 0 0 1px #d0ad6620}
+.catalog-card img.catalog-poster,.catalog-card .catalog-poster,.catalog-card .poster-empty,.catalog-hero img,.catalog-hero .poster-empty{border-color:#52677a;border-radius:12px}
+.catalog-card h3,.catalog-hero-copy h2,.catalog-section-title,#playerSection h2,#mediaLibrary h2,#downloadCenter h2,.contact-box h2{color:#fbf6e9;text-shadow:0 1px 0 #0002}
+.catalog-section-title{position:relative;padding-right:13px}
+.catalog-section-title:before{content:"";position:absolute;right:0;top:5px;bottom:5px;width:4px;border-radius:5px;background:linear-gradient(180deg,#f0d99e,#b98a3b)}
+.catalog-list-row,.catalog-episode{border-color:#34516a;border-radius:13px;background:linear-gradient(120deg,#18334a,#11263a);box-shadow:0 4px 14px #0002}
+.catalog-list-row:hover,.catalog-episode:hover{border-color:#cba75e;background:linear-gradient(120deg,#1d3c54,#142d43)}
+.catalog-empty{border-color:#587086;background:#10263a;border-radius:14px}
+#playerSection{border-radius:17px;padding:clamp(14px,2.2vw,22px)}
+#playerSection video{border:1px solid #344e64;border-radius:13px;box-shadow:0 10px 26px #0005}
+#audioControls{border-color:#3b566c;border-radius:12px;background:#142d43}
+.search-box,.header-filter,#catalogToolbar select,.contact-form input,.contact-form select,.contact-form textarea,#audioControls select{border-color:#405d75;background:#0e2235;border-radius:11px}
+.search-box:focus-within,.header-filter:focus,.contact-form input:focus,.contact-form select:focus,.contact-form textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px #d8b66d22;outline:none}
+button.secondary,.watched-card button,.download-remove,.customer-ad-controls>button{border:1px solid #526a7e;border-radius:10px;background:linear-gradient(135deg,#203d55,#173149);color:#f5ead1;transition:transform .16s,border-color .16s,filter .16s}
+button.secondary:hover,.watched-card button:hover,.download-remove:hover,.customer-ad-controls>button:hover{border-color:var(--gold);filter:brightness(1.12);transform:translateY(-1px)}
+.catalog-episode button,.action,.contact-form button,#audioControls button{border:1px solid #f0d79c;background:linear-gradient(135deg,#f0d38d,#c3974d);color:#17283a;border-radius:10px;box-shadow:0 4px 12px #0002}
+.catalog-episode button:hover,.action:hover,.contact-form button:hover,#audioControls button:hover{filter:brightness(1.07);transform:translateY(-1px)}
+.continue-card button{border:1px solid #d77880;border-radius:10px;background:linear-gradient(135deg,#b94d5b,#883746);color:#fff}
+.progress-track{height:7px;background:#304b62}
+.progress-fill{border-radius:8px;background:linear-gradient(90deg,#b98b3e,#f0d99e)}
+.catalog-card .catalog-card-badge{background:#8d3c4a}
+#catalogPageHead{border-color:#344e64}
+.catalog-back{border-color:#49647a;background:linear-gradient(135deg,#203d55,#142c42);border-radius:10px}
+.catalog-home{border-color:#e2c17b;background:linear-gradient(135deg,#f0d38d,#b98b3e);color:#17283a}
+.contact-cta-button{border-color:#48a5a2;background:linear-gradient(120deg,#176b70,#104c59);color:#f2ffff;border-radius:11px}
+.contact-cta-button:before{color:#b8eeee}
+.footer-contact-button{border-radius:10px}
+.developer-credit,.developer-credit strong,.developer-label{color:#e0c27e}
+.customer-ad-stage{border-color:#52677b;border-radius:16px;box-shadow:0 10px 26px #0004}
+.announcement-banner{border-radius:7px;box-shadow:0 5px 17px #0004}
+:where(button,a,input,select,textarea):focus-visible{outline:3px solid #e2c17b!important;outline-offset:3px!important}
+@media(max-width:760px){
+ .catalog-card{border-radius:13px;padding:6px}
+ .catalog-card h3{font-size:16px}
+ .catalog-list-row,.catalog-episode{border-radius:11px}
+ #playerSection{padding:11px;border-radius:13px}
+ #playerSection video{min-height:170px;border-radius:10px}
+ .contact-cta-button{width:min(100%,360px);padding:10px 14px}
+}
+
 </style></head><body>
 <header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="homeNav" class="nav-button compact-top-nav" type="button" hidden>⌂ الرئيسية</button><button id="contactNav" class="nav-button compact-top-nav" type="button">✉ تواصل مع الإدارة</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
 <div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p><span id="announcementMessage"></span></p></div>
