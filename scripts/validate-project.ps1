@@ -212,7 +212,7 @@ if ($html -match 'id="catalogHome"' -or
     $html -notmatch 'catalog-player-page video|#playerSection video') {
     throw "Customer mobile navigation must hide Home on the home page, keep only Back in sections, and scope compact filters to categories."
 }
-if ($html -notmatch 'catalog-back' -or $html -notmatch 'customer-ad-stage\{aspect-ratio:16/6;min-height:82px') {
+if ($html -notmatch 'catalog-back' -or $html -notmatch 'customer-ad-stage\{aspect-ratio:16/7;min-height:95px') {
     throw "Mobile catalog controls or compact ad spacing are missing."
 }
 Write-Host "PASS: mobile customer navigation has a single Back control in sections, compact category filters, and reduced vertical chrome."
@@ -597,5 +597,14 @@ if ($html.IndexOf('id="continueNav"') -gt $html.IndexOf('class="header-search"')
     throw "Customer search placement or dynamic new-arrivals metadata is incomplete."
 }
 Write-Host "PASS: compact search sits below navigation; new movies, series, and episodes are shown only while recently updated."
+# Customer-facing category cards show real names only; no implementation labels leak into the catalog.
+if ($html -match 'الأقسام الداخلية|قسم مسلسلات|قسم فيديوهات|أقسام داخلية' -or
+    $html -notmatch 'class="media-quick-nav"' -or
+    $html -notmatch 'class="customer-nav" aria-label="التنقل الرئيسي"' -or
+    $html -notmatch 'catalog-card h3\{font-size:19px') {
+    throw "Customer catalog still exposes internal labels or cluttered navigation, or lacks clear section titles."
+}
+Write-Host "PASS: customer home uses clean primary navigation, named sections, and large readable category titles."
+
 
 
