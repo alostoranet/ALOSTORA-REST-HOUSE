@@ -4,7 +4,7 @@
 #define OutputDir GetEnv("ALOSTORA_OUTPUT_DIR")
 
 [Setup]
-AppId={{A91B8C4E-3E1D-4F90-9E13-ALOSTORARESTHOUSE}}
+AppId={{A91B8C4E-3E1D-4F90-9E13-0A057E5A0001}}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=ALOSTORA
