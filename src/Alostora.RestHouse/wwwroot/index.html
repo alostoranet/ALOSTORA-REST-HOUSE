@@ -232,8 +232,8 @@ button:disabled{cursor:not-allowed;opacity:.58}
  #playerSection video{max-height:58vh}
 }
 .continue-nav{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:7px 12px;font-size:13px;border-radius:10px}.continue-nav:focus-visible{outline:3px solid #f2c56b;outline-offset:3px}#continueSection{margin:12px 0 20px;padding:0;border:0;background:transparent}#continueSection h2{font-size:20px;margin:8px 0 14px}#continueGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}@media(max-width:640px){.continue-nav{font-size:12px;padding:6px 9px;min-height:34px}#continueGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}}
-</style></head><body>
-<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><div class="header-search"><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل أو قسم..."></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح الفيديوهات التي بدأت مشاهدتها">▶ متابعة المشاهدة</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
+.header-search{display:flex;justify-content:flex-start;align-items:center;margin:12px 0 0;max-width:100%}.search-box{display:flex;align-items:center;gap:8px;width:min(100%,430px);height:40px;padding:0 12px;border:1px solid #49627c;border-radius:22px;background:#10243a;box-shadow:0 4px 14px #0002;color:#c9d7e5}.search-box>span{font-size:22px;line-height:1;color:#d9b45f}.search-box input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#fff;font:inherit;font-size:13px;padding:7px 0;box-shadow:none}.search-box input::placeholder{color:#aebed0}.new-arrivals{margin:14px 0 22px;padding:16px;border:1px solid #344e69;border-radius:16px;background:linear-gradient(135deg,#142a42,#0f2033);box-shadow:0 10px 26px #0002}.new-arrivals[hidden]{display:none!important}.new-arrivals-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:12px}.new-arrivals-heading h2{margin:3px 0 0;font-size:19px}.new-kicker{font-size:10px;color:#d9b45f;letter-spacing:.8px}.new-count{font-size:11px;color:#aebed0}.new-arrivals-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:11px}.new-arrivals .catalog-card{position:relative;min-width:0}.new-arrivals .catalog-card-badge{display:inline-flex;margin-top:5px;padding:3px 8px;border-radius:20px;background:#c93640;color:white;font-size:10px;font-weight:700}.new-arrivals .catalog-open-button{width:100%;height:100%;text-align:right}.new-arrivals .catalog-poster,.new-arrivals .poster-empty{height:178px;max-height:178px}.new-arrivals .catalog-open-button h3{font-size:13px;margin:7px 0 2px}.new-arrivals .catalog-open-button small{font-size:10px}@media(max-width:600px){header{padding:17px 4%}.brand-bar h1{font-size:22px}.brand-bar p{font-size:12px}.customer-nav{gap:7px;margin-top:13px}.nav-button{padding:8px 11px;font-size:13px}.header-search{margin-top:10px}.search-box{width:100%;height:36px}.new-arrivals{margin:10px 0 16px;padding:12px;border-radius:13px}.new-arrivals-heading h2{font-size:17px}.new-arrivals-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.new-arrivals .catalog-poster,.new-arrivals .poster-empty{height:155px;max-height:155px}}</style></head><body>
+<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح الفيديوهات التي بدأت مشاهدتها">▶ متابعة المشاهدة</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
 <div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p><span id="announcementMessage"></span></p></div>
 <section id="customerAds" class="customer-ads" aria-label="إعلانات الاستراحة" hidden>
  <div id="customerAdStage" class="customer-ad-stage"></div>
@@ -267,7 +267,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
 <select id="collection"><option value="">كل الأعمال المنشورة</option><option value="favorites">المفضلة</option></select>
 <select id="sort" aria-label="ترتيب المكتبة"><option value="title">ترتيب حسب الاسم</option><option value="year">الأحدث إنتاجاً</option><option value="rating">الأعلى تقييماً</option></select>
 </div>
-<div id="catalogContent"></div>
+<section id="newArrivals" class="new-arrivals" hidden aria-label="المضاف حديثاً"><div class="new-arrivals-heading"><div><span class="new-kicker">اكتشف الآن</span><h2>أُضيف حديثاً</h2></div><span class="new-count" id="newArrivalsCount"></span></div><div id="newArrivalsGrid" class="new-arrivals-grid"></div></section><div id="catalogContent"></div>
 <section id="playerSection" aria-live="polite" hidden>
 <h2 id="nowPlayingTitle">المشغل</h2><video id="player" controls playsinline preload="metadata"></video>
 <div id="audioControls" hidden><label for="audioTrack">المسار الصوتي:</label><select id="audioTrack"></select><button id="applyAudio" type="button">تشغيل بالصوت المحدد</button></div>
@@ -496,6 +496,22 @@ function toggleFavorite(item){const key=favoriteKey(item);if(!key)return;if(favo
 function addFavoriteButton(card,item){const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent=favorites.has(favoriteKey(item))?'★ إزالة من المفضلة':'☆ أضف للمفضلة';button.onclick=event=>{event.stopPropagation();toggleFavorite(item);};card.append(button);}
 function isNew(dateValue){if(!dateValue)return false;const date=new Date(dateValue);return !Number.isNaN(date.getTime())&&(Date.now()-date.getTime())<14*24*60*60*1000;}
 function makeNewBadge(){const badge=document.createElement('span');badge.className='new-badge';badge.textContent='جديد';return badge;}
+function isRecentlyAdded(value){if(!value)return false;const date=new Date(value);const age=Date.now()-date.getTime();return Number.isFinite(date.getTime())&&age>=0&&age<=14*24*60*60*1000;}
+function renderNewArrivals(){
+ const section=document.querySelector('#newArrivals'),grid=document.querySelector('#newArrivalsGrid'),count=document.querySelector('#newArrivalsCount');
+ if(!section||!grid||!count)return;
+ const recentVideos=items.filter(x=>x.isPublished===true&&x.kind!=='Series'&&isRecentlyAdded(x.updatedUtc)).map(x=>({...x,_arrivalType:'فيلم أو فيديو'}));
+ const recentSeries=seriesItems.filter(x=>x.isPublished===true&&isRecentlyAdded(x.updatedUtc)).map(x=>({...x,_arrivalType:'مسلسل أو برنامج'}));
+ const rows=[...recentVideos,...recentSeries].sort((a,b)=>new Date(b.updatedUtc)-new Date(a.updatedUtc)).slice(0,8);
+ grid.replaceChildren();
+ for(const item of rows){
+  const isSeries=!!item.seriesId;
+  const subtitle=[item._arrivalType,item.year,item.genre].filter(Boolean).join(' • ');
+  grid.append(catalogCard(item.title,subtitle,item.posterPath,()=>navigateCatalog(isSeries?{type:'series',seriesId:item.seriesId,title:item.title}:{type:'category',categoryId:item.categoryId,title:item.title}), 'جديد', isSeries?null:item));
+ }
+ count.textContent=rows.length?rows.length.toLocaleString('ar')+' إضافات جديدة':'';
+ section.hidden=rows.length===0;
+}
 function render(){renderCatalogPage();}
 function renderCustomerOverview(){
  const publishedVideos=items.filter(item=>item.isPublished===true&&item.kind!=='Series');
@@ -660,6 +676,7 @@ function renderCatalogPage(){
   return;
  }
  if(pageType==='home'){
+  renderNewArrivals();
   const mains=categories.filter(x=>x.parentId==null&&x.isPublished===true).filter(main=>{
    if(matchesQuery(main))return true;
    const children=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true);
@@ -952,7 +969,7 @@ async function load(){try{
   const failed=[['الأفلام',libraryResponse],['المسلسلات',seriesResponse],['الأقسام',categoryResponse]].filter(([,r])=>!r.ok).map(([name,r])=>name+' ('+r.status+')');
   throw Error('تعذر تحميل '+failed.join('، '));
  }
- items=await libraryResponse.json();seriesItems=await seriesResponse.json();categories=await categoryResponse.json();
+ items=await libraryResponse.json();seriesItems=await seriesResponse.json();categories=await categoryResponse.json();renderNewArrivals();
  try{const mr=await fetch('/api/media-libraries');if(mr.ok)mediaItems=await mr.json();}catch{mediaItems=[];}renderMediaLibraries();
  const select=document.querySelector('#categoryFilter');select.replaceChildren();
  const all=document.createElement('option');all.value='';all.textContent='كل الأقسام';select.append(all);
