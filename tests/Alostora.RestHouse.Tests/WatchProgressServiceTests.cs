@@ -28,6 +28,9 @@ public sealed class WatchProgressServiceTests : IDisposable
         Assert.Equal(3, _service.GetTotalPlaybackCount());
         Assert.Equal(2, counts[videoA]);
         Assert.Equal(1, counts[videoB]);
+        Assert.Equal(2, _service.GetViewCount(videoA));
+        Assert.Equal(1, _service.GetViewCount(videoB));
+        Assert.Equal(0, _service.GetViewCount("fedcba9876543210fedcba98"));
     }
 
     [Fact]
