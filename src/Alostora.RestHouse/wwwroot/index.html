@@ -152,7 +152,7 @@ main{width:min(100%,1280px);margin:0 auto;padding:22px 24px 32px}
 .contact-form button{justify-self:start;min-height:42px;padding:9px 18px;border:0;border-radius:9px;background:linear-gradient(135deg,#d9bd83,#b89155);color:#17283a;font-weight:850}
 .contact-form button:disabled{opacity:.6;cursor:wait}
 #contactFeedback{min-height:20px;margin:8px 0 0;font-weight:700}
-.developer-credit{max-width:1100px;margin:22px auto 12px;padding:12px;border-top:1px solid #263e54;color:#8296a9;text-align:center;font-size:12px}
+.developer-credit{max-width:1100px;margin:24px auto 14px;padding:15px 12px;border-top:1px solid #263e54;color:#91a4b6;text-align:center;font-size:12px;display:flex;align-items:center;justify-content:center;gap:7px 11px;flex-wrap:wrap}.developer-credit strong{color:#e4d1a8;font-weight:800}.developer-credit a{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid #315b50;border-radius:20px;background:#102d2a;color:#a9e3c7;text-decoration:none;font-weight:800;direction:ltr;transition:background .2s,border-color .2s}.developer-credit a:hover{background:#174238;border-color:#4b9678}.whatsapp-mark{font-size:13px;color:#7bd6a6}
 .app-toast{position:fixed;z-index:9999;right:18px;bottom:18px;max-width:min(92vw,420px);padding:13px 17px;border-radius:11px;background:#176b3a;color:#fff;box-shadow:0 12px 34px #0006;font-weight:700;line-height:1.7;opacity:0;transform:translateY(14px);pointer-events:none;transition:opacity .2s,transform .2s}
 .app-toast.visible{opacity:1;transform:translateY(0)}
 .app-toast[data-kind="error"]{background:#9f2630}
@@ -249,7 +249,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
 </div>
 <section id="newArrivals" class="new-arrivals" hidden aria-label="المضاف حديثاً"><div class="new-arrivals-heading"><div><span class="new-kicker">اكتشف الآن</span><h2>أُضيف حديثاً</h2></div><span class="new-count" id="newArrivalsCount"></span></div><div id="newArrivalsGrid" class="new-arrivals-grid"></div></section><div id="catalogContent"></div>
 <section id="playerSection" aria-live="polite" hidden>
-<h2 id="nowPlayingTitle">المشغل</h2><video id="player" controls playsinline preload="metadata"></video>
+<video id="player" controls playsinline preload="metadata"></video>
 <div id="audioControls" hidden><label for="audioTrack">المسار الصوتي:</label><select id="audioTrack"></select><button id="applyAudio" type="button">تشغيل بالصوت المحدد</button></div>
 <p id="playbackHint"></p><p id="subtitleHint" class="meta">تُكتشف الترجمات الخارجية تلقائياً بجانب ملف الفيديو.</p>
 </section>
@@ -270,7 +270,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
 </form>
 <p id="contactFeedback" role="status" aria-live="polite"></p>
 </section><div id="appToast" class="app-toast" role="status" aria-live="polite"></div></main>
-<footer class="developer-credit">تصميم وبرمجة: محمد النظاري</footer>
+<footer class="developer-credit"><span>تصميم وبرمجة الاستراحة</span><strong>م/ أبو عبيدة محمد النظاري</strong><a href="https://wa.me/967777824918" target="_blank" rel="noopener noreferrer" aria-label="تواصل عبر واتساب على الرقم 777824918"><span class="whatsapp-mark" aria-hidden="true">◉</span><bdi dir="ltr">777824918</bdi></a></footer>
 <script>
 const defaultCustomerSettings={showCatalog:true,showContinueWatching:true,showAudio:true,showBooks:true,showApps:true,showContact:true,showWelcome:true,showAnnouncement:true,showDownloads:true,showImageAds:true};
 let customerSettings={...defaultCustomerSettings};
