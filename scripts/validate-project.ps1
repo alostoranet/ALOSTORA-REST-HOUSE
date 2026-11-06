@@ -685,3 +685,12 @@ if ($xaml -notmatch 'Content="التحديثات" Click="Updates_Click"' -or
     throw "The Windows app must expose the prepared updates action without requiring an update URL yet."
 }
 Write-Host "PASS: the Windows app includes a prepared updates button and a clear not-yet-available message."
+
+# Customer page exposes the same prepared updates action without requiring an update URL.
+if ($html -notmatch 'id="updatesCta"' -or
+    $html -notmatch 'footer-updates-button' -or
+    $html -notmatch "document\.querySelector\('#updatesCta'\)\.addEventListener\('click'" -or
+    $html -notmatch 'سيتم توفير خدمة التحديثات قريباً') {
+    throw "Customer page updates action or its offline-safe placeholder message is missing."
+}
+Write-Host "PASS: customer page exposes the updates button and a clear offline-safe placeholder."
