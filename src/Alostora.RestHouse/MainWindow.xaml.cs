@@ -715,18 +715,40 @@ public partial class MainWindow : Window
         _activeEditorExpander = editor;
         _activeEditorContent = editor.Content;
         editor.Content = null;
+        var editorBody = _activeEditorContent as UIElement;
+        var editorFrame = new Border
+        {
+            Background = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(247, 250, 253)),
+            BorderBrush = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(199, 212, 226)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(22),
+            Margin = new Thickness(4),
+            Child = editorBody
+        };
+        var editorScrollViewer = new ScrollViewer
+        {
+            Content = editorFrame,
+            Margin = new Thickness(0),
+            Padding = new Thickness(14),
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
         var window = new Window
         {
             Title = title,
             Owner = this,
-            Width = 720,
+            Width = 820,
             Height = 700,
-            MinWidth = 560,
+            MinWidth = 640,
             MinHeight = 480,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             FlowDirection = FlowDirection.RightToLeft,
-            Background = System.Windows.Media.Brushes.White,
-            Content = new ScrollViewer { Content = _activeEditorContent, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }
+            Background = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(243, 246, 250)),
+            Content = editorScrollViewer
         };
         _activeEditorWindow = window;
         window.Closed += (_, _) =>
