@@ -7,7 +7,8 @@ function Test-Administrator {
 }
 
 if (-not (Test-Administrator)) {
-    Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath)
+    $arguments = '-NoProfile -ExecutionPolicy Bypass -File "' + $PSCommandPath + '"'
+    Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList $arguments
     exit
 }
 
