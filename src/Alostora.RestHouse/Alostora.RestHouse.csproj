@@ -2,4 +2,4 @@
   <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net8.0-windows</TargetFramework><UseWPF>true</UseWPF><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>
   <ItemGroup><FrameworkReference Include="Microsoft.AspNetCore.App" /><PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.11" /><PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" /></ItemGroup>
   <ItemGroup><Content Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
-</Project>
+  <ItemGroup><Content Include="..\\..\\installer\\*.ps1" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" /></ItemGroup>\n</Project>
