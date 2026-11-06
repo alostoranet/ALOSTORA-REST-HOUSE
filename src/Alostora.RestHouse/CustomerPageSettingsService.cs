@@ -13,7 +13,8 @@ public sealed record CustomerPageSettings(
     bool ShowWelcome = true,
     bool ShowAnnouncement = true,
     bool ShowDownloads = true,
-    bool ShowImageAds = true);
+    bool ShowImageAds = true,
+    string? LiveBroadcastUrl = null);
 
 public sealed class CustomerPageSettingsService
 {
