@@ -994,6 +994,7 @@ function showCustomerView(view){
  document.querySelector('#homeNav').setAttribute('aria-pressed',String(home));
  document.querySelector('#contactNav').setAttribute('aria-pressed',String(!home));
  document.querySelector('#customerAds').hidden=!home||customerSettings.showImageAds===false||customerAdItems.length===0;
+ const announcement=document.querySelector('#announcementBanner');if(announcement)announcement.hidden=!home||customerSettings.showAnnouncement===false||announcement.dataset.active!=='true';
  document.querySelector('.header-search').hidden=!home||customerSettings.showCatalog===false||activeMediaKind!=='all';
  window.scrollTo({top:0,behavior:'smooth'});
 }
