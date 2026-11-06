@@ -15,13 +15,16 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 .brand-bar h1{margin:0;color:#fff;font-size:clamp(22px,2.3vw,29px);font-weight:800;letter-spacing:.1px;line-height:1.35}
 .brand-bar p{margin:5px 0 0;color:#c4d2df;font-size:13px;line-height:1.6}
 .customer-nav{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:12px}
-.compact-top-nav{min-height:34px;padding:5px 11px;border-radius:9px;font-size:12px}
+.compact-top-nav{min-height:40px;padding:7px 13px;border-radius:10px;font-size:13px}
 .nav-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:8px 17px;border:1px solid #405970;border-radius:11px;background:#1b344b;color:#edf2f6;font-size:14px;font-weight:700;white-space:nowrap;transition:background .18s,border-color .18s,transform .18s}
 .nav-button:hover{border-color:var(--gold);background:#24435d}
 .nav-button.active{background:linear-gradient(135deg,#d9bd83,#b89354);border-color:#d9bd83;color:#17283a}
 .continue-nav{font-size:13px;padding-inline:13px}
-.header-search{display:flex;align-items:center;margin-top:11px;max-width:480px}
-.search-box{display:flex;align-items:center;gap:9px;width:100%;height:41px;padding:0 13px;border:1px solid #3b566d;border-radius:24px;background:#0d2031;color:var(--gold);transition:border-color .18s,box-shadow .18s}
+.header-search{display:flex;align-items:center;gap:7px;margin-top:11px;width:100%;max-width:680px;min-width:0}
+.search-box{display:flex;flex:1 1 auto;align-items:center;gap:7px;min-width:0;width:auto;height:40px;padding:0 11px;border:1px solid #3b566d;border-radius:22px;background:#0d2031;color:var(--gold);transition:border-color .18s,box-shadow .18s}
+.header-filter{flex:0 0 auto;width:clamp(84px,22vw,116px);height:40px;min-width:0;padding:5px 7px;border:1px solid #3b566d;border-radius:9px;background:#142b40;color:#edf2f6;font-size:12px;font-weight:700}
+.header-filter:focus{outline:2px solid #d6b779;outline-offset:1px}
+@media(max-width:420px){.header-search{gap:5px}.search-box{padding:0 8px}.search-box input{font-size:12px}.header-filter{width:86px;padding-inline:5px;font-size:11px}}
 .search-box:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px #d6b77920}
 .search-box>span{font-size:22px;line-height:1}
 .search-box input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#fff;font:inherit;font-size:13px;padding:7px 0;box-shadow:none}
@@ -229,7 +232,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
  .catalog-hero img,.catalog-hero .poster-empty{width:96px;flex-basis:96px}
 }
 </style></head><body>
-<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="homeNav" class="nav-button compact-top-nav" type="button" hidden>⌂ الرئيسية</button><button id="contactNav" class="nav-button compact-top-nav" type="button">✉ تواصل مع الإدارة</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
+<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="homeNav" class="nav-button compact-top-nav" type="button" hidden>⌂ الرئيسية</button><button id="contactNav" class="nav-button compact-top-nav" type="button">✉ تواصل مع الإدارة</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label><select id="categoryFilter" class="header-filter" aria-label="تصفية حسب القسم"><option value="">كل الأقسام</option></select><select id="sort" class="header-filter" aria-label="ترتيب المحتوى"><option value="title">الاسم</option><option value="year">الأحدث</option><option value="rating">التقييم</option></select></div></header>
 <div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p><span id="announcementMessage"></span></p></div>
 <section id="customerAds" class="customer-ads" aria-label="إعلانات الاستراحة" hidden>
  <div id="customerAdStage" class="customer-ad-stage"></div>
@@ -258,10 +261,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
 <section id="catalogView" aria-live="polite">
 <div class="catalog-page-head" id="catalogPageHead"><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div></div>
 <div class="toolbar" id="catalogToolbar">
-
-<select id="categoryFilter" aria-label="القسم" hidden><option value="">كل الأقسام</option></select>
-<select id="collection"><option value="">كل المحتوى</option><option value="favorites">المفضلة فقط</option></select>
-<select id="sort" aria-label="ترتيب المكتبة"><option value="title">الاسم</option><option value="year">سنة الإنتاج</option><option value="rating">التقييم</option></select>
+<select id="collection" aria-label="نوع العرض"><option value="">كل المحتوى</option><option value="favorites">المفضلة فقط</option></select>
 </div>
 <section id="newArrivals" class="new-arrivals" hidden aria-label="المضاف حديثاً"><div class="new-arrivals-heading"><div><span class="new-kicker">اكتشف الآن</span><h2>أُضيف حديثاً</h2></div><span class="new-count" id="newArrivalsCount"></span></div><div id="newArrivalsGrid" class="new-arrivals-grid"></div></section><div id="catalogContent"></div>
 <section id="playerSection" aria-live="polite" hidden>
@@ -785,15 +785,7 @@ function renderCatalogPage(){
   const seasons=show.seasons||[],direct=show.directVideos||[];
   const episodeCount=seasons.reduce((total,season)=>total+(season.episodes||[]).length,0);
   const seasonLabel=show.organizationType==='Parts'?'جزء':'موسم';
-  const seriesMeta=[
-   show.year,
-   show.genre,
-   seasons.length+' '+seasonLabel,
-   episodeCount+' حلقة',
-   direct.length?direct.length+' فيديو مباشر':'',
-   Number.isFinite(Number(show.rating))?'التقييم '+Number(show.rating).toFixed(1)+'/10':''
-  ].filter(Boolean).join(' • ');
-  content.append(catalogHero(show.title,show.posterPath,seriesMeta,show.description,false));
+  // Keep the series page focused on its season/part tiles; do not repeat the series poster and metadata above them.
   if(direct.length){
    content.append(catalogSectionTitle('حلقات أو فيديوهات مباشرة'));
    const directGrid=document.createElement('div');directGrid.className='catalog-grid';
@@ -809,7 +801,7 @@ function renderCatalogPage(){
    for(const season of seasons){
     const episodes=season.episodes||[];
     const name=season.title||((show.organizationType==='Parts'?'الجزء ':'الموسم ')+season.seasonNumber);
-    seasonGrid.append(catalogCard(name,episodes.length+' حلقة',season.posterPath||show.posterPath,()=>navigateCatalog({type:'season',seriesId:show.seriesId,seasonId:season.seasonId,title:name})));
+    seasonGrid.append(catalogCard(name,'',season.posterPath||show.posterPath,()=>navigateCatalog({type:'season',seriesId:show.seriesId,seasonId:season.seasonId,title:name})));
    }
    content.append(seasonGrid);
   }
@@ -822,15 +814,13 @@ function renderCatalogPage(){
   if(!show||!season){content.append(catalogEmpty('الموسم أو الجزء غير موجود.'));return;}
   const name=season.title||((show.organizationType==='Parts'?'الجزء ':'الموسم ')+season.seasonNumber);
   const episodes=season.episodes||[];
-  const seasonMeta=[show.title,episodes.length+' حلقة',show.year].filter(Boolean).join(' • ');
-  content.append(catalogHero(name,season.posterPath||show.posterPath,seasonMeta,show.description,true));
+  // The season page starts directly with its episode list; no duplicate season/show hero image or side metadata.
   content.append(catalogSectionTitle('حلقات '+name));
   if(!episodes.length){content.append(catalogEmpty('لا توجد حلقات في هذا الموسم بعد.'));return;}
   const episodeGrid=document.createElement('div');episodeGrid.className='catalog-grid';
   for(const ep of episodes){
    const episodeTitle='الحلقة '+ep.episodeNumber+(ep.title?' — '+ep.title:'');
-   const detail=ep.isMissing?'ملف الحلقة غير موجود حالياً.':(ep.runtimeMinutes?ep.runtimeMinutes+' دقيقة':'جاهزة للمشاهدة');
-   const card=catalogCard(episodeTitle,detail,ep.posterPath||season.posterPath||show.posterPath,()=>{
+   const card=catalogCard(episodeTitle,'',ep.posterPath||season.posterPath||show.posterPath,()=>{
     if(ep.isMissing||!ep.url)return;
     play({id:ep.videoId,url:ep.url,title:episodeTitle});
    });
@@ -1056,6 +1046,7 @@ function goCatalogHome(){
   player.pause();player.onerror=null;player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;
  }
  catalogStack=[];catalogPage={type:'home'};activeMediaKind='all';
+ const categoryFilter=document.querySelector('#categoryFilter');if(categoryFilter)categoryFilter.value='';
  document.querySelectorAll('.media-tab').forEach(x=>x.classList.remove('active'));
  document.querySelector('#mediaLibrary').hidden=true;
  document.querySelector('#catalogView').hidden=false;
@@ -1083,7 +1074,15 @@ document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener(
 }));
 document.querySelector('#customerAdPrev').addEventListener('click',()=>renderCustomerAd(customerAdIndex-1));
 document.querySelector('#customerAdNext').addEventListener('click',()=>renderCustomerAd(customerAdIndex+1));
-for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();load();loadCustomerSettings();loadAnnouncement();loadCustomerAds();
+for(const id of ['search','sort','collection']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}
+document.querySelector('#categoryFilter').addEventListener('change',()=>{
+ const value=document.querySelector('#categoryFilter').value;
+ if(!value){goCatalogHome();return;}
+ const category=categories.find(x=>String(x.categoryId)===String(value));
+ if(!category)return;
+ navigateCatalog({type:category.parentId==null?'main':'category',categoryId:category.categoryId,title:category.title});
+});
+loadBrandProfile();load();loadCustomerSettings();loadAnnouncement();loadCustomerAds();
 setInterval(async()=>{await loadCustomerSettings();await loadAnnouncement();await loadCustomerAds();},60000);
 setInterval(()=>{if(downloadRows.length)loadDownloads();},2000);
 </script></body></html>
