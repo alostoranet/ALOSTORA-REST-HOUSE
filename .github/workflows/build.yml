@@ -42,10 +42,21 @@ jobs:
       - name: Publish self-contained Windows x64 application
         run: dotnet publish src/Alostora.RestHouse/Alostora.RestHouse.csproj --configuration Release --runtime win-x64 --self-contained true --no-restore
 
-      - name: Upload Windows x64 package
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build single-file Windows installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force installer-output | Out-Null
+          & "${env:ProgramFiles(x86)}\\Inno Setup 6\\ISCC.exe" installer/ALOSTORA-REST-HOUSE.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload single-file Windows installer
         uses: actions/upload-artifact@v7
         with:
-          name: ALOSTORA-REST-HOUSE-Windows-x64
-          path: src/Alostora.RestHouse/bin/Release/net8.0-windows/win-x64/publish/
+          name: ALOSTORA-REST-HOUSE-Installer
+          path: installer-output/ALOSTORA-REST-HOUSE-Setup.exe
           if-no-files-found: error
           retention-days: 14
