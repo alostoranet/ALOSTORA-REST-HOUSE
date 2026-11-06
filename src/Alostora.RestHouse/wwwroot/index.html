@@ -265,6 +265,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
 <section id="newArrivals" class="new-arrivals" hidden aria-label="المضاف حديثاً"><div class="new-arrivals-heading"><div><span class="new-kicker">اكتشف الآن</span><h2>أُضيف حديثاً</h2></div><span class="new-count" id="newArrivalsCount"></span></div><div id="newArrivalsGrid" class="new-arrivals-grid"></div></section><div id="catalogContent"></div>
 <section id="playerSection" aria-live="polite" hidden>
 <h2 id="nowPlayingTitle">المشاهدة الآن</h2>
+<p id="nowPlayingViews" class="meta" aria-live="polite">👁 عدد المشاهدات: —</p>
 <video id="player" controls playsinline preload="metadata"></video>
 <div id="audioControls" hidden><label for="audioTrack">المسار الصوتي:</label><select id="audioTrack"></select><button id="applyAudio" type="button">تشغيل بالصوت المحدد</button></div>
 <p id="playbackHint"></p><p id="subtitleHint" class="meta">تُكتشف الترجمات الخارجية تلقائياً بجانب ملف الفيديو.</p>
@@ -872,9 +873,23 @@ async function play(item){
  playerSection.scrollIntoView({behavior:'smooth',block:'start'});
  const generation=++playbackGeneration,previous=activeVideo;
  const playbackId=(globalThis.crypto?.randomUUID?.()||(`${Date.now()}-${Math.random().toString(16).slice(2)}`));
- let playbackRecorded=false;
- const recordPlayback=()=>{if(playbackRecorded||generation!==playbackGeneration)return;playbackRecorded=true;fetch("/api/watch-events",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({viewerId,videoId:item.id,playbackId})}).then(()=>loadWatchHistory()).catch(()=>{});};
- player.addEventListener("playing",recordPlayback,{once:true});
+ const viewsElement=document.querySelector('#nowPlayingViews');
+ const initialViews=Number(item.viewCount??items.find(x=>x.id===item.id)?.viewCount??0);
+ if(viewsElement)viewsElement.textContent='👁 عدد المشاهدات: '+initialViews.toLocaleString('ar');
+ let playbackRecorded=false,playbackCountTimer=null;
+ const cancelPlaybackCount=()=>{if(playbackCountTimer){clearTimeout(playbackCountTimer);playbackCountTimer=null;}};
+ const recordPlayback=()=>{
+  if(playbackRecorded||generation!==playbackGeneration)return;
+  playbackRecorded=true;
+  fetch("/api/watch-events",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({viewerId,videoId:item.id,playbackId})})
+   .then(response=>{if(!response.ok)throw new Error('تعذر تسجيل المشاهدة');if(viewsElement)viewsElement.textContent='👁 عدد المشاهدات: '+(initialViews+1).toLocaleString('ar');return loadWatchHistory();})
+   .catch(()=>{playbackRecorded=false;});
+ };
+ const schedulePlaybackCount=()=>{cancelPlaybackCount();if(!playbackRecorded&&generation===playbackGeneration)playbackCountTimer=setTimeout(recordPlayback,10000);};
+ player.addEventListener("playing",schedulePlaybackCount);
+ player.addEventListener("pause",cancelPlaybackCount);
+ player.addEventListener("waiting",cancelPlaybackCount);
+ player.addEventListener("ended",cancelPlaybackCount);
  player.dataset.transcodeAttempted='0';
  if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
  const previousSave=previous?saveProgress(previous,false):Promise.resolve();
