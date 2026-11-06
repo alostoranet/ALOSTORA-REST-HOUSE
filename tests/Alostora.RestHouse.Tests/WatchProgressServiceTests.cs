@@ -30,6 +30,23 @@ public sealed class WatchProgressServiceTests : IDisposable
         Assert.Equal(1, counts[videoB]);
     }
 
+    [Fact]
+    public void ViewerHistoryReturnsDistinctVideosOnlyForThatViewerInRecentOrder()
+    {
+        const string videoA = "0123456789abcdef01234567";
+        const string videoB = "abcdef0123456789abcdef01";
+        _service.RecordPlayback(new WatchPlaybackRequest("viewer-a", videoA, "a-1"));
+        _service.RecordPlayback(new WatchPlaybackRequest("viewer-a", videoA, "a-2"));
+        _service.RecordPlayback(new WatchPlaybackRequest("viewer-a", videoB, "a-3"));
+        _service.RecordPlayback(new WatchPlaybackRequest("viewer-b", videoA, "b-1"));
+
+        var history = _service.GetViewerHistory("viewer-a");
+
+        Assert.Equal(2, history.Count);
+        Assert.Contains(history, item => item.VideoId == videoA);
+        Assert.Contains(history, item => item.VideoId == videoB);
+    }
+
     public void Dispose()
     {
         try { Directory.Delete(_root, recursive: true); }
