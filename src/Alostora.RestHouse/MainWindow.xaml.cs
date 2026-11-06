@@ -20,6 +20,18 @@ namespace Alostora.RestHouse;
 
 public partial class MainWindow : Window
 {
+    private void OpenWhatsApp_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("https://wa.me/967777824918") { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"تعذر فتح واتساب: {ex.Message}", "التواصل عبر واتساب", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
     private sealed record MultiMediaScanResult(bool Scanned, string Kind, int Count, MultiMediaAdminItem[] Items);
 
     private sealed record MultiMediaAdminItem(string Id, string Kind, string Title, string FileName, string RelativePath, long SizeBytes, string ModifiedUtc, string Url)
