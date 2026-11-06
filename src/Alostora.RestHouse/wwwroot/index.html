@@ -26,19 +26,17 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 .search-box input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#fff;font:inherit;font-size:13px;padding:7px 0;box-shadow:none}
 .search-box input::placeholder{color:#91a5b8}
 .header-search[hidden]{display:none!important}
-.announcement-banner{position:relative;display:flex;align-items:center;gap:13px;max-width:1280px;min-height:48px;margin:13px auto 0;padding:8px 15px;overflow:hidden;border:1px solid #3b5267;border-right:4px solid var(--gold);border-radius:12px;background:linear-gradient(100deg,#11283d,#1b3851 55%,#142b40);box-shadow:0 7px 20px #0002;color:#fff}
+.announcement-banner{position:relative;display:flex;align-items:center;gap:12px;max-width:1280px;min-height:46px;margin:13px auto 0;padding:7px 15px;overflow:hidden;border:1px solid #304a61;border-right:3px solid #b9955d;border-radius:10px;background:linear-gradient(100deg,#0d2031,#17354d 52%,#10263a);box-shadow:0 6px 18px #0002;color:#fff}
 .announcement-banner[hidden]{display:none!important}
-.announcement-banner strong{z-index:1;flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;background:linear-gradient(135deg,#e4ca91,#c6a365);color:#17283a;font-size:12px;font-weight:800;white-space:nowrap}
-.announcement-banner strong:before{content:"◆";font-size:7px}
-.announcement-banner p{flex:1;min-width:0;margin:0;white-space:nowrap;direction:rtl;animation:announcement-marquee 30s linear .6s infinite}
-.announcement-banner #announcementMessage{display:inline-block;color:#f8f4eb;font-size:14px;font-weight:600;line-height:1.8}
-.announcement-banner.is-entering strong{animation:announcement-label-drop .58s cubic-bezier(.2,.8,.25,1) both}
-.announcement-banner.is-entering #announcementMessage{animation:announcement-message-reveal .65s .25s cubic-bezier(.2,.75,.25,1) both}
+.announcement-banner strong{z-index:1;flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;padding:2px 3px;background:transparent;color:#e4c68f;font-size:12px;font-weight:800;white-space:nowrap;letter-spacing:.15px}
+.announcement-banner strong:before{content:"";width:7px;height:7px;border-radius:50%;background:#d45c61;box-shadow:0 0 0 4px #d45c6120,0 0 10px #d45c61a0}
+.announcement-banner p{flex:1;min-width:0;margin:0;white-space:nowrap;direction:rtl;animation:announcement-marquee 34s linear .4s infinite}
+.announcement-banner #announcementMessage{display:inline-block;color:#f7f1e6;font-size:14px;font-weight:650;line-height:1.8;text-shadow:0 1px 8px #0004}
+.announcement-banner.is-entering #announcementMessage{animation:announcement-message-reveal .7s ease-out both}
 .announcement-banner:hover p{animation-play-state:paused}
-@keyframes announcement-label-drop{0%{opacity:0;transform:translateY(-130%) scale(.94)}72%{opacity:1;transform:translateY(4px) scale(1.02)}100%{opacity:1;transform:translateY(0) scale(1)}}
-@keyframes announcement-message-reveal{from{opacity:0;clip-path:inset(0 0 100% 0);transform:translateY(-7px)}to{opacity:1;clip-path:inset(0 0 0 0);transform:translateY(0)}}
+@keyframes announcement-message-reveal{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
 @keyframes announcement-marquee{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.announcement-banner p{animation:none;white-space:normal}.announcement-banner.is-entering strong,.announcement-banner.is-entering #announcementMessage{animation:none!important}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.announcement-banner p{animation:none;white-space:normal}.announcement-banner.is-entering #announcementMessage{animation:none!important}}
 .customer-ads{max-width:1280px;margin:13px auto 0;padding:0 14px}
 .customer-ads[hidden]{display:none!important}
 .customer-ad-stage{position:relative;aspect-ratio:16/5;min-height:110px;max-height:250px;overflow:hidden;border:1px solid #344e65;border-radius:15px;background:#142b40;box-shadow:0 9px 24px #0003}
@@ -53,11 +51,13 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 main{width:min(100%,1280px);margin:0 auto;padding:22px 24px 32px}
 #welcomePanel,#customerOverview{display:none!important}
 #message{margin:8px 0;color:#f0c4c4;font-size:13px}
-#catalogPageHead{display:flex;align-items:center;gap:12px;margin:0 0 13px;padding:0 0 12px;border-bottom:1px solid #263e54}
+#catalogPageHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 13px;padding:0 0 12px;border-bottom:1px solid #263e54}
 #catalogPageHead[hidden]{display:none!important}
-#catalogBreadcrumb{min-width:0;color:#e8edf2;font-size:16px;font-weight:800}
-.catalog-back{min-height:39px;padding:7px 15px;border:1px solid #435d73;border-radius:10px;background:#1a344c;color:#fff;font-size:13px;font-weight:700}
-.catalog-back:hover{border-color:var(--gold);background:#23435c}
+#catalogBreadcrumb{min-width:0;flex:1;color:#e8edf2;font-size:16px;font-weight:800}
+.catalog-back,.catalog-home{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:7px 13px;border:1px solid #435d73;border-radius:10px;background:#1a344c;color:#fff;font-size:13px;font-weight:750;white-space:nowrap}
+.catalog-home{border-color:#8b754f;background:linear-gradient(135deg,#263d50,#172d42);color:#f0d9a8}
+.catalog-back:hover,.catalog-home:hover{border-color:var(--gold);background:#23435c}
+.catalog-home[hidden],.catalog-back[hidden]{display:none!important}
 #catalogToolbar{display:flex;align-items:center;gap:8px;margin:7px 0 15px;padding:0;border:0;background:transparent}
 #catalogToolbar[hidden]{display:none!important}
 #catalogToolbar select{min-width:130px;min-height:37px;padding:7px 12px;border:1px solid #344f66;border-radius:9px;background:#142b40;color:#e8edf2;font-size:12px}
@@ -240,7 +240,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
 <div id="downloadList"></div>
 </section>
 <section id="catalogView" aria-live="polite">
-<div class="catalog-page-head" id="catalogPageHead"><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div></div>
+<div class="catalog-page-head" id="catalogPageHead"><button id="catalogHome" class="catalog-home" type="button" hidden>⌂ الرئيسية</button><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div></div>
 <div class="toolbar" id="catalogToolbar">
 
 <select id="categoryFilter" aria-label="القسم" hidden><option value="">كل الأقسام</option></select>
@@ -577,7 +577,7 @@ function goCatalogBack(){
 }
 function renderCatalogPage(){
  const content=document.querySelector('#catalogContent'),back=document.querySelector('#catalogBack'),crumb=document.querySelector('#catalogBreadcrumb');
- const pageHead=document.querySelector('#catalogPageHead'),toolbar=document.querySelector('#catalogToolbar'),continueSection=document.querySelector('#continueSection'),message=document.querySelector('#message');
+ const pageHead=document.querySelector('#catalogPageHead'),homeButton=document.querySelector('#catalogHome'),toolbar=document.querySelector('#catalogToolbar'),continueSection=document.querySelector('#continueSection'),message=document.querySelector('#message');
  
  const playerSection=document.querySelector('#playerSection');
  if(!content||!catalogPage||!playerSection)return;
@@ -588,8 +588,9 @@ function renderCatalogPage(){
  const quickNav=document.querySelector('#mediaQuickNav');if(quickNav&&pageType!=='home')quickNav.hidden=true;
  const arrivals=document.querySelector('#newArrivals');if(arrivals&&pageType!=='home')arrivals.hidden=true;
  pageHead.hidden=pageType==='home';
-  toolbar.hidden=pageType!=='category';
-  continueSection.hidden=pageType!=='continue';
+ homeButton.hidden=pageType==='home';
+ toolbar.hidden=pageType!=='category';
+ continueSection.hidden=pageType!=='continue';
  message.hidden=true;
  back.hidden=pageType==='home'||catalogStack.length===0;
  back.textContent='رجوع';
@@ -993,6 +994,7 @@ async function loadBrandProfile(){
  }catch{}
 }
 document.querySelector('#catalogBack').addEventListener('click',goCatalogBack);
+document.querySelector('#catalogHome').addEventListener('click',goCatalogHome);
 function goCatalogHome(){if(catalogPage.type==='player'){playbackGeneration++;flushProgress();if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}player.pause();player.onerror=null;player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;}catalogStack=[];catalogPage={type:'home',title:'الرئيسية'};renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});}
 function showCustomerView(view){
  const home=view==='home',homeView=document.querySelector('#homeView'),contactView=document.querySelector('#contactView');
