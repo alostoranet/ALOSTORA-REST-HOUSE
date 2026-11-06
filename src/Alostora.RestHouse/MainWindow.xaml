@@ -475,7 +475,7 @@
 <StackPanel Grid.Row="2" Margin="0,4,0,0">
  <Border Background="#FFFFFF" BorderBrush="#142D4A" BorderThickness="1.5" CornerRadius="9" Padding="10,7" Margin="0,0,0,7">
   <DockPanel LastChildFill="True">
-   <Button DockPanel.Dock="Right" Content="نسخ" Click="CopyAddress_Click" Padding="16,7" Margin="8,0,0,0" Background="#142D4A" Foreground="White" BorderBrush="#142D4A"/>
+   <Button DockPanel.Dock="Left" Content="نسخ" Click="CopyAddress_Click" Padding="16,7" Margin="8,0,0,0" Background="#142D4A" Foreground="White" BorderBrush="#142D4A"/>
    <TextBlock x:Name="AddressBox" FontSize="15" FontWeight="Bold" HorizontalAlignment="Stretch" VerticalAlignment="Center" Foreground="#142D4A" TextAlignment="Center" FlowDirection="LeftToRight"/>
   </DockPanel>
  </Border>
@@ -483,7 +483,7 @@
  <TextBlock x:Name="CountText" Visibility="Collapsed"/>
  <Border Background="#F3F6FA" BorderBrush="#142D4A" BorderThickness="1.5" CornerRadius="9" Padding="12,7" Margin="0,0,0,2">
   <DockPanel LastChildFill="True">
-   <Button DockPanel.Dock="Right" Click="OpenWhatsApp_Click" Padding="8,2" Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="فتح محادثة واتساب">
+   <Button DockPanel.Dock="Left" Click="OpenWhatsApp_Click" Padding="8,2" Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="فتح محادثة واتساب">
     <StackPanel Orientation="Horizontal" FlowDirection="LeftToRight">
      <Border Background="#25D366" BorderThickness="0" Width="21" Height="21" CornerRadius="11" Margin="0,0,6,0"><TextBlock Text="◉" Foreground="White" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
      <TextBlock Text="777824918" Foreground="#142D4A" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
