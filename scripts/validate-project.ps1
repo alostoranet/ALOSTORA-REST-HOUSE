@@ -246,6 +246,15 @@ if ($html -notmatch 'catalog-back' -or $html -notmatch 'catalog-home' -or $html 
 }
 Write-Host "PASS: landing page has no redundant Home control; inner pages expose Home and Back together with compact category filters."
 
+if ($html.Contains('content.append(catalogSectionTitle(main.title))') -or
+    $html.Contains('content.append(catalogSectionTitle(category.title))') -or
+    $html.Contains('content.append(catalogSectionTitle(name))') -or
+    -not $html.Contains('catalogHero(show.title,show.posterPath,seriesMeta,show.description,false)')) {
+    throw "An inner category title is duplicated in the content; it must appear only once beside Home and Back."
+}
+Write-Host "PASS: inner catalog titles appear once in the navigation row, not repeated below."
+
+
 
 # A category may be published without a poster; new category forms default to published.
 if ($app -match 'request\.IsPublished\s*&&\s*!PosterExists\(request\.PosterPath,posters\)' -or
