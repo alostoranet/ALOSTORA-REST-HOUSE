@@ -188,7 +188,7 @@ public sealed class MultiMediaLibraryServiceTests : IDisposable
         var root = library.AddRoot("Audio", external);
         Assert.Equal(1, library.Scan("Audio"));
         var original = Assert.Single(library.List("Audio"));
-        Assert.Equal(root.Id, Assert.Single(library.ListRoots("Audio").Where(x => !x.IsDefault)).Id);
+        Assert.Equal(root.Id, Assert.Single(library.ListRoots("Audio"), x => !x.IsDefault).Id);
 
         // Simulate a disconnected removable drive. The registration and catalog row
         // must remain so reconnecting the same path can restore playback without re-adding it.
