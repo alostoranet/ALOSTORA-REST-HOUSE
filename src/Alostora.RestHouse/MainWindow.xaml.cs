@@ -2431,6 +2431,7 @@ public partial class MainWindow : Window
             CustomerShowAnnouncementBox.IsChecked = settings.ShowAnnouncement;
             CustomerShowDownloadsBox.IsChecked = settings.ShowDownloads;
             CustomerShowImageAdsBox.IsChecked = settings.ShowImageAds;
+            CustomerLiveBroadcastUrlBox.Text = settings.LiveBroadcastUrl ?? string.Empty;
             CustomerPageSettingsStatusText.Text = "تم تحميل إعدادات ظهور أقسام صفحة العملاء.";
         }
         catch (Exception ex)
