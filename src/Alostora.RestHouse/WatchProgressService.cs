@@ -82,6 +82,17 @@ public sealed class WatchProgressService
         command.ExecuteNonQuery();
     }
 
+    public int GetViewCount(string videoId)
+    {
+        if (string.IsNullOrWhiteSpace(videoId)) return 0;
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM WatchHistory WHERE VideoId = $video";
+        command.Parameters.AddWithValue("$video", videoId.Trim());
+        return Convert.ToInt32(command.ExecuteScalar());
+    }
+
     public int GetTotalPlaybackCount()
     {
         using var connection = new SqliteConnection(_connectionString);
