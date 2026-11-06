@@ -41,6 +41,15 @@ public sealed class CustomerPageSettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public void SavesAndReloadsExternalLiveBroadcastUrl()
+    {
+        const string url = "https://example.com/live/channel";
+        var saved = _service.Save(new CustomerPageSettings(LiveBroadcastUrl: url));
+        Assert.Equal(url, saved.LiveBroadcastUrl);
+        Assert.Equal(url, _service.Load().LiveBroadcastUrl);
+    }
+
+    [Fact]
     public void SavesAndReloadsIndependentSectionVisibility()
     {
         var saved = _service.Save(new CustomerPageSettings(

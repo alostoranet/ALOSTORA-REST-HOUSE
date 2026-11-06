@@ -2493,6 +2493,19 @@ public partial class MainWindow : Window
     {
         try
         {
+            var liveBroadcastUrl = string.IsNullOrWhiteSpace(CustomerLiveBroadcastUrlBox.Text)
+                ? null
+                : CustomerLiveBroadcastUrlBox.Text.Trim();
+            if (liveBroadcastUrl is not null &&
+                (!Uri.TryCreate(liveBroadcastUrl, UriKind.Absolute, out var liveUri) ||
+                 (liveUri.Scheme != Uri.UriSchemeHttp && liveUri.Scheme != Uri.UriSchemeHttps) ||
+                 string.IsNullOrWhiteSpace(liveUri.Host)))
+            {
+                CustomerPageSettingsStatusText.Text = "رابط البث غير صالح. أدخل رابطاً كاملاً يبدأ بـ http:// أو https:// ثم احفظ.";
+                CustomerLiveBroadcastUrlBox.Focus();
+                return;
+            }
+
             var request = new
             {
                 showCatalog = CustomerShowCatalogBox.IsChecked == true,
@@ -2505,7 +2518,7 @@ public partial class MainWindow : Window
                 showAnnouncement = CustomerShowAnnouncementBox.IsChecked == true,
                 showDownloads = CustomerShowDownloadsBox.IsChecked == true,
                 showImageAds = CustomerShowImageAdsBox.IsChecked == true,
-                liveBroadcastUrl = string.IsNullOrWhiteSpace(CustomerLiveBroadcastUrlBox.Text) ? null : CustomerLiveBroadcastUrlBox.Text.Trim()
+                liveBroadcastUrl
             };
             var response = await _http.PostAsJsonAsync("/api/admin/customer-settings", request);
             if (!response.IsSuccessStatusCode)
