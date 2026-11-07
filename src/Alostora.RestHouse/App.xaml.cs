@@ -943,6 +943,14 @@ _server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalog
     catch(InvalidOperationException ex){return Results.BadRequest(new{error=ex.Message});}
     catch(KeyNotFoundException ex){return Results.NotFound(new{error=ex.Message});}
    });
+   _server.MapPost("/api/admin/library/retain-root",(HttpContext c,ScanFolderRequest request,LibraryService files)=>
+   {
+    if(!IsAdmin(c)) return Results.NotFound();
+    if(string.IsNullOrWhiteSpace(request.FolderPath)||request.FolderPath.Length>1000||!Directory.Exists(request.FolderPath))
+     return Results.BadRequest(new{error="مجلد المكتبة السابق غير موجود"});
+    try { files.RetainRootAsScanFolder(request.FolderPath); return Results.Ok(new{retained=true}); }
+    catch(Exception ex) { return Results.BadRequest(new{error=ex.Message}); }
+   });
    _server.MapPost("/api/admin/scan-folder",(HttpContext c,ScanFolderRequest request,LibraryService files)=>{
     if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.FolderPath)||(request.FolderPath.Length>1000)||!Directory.Exists(request.FolderPath)) return Results.BadRequest(new{error="حدد مجلداً موجوداً ويمكن الوصول إليه"});
