@@ -232,6 +232,19 @@
 </DockPanel>
 <TextBlock x:Name="BrandProfileStatusText" Text="يمكنك تخصيص اسم الاستراحة واسم الشبكة ورفع شعار يظهر للعملاء." Foreground="#64748B" TextWrapping="Wrap"/>
 </StackPanel></Border></TabItem>
+<TabItem Header="📢 الإعلانات"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="12">
+<TextBlock Text="شريط الإعلانات والتنبيهات" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,8"/>
+<TextBlock Text="اكتب إعلاناً أو تنبيهاً ليظهر أعلى صفحة العملاء. يمكنك إيقافه أو تعديل النص والسرعة في أي وقت." Foreground="#64748B" TextWrapping="Wrap" Margin="0,0,0,12"/>
+<Border Background="#FFF7E8" CornerRadius="10" Padding="14"><StackPanel>
+<TextBlock Text="عنوان الشريط (اختياري)" FontWeight="Bold"/><TextBox x:Name="AnnouncementTitleBox" Padding="8" Margin="0,4,0,10" MaxLength="120"/>
+<TextBlock Text="نص الإعلان" FontWeight="Bold"/><TextBox x:Name="AnnouncementMessageBox" Padding="8" Margin="0,4,0,10" Height="85" AcceptsReturn="True" TextWrapping="Wrap" MaxLength="1000"/>
+<WrapPanel Margin="0,0,0,10"><RadioButton x:Name="AnnouncementNoticeRadio" Content="تنبيه" GroupName="AnnouncementKind" IsChecked="True" Margin="0,0,18,0"/><RadioButton x:Name="AnnouncementAdRadio" Content="إعلان" GroupName="AnnouncementKind"/></WrapPanel>
+<CheckBox x:Name="AnnouncementActiveBox" Content="تشغيل الشريط وإظهاره للعملاء" Margin="0,0,0,10"/>
+<TextBlock Text="مدة دورة الحركة بالثواني (5 أسرع — 60 أبطأ)" FontWeight="Bold"/>
+<TextBox x:Name="AnnouncementSpeedSecondsBox" Text="18" Width="85" HorizontalAlignment="Left" FlowDirection="LeftToRight" Padding="8" Margin="0,5,0,10"/>
+<WrapPanel><Button Content="حفظ ونشر" Click="SaveAnnouncement_Click" Padding="14,8" Background="#C93640" Foreground="White" Margin="0,0,7,0"/><Button Content="تحميل الإعلان الحالي" Click="LoadAnnouncement_Click" Padding="14,8"/></WrapPanel>
+<TextBlock x:Name="AnnouncementStatusText" Text="لا يوجد إعلان منشور حالياً." Foreground="#526174" TextWrapping="Wrap" Margin="0,10,0,0"/>
+</StackPanel></Border></StackPanel></ScrollViewer></TabItem>
 <TabItem Header="⚙️ إعدادات متقدمة"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
 <TextBlock Text="إعدادات متقدمة — لا تحتاج لتغييرها في الاستخدام اليومي" FontSize="18" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,10"/>
 <Border Background="#F1F5F9" CornerRadius="8" Padding="12" Margin="0,0,0,12"><StackPanel>
