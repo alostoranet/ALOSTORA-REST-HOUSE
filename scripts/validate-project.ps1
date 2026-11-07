@@ -640,17 +640,21 @@ if ($code -notmatch 'PublishBox\.IsChecked\s*==\s*true\s*&&\s*selectedCategory\s
 }
 Write-Host "PASS: published videos cannot be saved without a customer-facing subcategory."
 
-# Announcement ticker starts beside its label and scrolls across the full message area in a seamless loop.
+# Announcement ticker repeats enough identical copies and moves by one measured message width for a seamless RTL loop.
 if ($html -notmatch 'background:linear-gradient\(100deg,#9f1420,#d3232d 52%,#a91420\)' -or
     $html -notmatch 'const changed=banner.dataset.contentKey!==contentKey' -or
     $html -notmatch 'prefers-reduced-motion:reduce' -or
     $html -notmatch 'announcement-track' -or
     $html -notmatch 'announcement-copy' -or
-    $html -notmatch 'announcement-message-marquee\{from\{transform:translateX\(0\)\}to\{transform:translateX\(-50%\)\}\}' -or
+    $html -notmatch 'announcement-message-marquee\{from\{transform:translateX\(0\)\}to\{transform:translateX\(calc\(-1 \* var\(--announcement-shift, 50%\)\)\)\}\}' -or
+    $html -notmatch 'function setupAnnouncementMarquee\(' -or
+    $html -notmatch 'Math\.ceil\(viewportWidth/messageWidth\)\+2' -or
+    $html -notmatch 'track\.style\.setProperty\(''--announcement-shift'',messageWidth\+''px''\)' -or
+    $html -notmatch 'banner\.dataset\.marqueeKey===layoutKey' -or
     $html -notmatch '<span id="announcementMessage"></span>') {
-    throw "Customer announcement ticker start position, seamless full-width loop, refresh behavior, or reduced-motion support is incomplete."
+    throw "Customer announcement ticker measured-width seamless loop, refresh behavior, or reduced-motion support is incomplete."
 }
-Write-Host "PASS: announcement ticker starts beside its label and scrolls seamlessly across the full message area."
+Write-Host "PASS: announcement ticker repeats enough copies and loops seamlessly using the measured message width."
 
 
 # Customer search stays below navigation and new arrivals appear only when recently updated content exists.
