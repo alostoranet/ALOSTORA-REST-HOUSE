@@ -468,7 +468,7 @@ async function loadAnnouncement(){
   const changed=banner.dataset.contentKey!==contentKey;
   document.querySelector('#announcementTitle').textContent=title;
   message.textContent=item.message;
-  banner.querySelector('p').style.animationDuration=Math.max(18,Math.min(65,item.message.length*.55))+'s';
+  message.style.animationDuration=Math.max(5,Math.min(60,Number(item.speedSeconds)||18))+'s';
   if(changed){
    banner.dataset.contentKey=contentKey;
    banner.classList.remove('is-entering');
