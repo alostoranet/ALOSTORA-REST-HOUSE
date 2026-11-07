@@ -86,9 +86,18 @@ main{max-width:1320px;padding:26px 28px 18px}
 @keyframes announcement-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media(max-width:600px){.announcement-banner{margin:8px 10px 0;min-height:38px;padding:5px 8px;gap:7px}.announcement-banner strong{font-size:10px;padding:4px 6px}.announcement-banner p{height:26px}.announcement-track span{font-size:12px;padding:4px 14px}}
 @media(prefers-reduced-motion:reduce){.announcement-banner p{height:auto;min-height:30px;overflow:visible;white-space:normal}.announcement-track{position:static;top:auto;right:auto;bottom:auto;display:block!important;width:100%!important;max-width:100%;height:auto;white-space:normal;animation:none!important;transform:none!important;will-change:auto}.announcement-track #announcementMessage{display:block;width:100%;max-width:100%;white-space:normal;overflow-wrap:anywhere;padding:4px 0}.announcement-track .announcement-copy{display:none!important}}
+.customer-ads{max-width:1320px;margin:14px auto 20px;padding:0 12px}.customer-ads[hidden]{display:none!important}.customer-ad-stage{position:relative;aspect-ratio:16/5;min-height:120px;max-height:280px;overflow:hidden;border:1px solid #38516d;border-radius:14px;background:#142d4a;box-shadow:0 8px 24px #0003}.customer-ad-stage>a,.customer-ad-stage>div{display:block;position:relative;width:100%;height:100%;color:inherit}.customer-ad-stage img{display:block;width:100%;height:100%;object-fit:cover}.customer-ad-caption{position:absolute;inset:auto 0 0;padding:14px 20px;color:#fff;font-weight:800;font-size:clamp(14px,2vw,20px);background:linear-gradient(transparent,#071a2cdb);text-shadow:0 1px 3px #0008}.customer-ad-controls{display:flex;justify-content:center;align-items:center;gap:14px;padding:8px 0}.customer-ad-controls button{border:1px solid #526b85;background:#1b3550;color:#fff;border-radius:8px;padding:6px 14px;cursor:pointer}.customer-ad-dots{display:flex;align-items:center;gap:7px}.customer-ad-dot{width:9px;height:9px;padding:0!important;border:0!important;border-radius:50%!important;background:#8194a8!important}.customer-ad-dot.active{width:22px;border-radius:8px!important;background:#d6aa3b!important}@media(max-width:600px){.customer-ads{margin:10px 0;padding:0 10px}.customer-ad-stage{aspect-ratio:16/7;min-height:120px}.customer-ad-caption{padding:10px 12px;font-size:14px}.customer-ad-controls{gap:9px}.customer-ad-controls button{font-size:12px;padding:5px 9px}}@media(prefers-reduced-motion:reduce){.customer-ad-stage{scroll-behavior:auto}}
 </style></head><body>
 <header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button id="liveNav" class="nav-button" type="button" aria-pressed="false">البث المباشر</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
 <div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle">تنبيه من الإدارة</strong><p><span class="announcement-track"><span id="announcementMessage"></span><span class="announcement-copy" aria-hidden="true"></span></span></p></div>
+<section id="customerAds" class="customer-ads" aria-label="إعلانات الاستراحة" hidden>
+ <div id="customerAdStage" class="customer-ad-stage" aria-live="polite"></div>
+ <div id="customerAdControls" class="customer-ad-controls" hidden>
+  <button id="customerAdPrev" type="button" aria-label="الإعلان السابق">السابق</button>
+  <div id="customerAdDots" class="customer-ad-dots"></div>
+  <button id="customerAdNext" type="button" aria-label="الإعلان التالي">التالي</button>
+ </div>
+</section>
 <main><section id="homeView">
 <section class="welcome-panel" id="welcomePanel">
 <div><span class="welcome-kicker">ALOSTORA MEDIA LIBRARY</span><h2>كل مكتبتك الترفيهية في مكان واحد</h2><p>تصفح الأقسام، اكتشف البرامج والمسلسلات والأفلام، وتابع المشاهدة من حيث توقفت.</p></div>
@@ -134,6 +143,7 @@ main{max-width:1320px;padding:26px 28px 18px}
 function createViewerId(){try{if(window.crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();if(window.crypto&&crypto.getRandomValues){const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}}catch{}return 'viewer-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);}
 let viewerId='';try{viewerId=localStorage.getItem('alostora-viewer')||'';if(!viewerId){viewerId=createViewerId();localStorage.setItem('alostora-viewer',viewerId);}}catch{viewerId=createViewerId();}
 let favorites=new Set();try{favorites=new Set(JSON.parse(localStorage.getItem('alostora-favorites')||'[]'));}catch{}
+let customerAdItems=[],customerAdIndex=0,customerAdTimer=null;
 let activeVideo=null,loadedVideoId=null,items=[],seriesItems=[],categories=[],mediaItems=[],activeMediaKind="all",progressRows=[],saveTimer=null,playbackGeneration=0,catalogStack=[],catalogPage={type:'home'};const player=document.querySelector('#player');
  
 function renderMediaLibraries(){
@@ -502,6 +512,38 @@ async function load(){try{
  for(const sub of categories.filter(x=>x.parentId!=null&&x.isPublished)){const parent=categories.find(x=>x.categoryId===sub.parentId);const option=document.createElement('option');option.value=sub.categoryId;option.textContent=(parent?parent.title+' / ':'')+sub.title;select.append(option);}
  render();await loadProgress();
  }catch(error){document.querySelector('#message').textContent=error.message||'تعذر الاتصال بالسيرفر أو تحميل بيانات المكتبة.';document.querySelector('#continueEmpty').textContent='تعذر تحميل سجل المشاهدة.';}}
+function stopCustomerAdTimer(){if(customerAdTimer){clearTimeout(customerAdTimer);customerAdTimer=null;}}
+function scheduleCustomerAd(){
+ stopCustomerAdTimer();
+ if(customerAdItems.length<2||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ const item=customerAdItems[customerAdIndex];if(!item)return;
+ customerAdTimer=setTimeout(()=>renderCustomerAd(customerAdIndex+1),Math.max(5,Math.min(120,Number(item.durationSeconds)||10))*1000);
+}
+function renderCustomerAd(index=customerAdIndex){
+ const section=document.querySelector('#customerAds'),stage=document.querySelector('#customerAdStage'),controls=document.querySelector('#customerAdControls'),dots=document.querySelector('#customerAdDots');
+ if(!section||!stage)return;
+ if(!customerAdItems.length){section.hidden=true;stopCustomerAdTimer();return;}
+ customerAdIndex=(index+customerAdItems.length)%customerAdItems.length;
+ const item=customerAdItems[customerAdIndex],surface=document.createElement(item.linkUrl?'a':'div');
+ if(item.linkUrl){surface.href=item.linkUrl;surface.target='_blank';surface.rel='noopener noreferrer';surface.setAttribute('aria-label',item.title||'فتح الإعلان');}
+ const image=document.createElement('img');image.src='/api/customer-ads/'+encodeURIComponent(item.id)+'/image';image.alt=item.title||'إعلان الاستراحة';image.loading='lazy';surface.append(image);
+ if(item.title){const caption=document.createElement('div');caption.className='customer-ad-caption';caption.textContent=item.title;surface.append(caption);}
+ stage.replaceChildren(surface);dots.replaceChildren();
+ controls.hidden=customerAdItems.length<2;
+ customerAdItems.forEach((ad,i)=>{const dot=document.createElement('button');dot.type='button';dot.className='customer-ad-dot'+(i===customerAdIndex?' active':'');dot.setAttribute('aria-label','عرض الإعلان '+(i+1));dot.setAttribute('aria-current',String(i===customerAdIndex));dot.addEventListener('click',()=>renderCustomerAd(i));dots.append(dot);});
+ section.hidden=false;scheduleCustomerAd();
+}
+async function loadCustomerAds(){
+ try{
+  const response=await fetch('/api/customer-ads',{cache:'no-store'});if(!response.ok)return;
+  const rows=await response.json();
+  const nextItems=Array.isArray(rows)?rows:[];
+  if(JSON.stringify(nextItems)!==JSON.stringify(customerAdItems)){
+   customerAdItems=nextItems;
+   renderCustomerAd(Math.min(customerAdIndex,Math.max(0,customerAdItems.length-1)));
+  }
+ }catch{customerAdItems=[];renderCustomerAd(0);}
+}
 async function loadAnnouncement(){
  try{
   const response=await fetch('/api/announcement',{cache:'no-store'});
@@ -574,6 +616,8 @@ function showCustomerView(view){
 document.querySelector('#homeNav').addEventListener('click',()=>showCustomerView('home'));
 document.querySelector('#contactNav').addEventListener('click',()=>showCustomerView('contact'));
 document.querySelector('#liveNav').addEventListener('click',()=>showCustomerView('live'));
+document.querySelector('#customerAdPrev').addEventListener('click',()=>renderCustomerAd(customerAdIndex-1));
+document.querySelector('#customerAdNext').addEventListener('click',()=>renderCustomerAd(customerAdIndex+1));
 document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener('click',()=>{
  activeMediaKind=button.dataset.kind||'all';
  document.querySelectorAll('.media-tab').forEach(x=>x.classList.toggle('active',x===button));
@@ -583,5 +627,5 @@ document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener(
  if(mediaOnly){document.querySelector('#mediaLibrary').hidden=false;renderMediaLibraries();}
  else{document.querySelector('#mediaLibrary').hidden=mediaItems.length===0;renderMediaLibraries();}
 }));
-for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();load();loadAnnouncement();setInterval(loadAnnouncement,60000);
+for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();load();loadAnnouncement();loadCustomerAds();setInterval(loadAnnouncement,60000);setInterval(loadCustomerAds,60000);
 </script></body></html>

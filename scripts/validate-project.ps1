@@ -375,3 +375,25 @@ if ($html -notmatch 'id="liveView"' -or $html -notmatch 'id="liveNav"' -or $app 
     throw "The local live-stream customer view or settings API is missing."
 }
 Write-Host "PASS: local live-stream page and settings API remain available."
+
+# Customer image ads must remain local, validated, admin-managed, and visible on the customer home page.
+$customerAds = Get-Content (Join-Path $root "src/Alostora.RestHouse/CustomerAdService.cs") -Raw
+$customerAdTests = Get-Content (Join-Path $root "tests/Alostora.RestHouse.Tests/CustomerAdServiceTests.cs") -Raw
+if ($customerAds -notmatch 'MaximumImageBytes' -or
+    $customerAds -notmatch 'HasValidSignature' -or
+    $customerAds -notmatch 'ValidateLink' -or
+    $customerAds -notmatch 'Path.GetFileName\(fileName\)' -or
+    $app -notmatch 'MapGet\("\/api\/customer-ads"' -or
+    $app -notmatch 'MapPost\("\/api\/admin\/customer-ads"' -or
+    $app -notmatch 'MapDelete\("\/api\/admin\/customer-ads' -or
+    $app -notmatch 'TryGetImage\(id' -or
+    $xaml -notmatch 'CustomerAdsGrid' -or
+    $code -notmatch 'AddCustomerAd_Click' -or
+    $code -notmatch 'MoveCustomerAdAsync' -or
+    $html -notmatch 'id="customerAds"' -or
+    $html -notmatch 'loadCustomerAds\(\)' -or
+    $customerAdTests -notmatch 'RejectsUnsupportedOrMismatchedImagesAndUnsafeLinks' -or
+    $customerAdTests -notmatch 'RemovesOnlyTheManagedAdImageAndMetadata') {
+    throw "Customer image ad gallery validation, administration, customer display, or regression tests are incomplete."
+}
+Write-Host "PASS: local customer image ad gallery is validated, admin-managed, and covered by regression tests."
