@@ -1821,24 +1821,106 @@ public partial class MainWindow : Window
     private async void SeriesPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (SeriesPicker.SelectedItem is not SeriesAdmin s) return;
-        _pendingSeriesPosterPath = null;
-        SeriesIdBox.Text = s.SeriesId;
-        SeriesTitleBox.Text = s.Title ?? "";
-        SeriesDescriptionBox.Text = s.Description ?? "";
-        SeriesYearBox.Text = s.Year?.ToString() ?? "";
-        SeriesGenreBox.Text = s.Genre ?? "";
-        SeriesSectionBox.Text = s.Section ?? "عام";
-        var selectedSeriesCategory = _categories.FirstOrDefault(x => x.CategoryId == s.CategoryId);
-        SeriesMainCategoryPicker.SelectedValue = selectedSeriesCategory?.ParentId;
-        RefreshSeriesCategoryPicker(s.CategoryId);
-        SeriesPublishBox.IsChecked = s.IsPublished;
-        SeriesPosterPathBox.Text = s.PosterPath ?? "";
-        UpdateSeriesPosterPreview(s.PosterPath);
-        SeriesFolderPathBox.Text = s.FolderPath ?? "";
-        SeriesStructureBox.SelectedItem = SeriesStructureBox.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == s.OrganizationType);
-        UpdateSeriesStructureLabels();
-        await LoadSeasonsAsync(s.SeriesId);
-        OpenDedicatedEditor(SeriesEditorExpander, "تعديل بيانات المسلسل");
+        try
+        {
+            _pendingSeriesPosterPath = null;
+            SeriesIdBox.Text = s.SeriesId;
+            SeriesTitleBox.Text = s.Title ?? "";
+            SeriesDescriptionBox.Text = s.Description ?? "";
+            SeriesYearBox.Text = s.Year?.ToString() ?? "";
+            SeriesGenreBox.Text = s.Genre ?? "";
+            SeriesSectionBox.Text = s.Section ?? "عام";
+            var selectedSeriesCategory = _categories.FirstOrDefault(x => x.CategoryId == s.CategoryId);
+            SeriesMainCategoryPicker.SelectedValue = selectedSeriesCategory?.ParentId;
+            RefreshSeriesCategoryPicker(s.CategoryId);
+            SeriesPublishBox.IsChecked = s.IsPublished;
+            SeriesPosterPathBox.Text = s.PosterPath ?? "";
+            UpdateSeriesPosterPreview(s.PosterPath);
+            SeriesFolderPathBox.Text = s.FolderPath ?? "";
+            SeriesStructureBox.SelectedItem = SeriesStructureBox.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == s.OrganizationType);
+            UpdateSeriesStructureLabels();
+
+            await LoadSeasonsAsync(s.SeriesId);
+            var seasons = (SeasonsGrid.ItemsSource as SeasonAdmin[]) ?? Array.Empty<SeasonAdmin>();
+
+            // A series-level folder is treated as the folder of its first episode group.
+            // Create a default season only when the series has none; never overwrite existing season structure.
+            if (seasons.Length == 0 && !string.IsNullOrWhiteSpace(s.FolderPath) && Directory.Exists(s.FolderPath))
+            {
+                SeriesStatusText.Text = "جارٍ تجهيز قائمة حلقات المسلسل من المجلد المحدد...";
+                var createSeason = await _http.PostAsJsonAsync("/api/admin/seasons", new
+                {
+                    seriesId = s.SeriesId,
+                    seasonNumber = 1,
+                    title = "الحلقات",
+                    folderPath = Path.GetFullPath(s.FolderPath)
+                });
+                if (createSeason.IsSuccessStatusCode)
+                {
+                    await LoadSeasonsAsync(s.SeriesId);
+                    seasons = (SeasonsGrid.ItemsSource as SeasonAdmin[]) ?? Array.Empty<SeasonAdmin>();
+                }
+                else
+                {
+                    SeriesStatusText.Text = "تم فتح المسلسل، لكن تعذر تجهيز مجموعة الحلقات تلقائياً: " +
+                        await createSeason.Content.ReadAsStringAsync();
+                }
+            }
+
+            var firstSeason = seasons.OrderBy(x => x.SeasonNumber).FirstOrDefault();
+            if (firstSeason is not null)
+            {
+                SeasonsGrid.SelectedItem = firstSeason;
+                await LoadEpisodesAsync(firstSeason.SeasonId);
+                if (!string.IsNullOrWhiteSpace(firstSeason.FolderPath) && Directory.Exists(firstSeason.FolderPath))
+                    await LoadEpisodeCandidatesForSeasonAsync(firstSeason.SeasonId);
+            }
+            else
+            {
+                EpisodesGrid.ItemsSource = null;
+                _episodeCandidates.Clear();
+                EpisodeCandidatesGrid.Items.Refresh();
+            }
+
+            SeriesEditorExpander.IsExpanded = false;
+            var episodesTab = MainNavigationTabs.Items.OfType<TabItem>()
+                .FirstOrDefault(x => string.Equals(x.Header?.ToString(), "المواسم والحلقات", StringComparison.Ordinal));
+            if (episodesTab is not null) MainNavigationTabs.SelectedItem = episodesTab;
+            SeriesStatusText.Text = firstSeason is null
+                ? $"تم اختيار «{s.Title}». أضف مجلداً للمسلسل أو أنشئ موسماً لبدء إضافة الحلقات."
+                : $"تم فتح حلقات «{s.Title}». حدد الملفات المطلوبة وأرقام الحلقات ثم اعتمد الإضافة.";
+        }
+        catch (Exception ex)
+        {
+            App.LogDiagnostic("MainWindow.SeriesPicker_SelectionChanged", ex);
+            SeriesStatusText.Text = "تعذر فتح بيانات المسلسل أو حلقاته. بقيت نافذة الإدارة مفتوحة؛ راجع سجل الأخطاء.";
+        }
+    }
+
+    private async System.Threading.Tasks.Task LoadEpisodeCandidatesForSeasonAsync(long seasonId)
+    {
+        try
+        {
+            var rows = await _http.GetFromJsonAsync<EpisodeCandidate[]>(
+                "/api/admin/seasons/" + seasonId + "/preview") ?? Array.Empty<EpisodeCandidate>();
+            _episodeCandidates.Clear();
+            foreach (var row in rows)
+            {
+                row.Status = row.IsAlreadyLinked ? "مربوط مسبقاً"
+                    : row.EpisodeNumber is null or <= 0 ? "لم يتم التعرف على الرقم"
+                    : row.IsNumberUsed ? "رقم مكرر"
+                    : "جاهز للمراجعة";
+                row.Selected = false;
+                _episodeCandidates.Add(row);
+            }
+            EpisodeCandidatesGrid.Items.Refresh();
+            EpisodeSelectionSummaryText.Text = $"تم اكتشاف {rows.Length} ملفاً. اختر الحلقات التي تريد إضافتها فقط.";
+        }
+        catch (Exception ex)
+        {
+            App.LogDiagnostic("MainWindow.LoadEpisodeCandidatesForSeasonAsync", ex);
+            SeriesStatusText.Text = "تعذر اكتشاف ملفات الحلقات: " + ex.Message;
+        }
     }
 
     private async System.Threading.Tasks.Task LoadSeasonsAsync(string seriesId)
