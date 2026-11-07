@@ -333,7 +333,7 @@ public partial class App : Application
    _server.MapGet("/api/announcement",(AnnouncementService announcements)=>
    {
     var item=announcements.Load();
-    return Results.Ok(new{item.Title,item.Message,item.IsActive,item.Kind,item.UpdatedUtc});
+    return Results.Ok(new{item.Title,item.Message,item.IsActive,item.Kind,item.UpdatedUtc,item.SpeedSeconds});
    });
    _server.MapGet("/api/admin/announcement",(HttpContext c,AnnouncementService announcements)=>
     IsAdmin(c)?Results.Ok(announcements.Load()):Results.NotFound());
