@@ -734,15 +734,6 @@ public partial class App : Application
     foreach(var id in ids) librarySvc.RemoveFromLibrary(id);
     return Results.Ok(new{removed=ids.Length,message="تمت إزالة الملفات المحددة من المكتبة فقط، دون حذف الملفات الأصلية"});
    });
-   _server.MapPost("/api/admin/library/bulk-delete",(HttpContext c,BulkLibraryRequest request,LibraryService librarySvc,VideoMetadataService metadata,WatchProgressService progress)=>
-   {
-    if(!IsAdmin(c)) return Results.NotFound();
-    if(request.Ids is null||request.Ids.Count<1||request.Ids.Count>5000||request.Ids.Any(id=>string.IsNullOrWhiteSpace(id)||id.Length!=24||!id.All(Uri.IsHexDigit))) return Results.BadRequest(new{error="قائمة الملفات المحددة غير صالحة"});
-    var ids=request.Ids.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-    if(ids.Any(id=>librarySvc.Resolve(id) is null)) return Results.NotFound(new{error="بعض الملفات المحددة لم تعد موجودة في المكتبة"});
-    foreach(var id in ids) { librarySvc.DeleteFile(id); metadata.Delete(id); progress.DeleteVideo(id); }
-    return Results.Ok(new{deleted=ids.Length,message="تم حذف الملفات المحددة نهائياً وتنظيف بياناتها"});
-   });
    _server.MapPost("/api/admin/library/{id}/remove",(HttpContext c,string id,LibraryService librarySvc)=>
    {
     if(!IsAdmin(c)) return Results.NotFound();
@@ -750,20 +741,6 @@ public partial class App : Application
     try { librarySvc.RemoveFromLibrary(id); return Results.Ok(new{removed=true,message="تمت إزالة الفيديو من المكتبة دون حذف الملف الأصلي"}); }
     catch(FileNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
     catch(Exception ex) { return Results.BadRequest(new{error=ex.Message}); }
-   });
-   _server.MapDelete("/api/admin/library/{id}",(HttpContext c,string id,LibraryService librarySvc,VideoMetadataService metadata,WatchProgressService progress)=>
-   {
-    if(!IsAdmin(c)) return Results.NotFound();
-    if(string.IsNullOrWhiteSpace(id)||id.Length!=24||!id.All(Uri.IsHexDigit)) return Results.BadRequest(new{error="معرّف الفيديو غير صالح"});
-    try
-    {
-     librarySvc.DeleteFile(id);
-     metadata.Delete(id);
-     progress.DeleteVideo(id);
-     return Results.Ok(new{deleted=true,message="تم حذف ملف الفيديو من القرص وتنظيف بياناته وسجل مشاهدته. إذا كان مربوطاً بحلقة فستظهر كحلقة مفقودة ويمكن إعادة ربطها."});
-    }
-    catch(FileNotFoundException) { return Results.NotFound(new{error="ملف الفيديو غير موجود أو حُذف مسبقاً"}); }
-    catch(Exception ex) { return Results.Problem("تعذر حذف ملف الفيديو: "+ex.Message); }
    });
    _server.MapGet("/api/progress/{viewerId}",(string viewerId,WatchProgressService db)=>viewerId.Length<=80?Results.Ok(db.Get(viewerId)):Results.BadRequest());
    _server.MapPost("/api/progress",(WatchProgressRequest request,WatchProgressService db,LibraryService svc,PublicCatalogAccessService publicCatalog)=>{if(string.IsNullOrWhiteSpace(request.ViewerId)||request.ViewerId.Length>80||string.IsNullOrWhiteSpace(request.VideoId)||svc.Resolve(request.VideoId) is null||!publicCatalog.IsVideoPublished(request.VideoId)||!double.IsFinite(request.PositionSeconds)||!double.IsFinite(request.DurationSeconds)||request.PositionSeconds<0||request.DurationSeconds<=0||request.PositionSeconds>request.DurationSeconds+5||request.PositionSeconds>864000||request.DurationSeconds>864000)return Results.BadRequest();db.Save(request);return Results.Ok(new{saved=true});});
