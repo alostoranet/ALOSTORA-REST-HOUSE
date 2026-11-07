@@ -86,6 +86,7 @@ public partial class App : Application
    builder.Services.AddSingleton(new CustomerMessageService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new RestHouseProfileService(root));
    builder.Services.AddSingleton(new AnnouncementService(root));
+   builder.Services.AddSingleton(new CustomerAdService(root,posters));
    builder.Services.AddSingleton(new LiveStreamSettingsService(root));
    builder.Services.AddSingleton(new PublicCatalogAccessService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddHostedService(provider => new ScheduledBackupService(root,posters,provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ScheduledBackupService>>()));
@@ -252,6 +253,55 @@ public partial class App : Application
     try{return Results.Ok(new{saved=true,announcement=announcements.Save(request)});}
     catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
     catch(IOException){return Results.Problem("تعذر حفظ الإعلان محلياً.",statusCode:500);}
+   });
+   _server.MapGet("/api/customer-ads",(CustomerAdService ads)=>Results.Ok(ads.List(activeOnly:true)));
+   _server.MapGet("/api/customer-ads/{id}/image",(string id,CustomerAdService ads)=>
+   {
+    if(!Guid.TryParseExact(id,"N",out _)||!ads.TryGetImage(id,out var path,out var contentType))return Results.NotFound();
+    return Results.File(path,contentType,enableRangeProcessing:true);
+   });
+   _server.MapGet("/api/admin/customer-ads",(HttpContext c,CustomerAdService ads)=>
+    IsAdmin(c)?Results.Ok(ads.List()):Results.NotFound());
+   _server.MapPost("/api/admin/customer-ads",async (HttpContext c,CustomerAdService ads)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(c.Request.ContentLength is > 6*1024*1024)return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+    if(!c.Request.HasFormContentType)return Results.BadRequest(new{error="أرسل صورة الإعلان بصيغة نموذج ملفات."});
+    try
+    {
+     var form=await c.Request.ReadFormAsync(c.RequestAborted);
+     var file=form.Files.GetFile("image");
+     if(file is null||file.Length<=0||file.Length>CustomerAdService.MaximumImageBytes)
+      return Results.BadRequest(new{error="اختر صورة لا يتجاوز حجمها 5 ميجابايت."});
+     if(!int.TryParse(form["durationSeconds"],out var duration)||duration is <5 or >120)
+      return Results.BadRequest(new{error="مدة العرض يجب أن تكون بين 5 و120 ثانية."});
+     await using var stream=file.OpenReadStream();
+     var item=ads.Add(stream,file.FileName,form["title"].ToString(),form["linkUrl"].ToString(),duration);
+     return Results.Ok(new{ad=item});
+    }
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+    catch(IOException){return Results.Problem("تعذر حفظ صورة الإعلان محلياً.",statusCode:500);}
+   });
+   _server.MapPost("/api/admin/customer-ads/{id}",(HttpContext c,string id,CustomerAdUpdateRequest request,CustomerAdService ads)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(!Guid.TryParseExact(id,"N",out _))return Results.BadRequest(new{error="معرّف الإعلان غير صالح."});
+    try{return Results.Ok(new{ad=ads.Update(id,request)});}
+    catch(KeyNotFoundException){return Results.NotFound();}
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+   });
+   _server.MapPost("/api/admin/customer-ads/{id}/move",(HttpContext c,string id,CustomerAdMoveRequest request,CustomerAdService ads)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(!Guid.TryParseExact(id,"N",out _))return Results.BadRequest(new{error="معرّف الإعلان غير صالح."});
+    try{return ads.Move(id,request.Direction)?Results.Ok(new{moved=true}):Results.NotFound();}
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+   });
+   _server.MapDelete("/api/admin/customer-ads/{id}",(HttpContext c,string id,CustomerAdService ads)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(!Guid.TryParseExact(id,"N",out _))return Results.BadRequest(new{error="معرّف الإعلان غير صالح."});
+    return ads.Remove(id)?Results.Ok(new{removed=true}):Results.NotFound();
    });
    _server.MapGet("/api/admin/profile",(HttpContext c,RestHouseProfileService profile)=>
     IsAdmin(c)?Results.Ok(profile.Load()):Results.NotFound());
