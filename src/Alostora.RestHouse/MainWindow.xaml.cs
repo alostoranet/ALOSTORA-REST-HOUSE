@@ -59,7 +59,7 @@ public partial class MainWindow : Window
         _videosView.Filter = FilterVideosByFolder;
         VideosGrid.ItemsSource = _videosView;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
-        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadLiveStreamInitialAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); };
+        Loaded += async (_, _) => { await LoadBrandProfileAsync(); await LoadAnnouncementAsync(); await LoadLiveStreamInitialAsync(); await LoadCategoriesAsync(); await LoadVideosAsync(); await LoadSeriesAsync(); await LoadMissingEpisodesAsync(); await LoadCustomerMessagesAsync(); await CheckMediaToolsAsync(); await RefreshMultiMediaLibraryAsync(); };
         _messageRefreshTimer.Tick += async (_, _) => await LoadCustomerMessagesAsync();
         _messageRefreshTimer.Start();
         Closed += (_, _) => _messageRefreshTimer.Stop();
@@ -342,7 +342,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            HeaderBrandLogo.Source = new BitmapImage(new Uri("pack://application:,,,/Assets/alostora.ico"));
+            HeaderBrandLogo.Source = new BitmapImage(new Uri("pack://application:,,,/Alostora.RestHouse;component/Assets/alostora.ico"));
             var profile = await _http.GetFromJsonAsync<RestHouseProfileAdmin>("/api/admin/profile");
             if (profile is null) return;
             RestHouseNameBox.Text = profile.RestHouseName;
@@ -366,6 +366,59 @@ public partial class MainWindow : Window
         {
             BrandProfileStatusText.Text = "تعذر تحميل بيانات الهوية: " + ex.Message;
         }
+    }
+
+    private async void LoadAnnouncement_Click(object sender, RoutedEventArgs e) => await LoadAnnouncementAsync();
+
+    private async System.Threading.Tasks.Task LoadAnnouncementAsync()
+    {
+        try
+        {
+            var item = await _http.GetFromJsonAsync<AnnouncementAdmin>("/api/admin/announcement");
+            if (item is null) return;
+            AnnouncementTitleBox.Text = item.Title ?? "";
+            AnnouncementMessageBox.Text = item.Message ?? "";
+            AnnouncementActiveBox.IsChecked = item.IsActive;
+            AnnouncementSpeedSecondsBox.Text = Math.Clamp(item.SpeedSeconds, 5, 60).ToString();
+            AnnouncementAdRadio.IsChecked = item.Kind == "ad";
+            AnnouncementNoticeRadio.IsChecked = item.Kind != "ad";
+            AnnouncementStatusText.Text = item.IsActive ? "الإعلان منشور للعملاء." : "الإعلان محفوظ لكنه متوقف.";
+        }
+        catch (Exception ex) { AnnouncementStatusText.Text = "تعذر تحميل الإعلان: " + ex.Message; }
+    }
+
+    private async void SaveAnnouncement_Click(object sender, RoutedEventArgs e)
+    {
+        if (!int.TryParse(AnnouncementSpeedSecondsBox.Text.Trim(), out var speedSeconds) || speedSeconds < 5 || speedSeconds > 60)
+        {
+            AnnouncementStatusText.Text = "أدخل مدة صحيحة من 5 إلى 60 ثانية.";
+            return;
+        }
+        var request = new
+        {
+            title = AnnouncementTitleBox.Text.Trim(),
+            message = AnnouncementMessageBox.Text.Trim(),
+            isActive = AnnouncementActiveBox.IsChecked == true,
+            kind = AnnouncementAdRadio.IsChecked == true ? "ad" : "notice",
+            speedSeconds,
+            updatedUtc = DateTime.UtcNow
+        };
+        if (request.isActive && string.IsNullOrWhiteSpace(request.message))
+        {
+            AnnouncementStatusText.Text = "اكتب نص الإعلان قبل نشره.";
+            return;
+        }
+        try
+        {
+            var response = await _http.PostAsJsonAsync("/api/admin/announcement", request);
+            if (!response.IsSuccessStatusCode)
+            {
+                AnnouncementStatusText.Text = "تعذر حفظ الإعلان: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            AnnouncementStatusText.Text = request.isActive ? "تم حفظ الإعلان ونشره للعملاء." : "تم حفظ الإعلان وإيقاف ظهوره.";
+        }
+        catch (Exception ex) { AnnouncementStatusText.Text = "تعذر حفظ الإعلان: " + ex.Message; }
     }
 
     private async void SaveBrandProfile_Click(object sender, RoutedEventArgs e)
@@ -2259,6 +2312,15 @@ public partial class MainWindow : Window
             CustomerMessageStatusText.Text = $"تم حذف الرسالة رقم {message.Id}.";
         }
         catch (Exception ex) { CustomerMessageStatusText.Text = "تعذر حذف الرسالة: " + ex.Message; }
+    }
+
+    private sealed class AnnouncementAdmin
+    {
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public bool IsActive { get; set; }
+        public string Kind { get; set; } = "notice";
+        public int SpeedSeconds { get; set; } = 18;
     }
 
     private sealed class RestHouseProfileAdmin

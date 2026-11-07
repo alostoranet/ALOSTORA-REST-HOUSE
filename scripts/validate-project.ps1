@@ -46,12 +46,35 @@ $requiredRoutes = @(
     '/api/admin/seasons/{seasonId:long}/episodes',
     '/api/admin/episodes/{episodeId:long}',
     '/api/admin/missing-episodes',
-    '/api/library'
+    '/api/library',
+    '/api/announcement',
+    '/api/admin/announcement'
 )
 foreach ($route in $requiredRoutes) {
     if (-not $app.Contains($route)) { throw ("Missing API route: " + $route) }
 }
 Write-Host ("PASS: all {0} required management API routes are present." -f $requiredRoutes.Count)
+# The customer announcement is editable in the Windows admin panel and has a reduced-motion fallback.
+if ($xaml -notmatch 'Header="📢 الإعلانات"' -or
+    $xaml -notmatch 'AnnouncementMessageBox' -or
+    $code -notmatch 'SaveAnnouncement_Click' -or
+    $app -notmatch 'MapPost\("/api/admin/announcement"' -or
+    $html -notmatch 'id="announcementBanner"' -or
+    $html -notmatch 'announcement-marquee' -or
+    $html -notmatch 'prefers-reduced-motion:reduce' -or
+    $html -notmatch 'announcement-copy\{display:none!important\}' -or
+    -not $html.Contains('.announcement-banner p{position:relative;') -or
+    -not $html.Contains('.announcement-track{position:absolute;top:0;right:0;') -or
+    -not $html.Contains('flex-direction:row;direction:rtl;width:max-content;min-width:200%;animation:announcement-marquee') -or
+    -not $html.Contains('flex:0 0 50%;width:auto;max-width:none;') -or
+    -not $html.Contains('position:static;top:auto;right:auto;bottom:auto;display:block!important;') -or
+    -not $html.Contains('const wasHidden=banner.hidden;') -or
+    -not $html.Contains("track.style.animationPlayState='paused';") -or
+    -not $html.Contains("track.style.animationPlayState='running';")) {
+    throw "Customer announcement editor/API/ticker direction, start position, restart behavior, or reduced-motion fallback is incomplete."
+}
+Write-Host "PASS: announcement controls/API, RTL start position, restart-on-enable behavior, and reduced-motion fallback are wired."
+
 
 # Parse each inline viewer script with Node.js to catch syntax errors before packaging.
 $scripts = [regex]::Matches($html, '(?is)<script\b[^>]*>(.*?)</script>')

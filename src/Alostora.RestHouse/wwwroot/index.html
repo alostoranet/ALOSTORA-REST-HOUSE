@@ -77,8 +77,18 @@ main{max-width:1320px;padding:26px 28px 18px}
 #liveView h2{color:#8dc9e8}
 #liveOpenLink{background:#276b91}
 @media(max-width:600px){.nav-button{padding:10px 13px;font-size:13px}.catalog-card h3{font-size:14px}}
+ .announcement-banner{display:flex;align-items:center;gap:10px;max-width:1320px;min-height:42px;margin:12px auto 0;padding:6px 14px;overflow:hidden;border:1px solid #d85b62;border-right:4px solid #fff;border-radius:9px;background:linear-gradient(100deg,#9f1420,#d3232d 52%,#a91420);box-shadow:0 5px 16px #0003;color:#fff}
+.announcement-banner[hidden]{display:none!important}
+.announcement-banner strong{flex:0 0 auto;background:#fff;color:#a91420;border-radius:5px;padding:5px 10px;font-size:12px;white-space:nowrap}
+.announcement-banner p{position:relative;flex:1 1 auto;min-width:0;height:30px;margin:0;overflow:hidden;white-space:nowrap}
+.announcement-track{position:absolute;top:0;right:0;bottom:0;display:flex;align-items:center;flex:0 0 auto;flex-direction:row;direction:rtl;width:max-content;min-width:200%;animation:announcement-marquee 18s linear infinite;will-change:transform}
+.announcement-track span{display:inline-block;box-sizing:border-box;flex:0 0 50%;width:auto;max-width:none;padding:4px 28px;direction:rtl;unicode-bidi:plaintext;white-space:nowrap;font-size:14px;font-weight:800;color:#fff}
+@keyframes announcement-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media(max-width:600px){.announcement-banner{margin:8px 10px 0;min-height:38px;padding:5px 8px;gap:7px}.announcement-banner strong{font-size:10px;padding:4px 6px}.announcement-banner p{height:26px}.announcement-track span{font-size:12px;padding:4px 14px}}
+@media(prefers-reduced-motion:reduce){.announcement-banner p{height:auto;min-height:30px;overflow:visible;white-space:normal}.announcement-track{position:static;top:auto;right:auto;bottom:auto;display:block!important;width:100%!important;max-width:100%;height:auto;white-space:normal;animation:none!important;transform:none!important;will-change:auto}.announcement-track #announcementMessage{display:block;width:100%;max-width:100%;white-space:normal;overflow-wrap:anywhere;padding:4px 0}.announcement-track .announcement-copy{display:none!important}}
 </style></head><body>
 <header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button id="liveNav" class="nav-button" type="button" aria-pressed="false">البث المباشر</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
+<div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle">تنبيه من الإدارة</strong><p><span class="announcement-track"><span id="announcementMessage"></span><span class="announcement-copy" aria-hidden="true"></span></span></p></div>
 <main><section id="homeView">
 <section class="welcome-panel" id="welcomePanel">
 <div><span class="welcome-kicker">ALOSTORA MEDIA LIBRARY</span><h2>كل مكتبتك الترفيهية في مكان واحد</h2><p>تصفح الأقسام، اكتشف البرامج والمسلسلات والأفلام، وتابع المشاهدة من حيث توقفت.</p></div>
@@ -492,6 +502,36 @@ async function load(){try{
  for(const sub of categories.filter(x=>x.parentId!=null&&x.isPublished)){const parent=categories.find(x=>x.categoryId===sub.parentId);const option=document.createElement('option');option.value=sub.categoryId;option.textContent=(parent?parent.title+' / ':'')+sub.title;select.append(option);}
  render();await loadProgress();
  }catch(error){document.querySelector('#message').textContent=error.message||'تعذر الاتصال بالسيرفر أو تحميل بيانات المكتبة.';document.querySelector('#continueEmpty').textContent='تعذر تحميل سجل المشاهدة.';}}
+async function loadAnnouncement(){
+ try{
+  const response=await fetch('/api/announcement',{cache:'no-store'});
+  if(!response.ok)return;
+  const item=await response.json();
+  const banner=document.querySelector('#announcementBanner');
+  if(!banner)return;
+  const track=document.querySelector('.announcement-track');
+  if(!item.isActive||!item.message){
+   if(track)track.style.animationPlayState='paused';
+   banner.hidden=true;
+   return;
+  }
+  const wasHidden=banner.hidden;
+  const title=item.title||(item.kind==='ad'?'إعلان':'تنبيه من الإدارة');
+  const message=document.querySelector('#announcementMessage');
+  const copy=document.querySelector('.announcement-copy');
+  const duration=Math.max(5,Math.min(60,Number(item.speedSeconds)||18));
+  document.querySelector('#announcementTitle').textContent=title;
+  message.textContent=item.message;
+  copy.textContent=item.message;
+  banner.hidden=false;
+  if(wasHidden||track.dataset.message!==item.message||track.dataset.duration!==String(duration)){
+   track.dataset.message=item.message;track.dataset.duration=String(duration);
+   track.style.animation='none';void track.offsetWidth;
+   track.style.animation='announcement-marquee '+duration+'s linear infinite';
+  }
+  track.style.animationPlayState='running';
+ }catch{}
+}
 async function loadBrandProfile(){
  try{
   const response=await fetch('/api/profile');
@@ -543,5 +583,5 @@ document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener(
  if(mediaOnly){document.querySelector('#mediaLibrary').hidden=false;renderMediaLibraries();}
  else{document.querySelector('#mediaLibrary').hidden=mediaItems.length===0;renderMediaLibraries();}
 }));
-for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();load();
+for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();load();loadAnnouncement();setInterval(loadAnnouncement,60000);
 </script></body></html>
