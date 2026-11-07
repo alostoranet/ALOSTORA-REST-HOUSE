@@ -70,6 +70,7 @@ header.is-inner-page #headerBackNav{background:linear-gradient(135deg,#203d55,#1
 /* Keep the announcement moving continuously, including while the pointer is over it. */
 @keyframes announcement-message-reveal{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
 @keyframes announcement-message-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes announcement-message-entry{from{transform:translateX(var(--announcement-start,100vw))}to{transform:translateX(-50%)}}
 /* Repeated equal-width copies and a one-copy translation create a seamless right-to-left loop. */
 .announcement-banner .announcement-track{animation-direction:normal;gap:0}
 @media(max-width:600px){
@@ -489,6 +490,20 @@ async function loadCustomerAds(){
   renderCustomerAd(customerAdIndex);
  }catch{}
 }
+function startAnnouncementTrack(track,duration){
+ const viewportWidth=track.parentElement?.clientWidth||window.innerWidth;
+ track.onanimationend=null;
+ track.style.setProperty('--announcement-start',viewportWidth+'px');
+ track.style.animation='none';
+ track.style.transform='translateX(0)';
+ void track.offsetWidth;
+ track.onanimationend=(event)=>{
+  if(event.animationName!=='announcement-message-entry')return;
+  track.onanimationend=null;
+  track.style.animation='announcement-message-marquee '+duration+'s linear infinite';
+ };
+ track.style.animation='announcement-message-entry '+duration+'s linear 1 forwards';
+}
 async function loadAnnouncement(){
  try{
   const response=await fetch('/api/announcement',{cache:'no-store'});
@@ -506,8 +521,6 @@ async function loadAnnouncement(){
   message.textContent=item.message;
   copy.textContent=item.message;
   const duration=Math.max(5,Math.min(60,Number(item.speedSeconds)||18));
-  track.style.animation='none';
-  track.style.transform='translateX(0)';
   track.style.animationDuration=duration+'s';
   track.style.animationDirection='normal';
   track.style.animationTimingFunction='linear';
@@ -517,8 +530,7 @@ async function loadAnnouncement(){
    void banner.offsetWidth;
    banner.classList.add('is-entering');
   }
-  void track.offsetWidth;
-  track.style.animation=`announcement-message-marquee ${duration}s linear infinite`;
+  startAnnouncementTrack(track,duration);
   banner.dataset.active='true';
   syncAnnouncementVisibility(catalogPage?.type==='home'&&document.querySelector('#contactView')?.hidden!==false);
  }catch{}
@@ -536,10 +548,7 @@ function syncAnnouncementVisibility(isHome){
   const track=banner.querySelector('.announcement-track');
   if(track){
    const duration=Math.max(5,Math.min(60,Number(track.style.animationDuration.replace('s',''))||18));
-   track.style.animation='none';
-   track.style.transform='translateX(0)';
-   void track.offsetWidth;
-   track.style.animation=`announcement-message-marquee ${duration}s linear infinite`;
+   startAnnouncementTrack(track,duration);
   }
  }
 }
