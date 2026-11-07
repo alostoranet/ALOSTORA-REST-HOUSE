@@ -62,10 +62,17 @@ if ($xaml -notmatch 'Header="📢 الإعلانات"' -or
     $html -notmatch 'id="announcementBanner"' -or
     $html -notmatch 'announcement-marquee' -or
     $html -notmatch 'prefers-reduced-motion:reduce' -or
-    $html -notmatch 'announcement-copy\{display:none!important\}') {
-    throw "Customer announcement editor, API, ticker, or reduced-motion fallback is incomplete."
+    $html -notmatch 'announcement-copy\{display:none!important\}' -or
+    -not $html.Contains('.announcement-banner p{position:relative;') -or
+    -not $html.Contains('.announcement-track{position:absolute;top:0;right:0;') -or
+    -not $html.Contains('flex-direction:row;direction:rtl;width:max-content;animation:announcement-marquee') -or
+    -not $html.Contains('position:static;top:auto;right:auto;bottom:auto;display:block!important;') -or
+    -not $html.Contains('const wasHidden=banner.hidden;') -or
+    -not $html.Contains("track.style.animationPlayState='paused';") -or
+    -not $html.Contains("track.style.animationPlayState='running';")) {
+    throw "Customer announcement editor/API/ticker direction, start position, restart behavior, or reduced-motion fallback is incomplete."
 }
-Write-Host "PASS: announcement editor/API/ticker and reduced-motion fallback are wired."
+Write-Host "PASS: announcement controls/API, RTL start position, restart-on-enable behavior, and reduced-motion fallback are wired."
 
 
 # Parse each inline viewer script with Node.js to catch syntax errors before packaging.
