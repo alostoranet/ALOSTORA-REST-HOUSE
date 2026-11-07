@@ -704,18 +704,33 @@ public partial class MainWindow : Window
         }
     }
 
-    private void SaveFolderSettings()
+    private async void SaveFolderSettings()
     {
         try
         {
             if (!Directory.Exists(_library) || !Directory.Exists(_posters))
                 throw new DirectoryNotFoundException("تأكد أن مجلدي الفيديو والأغلفة موجودان ويمكن الوصول إليهما.");
+
+            var previousLibrary = MediaFolderBox.Text?.Trim();
+            var previousPosters = PostersFolderBox.Text?.Trim();
+            if (!string.IsNullOrWhiteSpace(previousLibrary) && Directory.Exists(previousLibrary) &&
+                !string.Equals(Path.GetFullPath(previousLibrary), Path.GetFullPath(_library), StringComparison.OrdinalIgnoreCase))
+            {
+                var retained = await _http.PostAsJsonAsync("/api/admin/library/retain-root", new { folderPath = Path.GetFullPath(previousLibrary) });
+                if (!retained.IsSuccessStatusCode)
+                    throw new InvalidOperationException("تعذر الاحتفاظ بمجلد المكتبة السابق: " + await retained.Content.ReadAsStringAsync());
+            }
+
+            if (!string.IsNullOrWhiteSpace(previousPosters) && Directory.Exists(previousPosters) &&
+                !string.Equals(Path.GetFullPath(previousPosters), Path.GetFullPath(_posters), StringComparison.OrdinalIgnoreCase))
+                CopyPosterFilesSafely(previousPosters, _posters);
+
             AppSettings.Save(_root, _library, _posters);
             MediaFolderBox.Text = _library;
             PostersFolderBox.Text = _posters;
             LibraryBox.Text = _library;
             MessageBox.Show(
-                "تم حفظ مسارات المجلدات. لكي يبدأ البرنامج باستخدامها، أغلق ALOSTORA REST HOUSE وافتحه مرة أخرى.\n\nملاحظة: لا يتم نقل ملفات الفيديو أو الصور؛ البرنامج يقرأها من المجلدات التي اخترتها.",
+                "تم حفظ مسارات المجلدات. أعد تشغيل البرنامج لتفعيل المسارات الجديدة.\n\nاحتفظ البرنامج بمجلد الفيديو السابق ضمن مسارات الفحص حتى لا تختفي ملفاته، ونسخ صور الأغلفة إلى المجلد الجديد دون حذف النسخ الأصلية. لم يتم نقل أو حذف ملفات الفيديو.",
                 "تحديث مسارات المكتبة",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -724,6 +739,33 @@ public partial class MainWindow : Window
         {
             MessageBox.Show("تعذر حفظ مسارات المجلدات: " + ex.Message,
                 "مسارات المكتبة", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private static void CopyPosterFilesSafely(string sourceFolder, string destinationFolder)
+    {
+        var source = Path.GetFullPath(sourceFolder).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var destination = Path.GetFullPath(destinationFolder).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (string.Equals(source, destination, StringComparison.OrdinalIgnoreCase)) return;
+        var sourcePrefix = source + Path.DirectorySeparatorChar;
+        var destinationPrefix = destination + Path.DirectorySeparatorChar;
+        if (destination.StartsWith(sourcePrefix, StringComparison.OrdinalIgnoreCase) ||
+            source.StartsWith(destinationPrefix, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("اختر مجلداً مستقلاً للأغلفة؛ لا تجعل مجلد الأغلفة الجديد داخل القديم أو العكس.");
+
+        Directory.CreateDirectory(destination);
+        foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+        {
+            var relative = Path.GetRelativePath(source, file);
+            var target = Path.Combine(destination, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            if (File.Exists(target))
+            {
+                if (!File.ReadAllBytes(file).AsSpan().SequenceEqual(File.ReadAllBytes(target)))
+                    throw new IOException("يوجد ملف غلاف مختلف بالاسم نفسه في المجلد الجديد: " + relative);
+                continue;
+            }
+            File.Copy(file, target, overwrite: false);
         }
     }
 
