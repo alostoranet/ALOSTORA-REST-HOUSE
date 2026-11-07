@@ -32,6 +32,15 @@ public sealed class AnnouncementServiceTests : IDisposable
         Assert.Equal(saved.Message, loaded.Message);
         Assert.True(loaded.IsActive);
         Assert.Equal("notice", loaded.Kind);
+        Assert.Equal(18, loaded.SpeedSeconds);
+    }
+
+    [Fact]
+    public void ClampsAnnouncementScrollSpeedToSupportedRange()
+    {
+        var saved = _service.Save(new RestHouseAnnouncement("تنبيه", "اختبار السرعة", true, "notice", DateTime.UtcNow, SpeedSeconds: 2));
+        Assert.Equal(5, saved.SpeedSeconds);
+        Assert.Equal(5, _service.Load().SpeedSeconds);
     }
 
     [Fact]
