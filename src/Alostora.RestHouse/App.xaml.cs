@@ -286,6 +286,7 @@ public partial class App : Application
    {
     if(!IsAdmin(c))return Results.NotFound();
     if(!Guid.TryParseExact(id,"N",out _))return Results.BadRequest(new{error="معرّف الإعلان غير صالح."});
+    if(request is null)return Results.BadRequest(new{error="بيانات الإعلان غير صالحة."});
     try{return Results.Ok(new{ad=ads.Update(id,request)});}
     catch(KeyNotFoundException){return Results.NotFound();}
     catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
@@ -294,6 +295,7 @@ public partial class App : Application
    {
     if(!IsAdmin(c))return Results.NotFound();
     if(!Guid.TryParseExact(id,"N",out _))return Results.BadRequest(new{error="معرّف الإعلان غير صالح."});
+    if(request is null)return Results.BadRequest(new{error="بيانات ترتيب الإعلان غير صالحة."});
     try{return ads.Move(id,request.Direction)?Results.Ok(new{moved=true}):Results.NotFound();}
     catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
    });
