@@ -1900,8 +1900,8 @@ public partial class MainWindow : Window
                 SeriesEpisodeSelectionSummaryText.Text = "اختر مجلد المسلسل واحفظه ثم اضغط اكتشاف الحلقات.";
             }
 
-            SeriesEditorExpander.IsExpanded = true;
-            SeriesStatusText.Text = $"تم فتح «{s.Title}». يمكنك إدارة المواسم والأجزاء من تبويبها، أو اختيار حلقات مباشرة من مجلد المسلسل.";
+            SeriesStatusText.Text = $"تم تحميل بيانات «{s.Title}». افتحنا الآن نافذة التعديل لإدارة بيانات المسلسل وحلقاته وحذفه عند الحاجة.";
+            OpenDedicatedEditor(SeriesEditorExpander, "تعديل المسلسل — " + s.Title);
         }
         catch (Exception ex)
         {
@@ -2293,6 +2293,7 @@ public partial class MainWindow : Window
                 SeriesStatusText.Text = "تعذر حذف المسلسل: " + await response.Content.ReadAsStringAsync();
                 return;
             }
+            CloseDedicatedEditor();
             SeriesPicker.SelectedItem = null;
             SeriesIdBox.Clear(); SeriesTitleBox.Clear(); SeriesDescriptionBox.Clear(); SeriesYearBox.Clear();
             SeriesGenreBox.Clear(); SeriesPosterPathBox.Clear(); SeriesFolderPathBox.Clear();
