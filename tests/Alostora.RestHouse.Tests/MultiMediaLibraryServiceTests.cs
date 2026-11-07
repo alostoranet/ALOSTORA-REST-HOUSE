@@ -94,6 +94,118 @@ public sealed class MultiMediaLibraryServiceTests : IDisposable
         Assert.Null(library.ResolveById(item.Id));
     }
 
+    [Fact]
+    public void SupportsMultipleIndependentRootsForEachMediaKind()
+    {
+        var mediaRoot = Path.Combine(_root, "media");
+        var library = new MultiMediaLibraryService(mediaRoot, _databasePath);
+        var externalAudio = Path.Combine(_root, "drive-d", "Music");
+        var externalBooks = Path.Combine(_root, "drive-e", "Books");
+        Directory.CreateDirectory(externalAudio);
+        Directory.CreateDirectory(externalBooks);
+        File.WriteAllBytes(Path.Combine(externalAudio, "concert.flac"), [1, 2, 3, 4]);
+        File.WriteAllBytes(Path.Combine(externalBooks, "manual.epub"), [5, 6, 7]);
+
+        var audioRoot = library.AddRoot("Audio", externalAudio);
+        var booksRoot = library.AddRoot("Books", externalBooks);
+
+        Assert.False(audioRoot.IsDefault);
+        Assert.False(booksRoot.IsDefault);
+        Assert.Equal(1, library.Scan("Audio"));
+        Assert.Equal(1, library.Scan("Books"));
+        Assert.Contains(library.List("Audio"), x => x.Title == "concert" && x.SizeBytes == 4);
+        Assert.Contains(library.List("Books"), x => x.Title == "manual" && x.SizeBytes == 3);
+        Assert.Contains(library.ListRoots("Audio"), x => x.Id == audioRoot.Id && x.Path == externalAudio);
+        Assert.Equal(2, library.GetStorageSummary().IndexedFiles);
+    }
+
+    [Fact]
+    public void StorageSummaryReportsIndexedSizeForEachRegisteredRoot()
+    {
+        var mediaRoot = Path.Combine(_root, "media");
+        var library = new MultiMediaLibraryService(mediaRoot, _databasePath);
+        var externalAudio = Path.Combine(_root, "external-audio");
+        var externalBooks = Path.Combine(_root, "external-books");
+        Directory.CreateDirectory(externalAudio);
+        Directory.CreateDirectory(externalBooks);
+        File.WriteAllBytes(Path.Combine(externalAudio, "track.mp3"), [1, 2, 3, 4]);
+        File.WriteAllBytes(Path.Combine(externalBooks, "guide.pdf"), [5, 6, 7]);
+
+        var audioRoot = library.AddRoot("Audio", externalAudio);
+        var booksRoot = library.AddRoot("Books", externalBooks);
+        library.Scan("Audio");
+        library.Scan("Books");
+
+        var summary = library.GetStorageSummary();
+        Assert.Equal(library.ListRoots().Count, summary.RootCount);
+        Assert.Equal(2, summary.IndexedFiles);
+        Assert.Contains(summary.Roots, root => root.Id == audioRoot.Id && root.IndexedFiles == 1 && root.IndexedBytes == 4);
+        Assert.Contains(summary.Roots, root => root.Id == booksRoot.Id && root.IndexedFiles == 1 && root.IndexedBytes == 3);
+    }
+
+    [Fact]
+    public void RemovingExternalRootUnlinksItWithoutDeletingOriginalFiles()
+    {
+        var mediaRoot = Path.Combine(_root, "media");
+        var library = new MultiMediaLibraryService(mediaRoot, _databasePath);
+        var external = Path.Combine(_root, "external-audio");
+        Directory.CreateDirectory(external);
+        var song = Path.Combine(external, "song.mp3");
+        File.WriteAllBytes(song, [1, 2, 3]);
+        var root = library.AddRoot("Audio", external);
+        library.Scan("Audio");
+
+        Assert.True(library.RemoveRoot(root.Id));
+        Assert.True(File.Exists(song));
+        Assert.DoesNotContain(library.List("Audio"), x => x.FileName == "song.mp3");
+        Assert.False(library.RemoveRoot(library.ListRoots("Audio").Single(x => x.IsDefault).Id));
+    }
+
+    [Fact]
+    public void RejectsOverlappingRootsToAvoidDuplicateCatalogEntries()
+    {
+        var mediaRoot = Path.Combine(_root, "media");
+        var library = new MultiMediaLibraryService(mediaRoot, _databasePath);
+        var external = Path.Combine(_root, "external");
+        var nested = Path.Combine(external, "nested");
+        Directory.CreateDirectory(nested);
+
+        library.AddRoot("Audio", external);
+        Assert.Throws<ArgumentException>(() => library.AddRoot("Audio", nested));
+    }
+
+
+    [Fact]
+    public void ExternalDriveCanDisappearAndReconnectWithoutLosingItsRegistrationOrFileIdentity()
+    {
+        var mediaRoot = Path.Combine(_root, "media");
+        var library = new MultiMediaLibraryService(mediaRoot, _databasePath);
+        var external = Path.Combine(_root, "removable-drive", "Music");
+        Directory.CreateDirectory(external);
+        var song = Path.Combine(external, "concert.mp3");
+        File.WriteAllBytes(song, [1, 2, 3, 4]);
+
+        var root = library.AddRoot("Audio", external);
+        Assert.Equal(1, library.Scan("Audio"));
+        var original = Assert.Single(library.List("Audio"));
+        Assert.Equal(root.Id, Assert.Single(library.ListRoots("Audio"), x => !x.IsDefault).Id);
+
+        // Simulate a disconnected removable drive. The registration and catalog row
+        // must remain so reconnecting the same path can restore playback without re-adding it.
+        Directory.Delete(Path.Combine(_root, "removable-drive"), recursive: true);
+        Assert.Empty(library.List("Audio"));
+        Assert.Contains(library.ListRoots("Audio"), x => x.Id == root.Id && x.Path == external);
+        Assert.Equal(0, library.Scan("Audio"));
+
+        Directory.CreateDirectory(external);
+        File.WriteAllBytes(song, [1, 2, 3, 4]);
+        Assert.Equal(1, library.Scan("Audio"));
+        var reconnected = Assert.Single(library.List("Audio"));
+        Assert.Equal(original.Id, reconnected.Id);
+        Assert.Equal(song, library.ResolveById(original.Id));
+        Assert.Equal(4, reconnected.SizeBytes);
+    }
+
     public void Dispose()
     {
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();

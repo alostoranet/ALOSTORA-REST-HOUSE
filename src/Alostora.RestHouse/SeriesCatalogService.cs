@@ -3,9 +3,9 @@ using System.IO;
 
 namespace Alostora.RestHouse;
 
-public sealed record SeriesRecord(string SeriesId, string Title, string Description, int? Year, string Genre, string? PosterPath, string? FolderPath, string? CategoryId, string Section, bool IsPublished, string OrganizationType);
+public sealed record SeriesRecord(string SeriesId, string Title, string Description, int? Year, string Genre, string? PosterPath, string? FolderPath, string? CategoryId, string Section, bool IsPublished, string OrganizationType, string UpdatedUtc);
 public sealed record SeasonRecord(long SeasonId, string SeriesId, int SeasonNumber, string Title, string? FolderPath);
-public sealed record EpisodeRecord(long EpisodeId, long SeasonId, string VideoId, int EpisodeNumber, string Title);
+public sealed record EpisodeRecord(long EpisodeId, long SeasonId, string VideoId, int EpisodeNumber, string Title, string? PosterPath = null);
 public sealed record MissingEpisodeRecord(long EpisodeId, string SeriesId, string SeriesTitle, int SeasonNumber, int EpisodeNumber, string Title, string VideoId);
 public sealed record SaveSeriesRequest(string SeriesId, string Title, string? Description, int? Year, string? Genre, string? PosterPath, string? FolderPath = null, string? Section = null, bool IsPublished = false, string? CategoryId = null, string? OrganizationType = "Seasons");
 public sealed record VideoPlacementRecord(string SeriesId, long? SeasonId, int? EpisodeNumber, string? Title);
@@ -34,7 +34,7 @@ public sealed class SeriesCatalogService
           );
           CREATE TABLE IF NOT EXISTS SeriesEpisodes(
             EpisodeId INTEGER PRIMARY KEY AUTOINCREMENT, SeasonId INTEGER NOT NULL REFERENCES SeriesSeasons(SeasonId) ON DELETE CASCADE,
-            VideoId TEXT NOT NULL UNIQUE, EpisodeNumber INTEGER NOT NULL CHECK(EpisodeNumber > 0), Title TEXT NOT NULL DEFAULT '',
+            VideoId TEXT NOT NULL UNIQUE, EpisodeNumber INTEGER NOT NULL CHECK(EpisodeNumber > 0), Title TEXT NOT NULL DEFAULT '', PosterPath TEXT NULL,
             UNIQUE(SeasonId, EpisodeNumber)
           );
           CREATE INDEX IF NOT EXISTS IX_SeriesSeasons_SeriesId ON SeriesSeasons(SeriesId);
@@ -52,6 +52,7 @@ public sealed class SeriesCatalogService
         EnsureColumn(c, "SeriesCatalog", "IsPublished", "INTEGER NOT NULL DEFAULT 1");
         EnsureColumn(c, "SeriesCatalog", "OrganizationType", "TEXT NOT NULL DEFAULT 'Seasons'");
         EnsureColumn(c, "SeriesSeasons", "FolderPath", "TEXT NULL");
+        EnsureColumn(c, "SeriesEpisodes", "PosterPath", "TEXT NULL");
     }
     private static void EnsureColumn(SqliteConnection c, string table, string column, string type)
     {
@@ -67,9 +68,9 @@ public sealed class SeriesCatalogService
     public IReadOnlyList<SeriesRecord> ListSeries()
     {
         using var c=Open(); using var cmd=c.CreateCommand();
-        cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath,CategoryId,Section,IsPublished,OrganizationType FROM SeriesCatalog ORDER BY Title COLLATE NOCASE";
+        cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath,CategoryId,Section,IsPublished,OrganizationType,UpdatedUtc FROM SeriesCatalog ORDER BY Title COLLATE NOCASE";
         using var r=cmd.ExecuteReader(); var rows=new List<SeriesRecord>();
-        while(r.Read()) rows.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetString(7),r.GetString(8),r.GetInt32(9)!=0,r.GetString(10)));
+        while(r.Read()) rows.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetString(7),r.GetString(8),r.GetInt32(9)!=0,r.GetString(10),r.GetString(11)));
         return rows;
     }
     public IReadOnlyList<SeasonRecord> ListSeasons(string seriesId)
@@ -94,17 +95,17 @@ public sealed class SeriesCatalogService
     public IReadOnlyList<EpisodeRecord> ListEpisodes(long seasonId)
     {
         using var c = Open(); using var cmd = c.CreateCommand();
-        cmd.CommandText = "SELECT EpisodeId,SeasonId,VideoId,EpisodeNumber,Title FROM SeriesEpisodes WHERE SeasonId=$id ORDER BY EpisodeNumber";
+        cmd.CommandText = "SELECT EpisodeId,SeasonId,VideoId,EpisodeNumber,Title,PosterPath FROM SeriesEpisodes WHERE SeasonId=$id ORDER BY EpisodeNumber";
         cmd.Parameters.AddWithValue("$id", seasonId);
         using var r = cmd.ExecuteReader(); var rows = new List<EpisodeRecord>();
-        while (r.Read()) rows.Add(new EpisodeRecord(r.GetInt64(0), r.GetInt64(1), r.GetString(2), r.GetInt32(3), r.GetString(4)));
+        while (r.Read()) rows.Add(new EpisodeRecord(r.GetInt64(0), r.GetInt64(1), r.GetString(2), r.GetInt32(3), r.GetString(4), r.IsDBNull(5) ? null : r.GetString(5)));
         return rows;
     }
 
     public SeriesRecord? GetSeries(string id)
     {
-        using var c=Open(); using var cmd=c.CreateCommand(); cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath,CategoryId,Section,IsPublished,OrganizationType FROM SeriesCatalog WHERE SeriesId=$id"; cmd.Parameters.AddWithValue("$id",id);
-        using var r=cmd.ExecuteReader(); return r.Read()?new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetString(7),r.GetString(8),r.GetInt32(9)!=0,r.GetString(10)):null;
+        using var c=Open(); using var cmd=c.CreateCommand(); cmd.CommandText="SELECT SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath,CategoryId,Section,IsPublished,OrganizationType,UpdatedUtc FROM SeriesCatalog WHERE SeriesId=$id"; cmd.Parameters.AddWithValue("$id",id);
+        using var r=cmd.ExecuteReader(); return r.Read()?new(r.GetString(0),r.GetString(1),r.GetString(2),r.IsDBNull(3)?null:r.GetInt32(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetString(7),r.GetString(8),r.GetInt32(9)!=0,r.GetString(10),r.GetString(11)):null;
     }
     public void SaveSeries(SaveSeriesRequest x)
     {
@@ -291,6 +292,23 @@ public sealed class SeriesCatalogService
         return oldVideoId;
     }
 
+    public string? GetEpisodePoster(long episodeId)
+    {
+        using var c = Open(); using var cmd = c.CreateCommand();
+        cmd.CommandText = "SELECT PosterPath FROM SeriesEpisodes WHERE EpisodeId=$id";
+        cmd.Parameters.AddWithValue("$id", episodeId);
+        return cmd.ExecuteScalar() as string;
+    }
+
+    public void SetEpisodePoster(long episodeId, string posterPath)
+    {
+        using var c = Open(); using var cmd = c.CreateCommand();
+        cmd.CommandText = "UPDATE SeriesEpisodes SET PosterPath=$path WHERE EpisodeId=$id";
+        cmd.Parameters.AddWithValue("$path", posterPath);
+        cmd.Parameters.AddWithValue("$id", episodeId);
+        if (cmd.ExecuteNonQuery() == 0) throw new KeyNotFoundException("الحلقة غير موجودة");
+    }
+
     public void UpdateEpisode(long episodeId, int episodeNumber, string? title)
     {
         if (episodeNumber < 1 || episodeNumber > 10000)
@@ -381,7 +399,7 @@ public sealed class SeriesCatalogService
         {
             cmd.CommandText = """
                 SELECT ss.SeasonId, ss.SeriesId, ss.SeasonNumber, ss.Title, ss.FolderPath,
-                       se.EpisodeId, se.VideoId, se.EpisodeNumber, se.Title
+                       se.EpisodeId, se.VideoId, se.EpisodeNumber, se.Title, se.PosterPath
                 FROM SeriesSeasons ss
                 LEFT JOIN SeriesEpisodes se ON se.SeasonId = ss.SeasonId
                 ORDER BY ss.SeriesId, ss.SeasonNumber, se.EpisodeNumber
@@ -398,8 +416,13 @@ public sealed class SeriesCatalogService
 
                 if (!r.IsDBNull(5))
                 {
-                    seasonMap[seasonId].Episodes.Add(new EpisodeRecord(
-                        r.GetInt64(5), seasonId, r.GetString(6), r.GetInt32(7), r.GetString(8)));
+                    var videoId = r.GetString(6);
+                    // Public viewers must only receive episodes whose source videos are published.
+                    if (allowedVideoIds is null || allowedVideoIds.Contains(videoId))
+                    {
+                        seasonMap[seasonId].Episodes.Add(new EpisodeRecord(
+                            r.GetInt64(5), seasonId, videoId, r.GetInt32(7), r.GetString(8), r.IsDBNull(9) ? null : r.GetString(9)));
+                    }
                 }
             }
         }
@@ -429,6 +452,7 @@ public sealed class SeriesCatalogService
                                 videoId = episode.VideoId,
                                 episodeNumber = episode.EpisodeNumber,
                                 title,
+                                posterPath = string.IsNullOrWhiteSpace(episode.PosterPath) ? series.PosterPath : episode.PosterPath,
                                 url = hasFile ? file!.Url : null,
                                 isMissing = !hasFile,
                                 director = videoMetadata?.Director,

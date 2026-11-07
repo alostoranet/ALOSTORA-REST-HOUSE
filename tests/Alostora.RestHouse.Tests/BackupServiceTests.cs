@@ -1,0 +1,86 @@
+using Alostora.RestHouse;
+using Microsoft.Data.Sqlite;
+using System.IO.Compression;
+using Xunit;
+
+namespace Alostora.RestHouse.Tests;
+
+public sealed class BackupServiceTests : IDisposable
+{
+    private readonly string _root;
+
+    public BackupServiceTests()
+    {
+        _root = Path.Combine(Path.GetTempPath(), "alostora-backup-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_root);
+    }
+
+    [Fact]
+    public void BackupAndRestorePreserveLocalBrandingAnnouncementsAndCustomerPageSettings()
+    {
+        var database = Path.Combine(_root, "resthouse.db");
+        using (var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = database }.ToString()))
+        {
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "CREATE TABLE Sample(Id INTEGER PRIMARY KEY); INSERT INTO Sample DEFAULT VALUES;";
+            command.ExecuteNonQuery();
+        }
+
+        var posters = Path.Combine(_root, "posters");
+        Directory.CreateDirectory(posters);
+        File.WriteAllText(Path.Combine(_root, "profile.json"), "{\"RestHouseName\":\"قبل النسخة\"}");
+        File.WriteAllText(Path.Combine(_root, "announcement.json"), "{\"Title\":\"تنبيه قديم\"}");
+        File.WriteAllText(Path.Combine(_root, "customer-page-settings.json"), "{\"ShowApps\":false}");
+        File.WriteAllText(Path.Combine(_root, "customer-ads.json"), "[]");
+        var adImages = Path.Combine(posters, "customer-ads");
+        Directory.CreateDirectory(adImages);
+        File.WriteAllBytes(Path.Combine(adImages, "sample.png"), new byte[] { 1, 2, 3 });
+        File.WriteAllText(Path.Combine(_root, "download-speed-settings.json"), "{\"LimitMbps\":6}");
+        File.WriteAllText(Path.Combine(_root, "settings.json"), "{\"LibraryPath\":\"C:\\\\Media\\\\Library\",\"PostersPath\":\"C:\\\\Media\\\\Posters\",\"FfmpegPath\":\"C:\\\\Tools\\\\ffmpeg.exe\",\"Port\":8097}");
+        var archive = Path.Combine(_root, "Backups", "test.zip");
+        BackupService.CreateArchive(database, posters, archive);
+
+        using (var zip = ZipFile.OpenRead(archive))
+        {
+            Assert.Contains(zip.Entries, x => x.FullName == "profile.json");
+            Assert.Contains(zip.Entries, x => x.FullName == "announcement.json");
+            Assert.Contains(zip.Entries, x => x.FullName == "customer-page-settings.json");
+            Assert.Contains(zip.Entries, x => x.FullName == "download-speed-settings.json");
+            Assert.Contains(zip.Entries, x => x.FullName == "customer-ads.json");
+            Assert.Contains(zip.Entries, x => x.FullName == "settings.json");
+            Assert.Contains(zip.Entries, x => x.FullName == "posters/customer-ads/sample.png");
+            var manifest = zip.GetEntry("backup-info.txt");
+            Assert.NotNull(manifest);
+            using var reader = new StreamReader(manifest!.Open());
+            var manifestText = reader.ReadToEnd();
+            Assert.Contains("Original media files (videos, audio, books, and apps) are not included", manifestText);
+            Assert.Contains("customer page visibility settings", manifestText);
+        }
+
+        File.WriteAllText(Path.Combine(_root, "profile.json"), "{\"RestHouseName\":\"بعد النسخة\"}");
+        File.WriteAllText(Path.Combine(_root, "announcement.json"), "{\"Title\":\"تنبيه جديد\"}");
+        File.WriteAllText(Path.Combine(_root, "customer-page-settings.json"), "{\"ShowApps\":true}");
+        File.WriteAllText(Path.Combine(_root, "customer-ads.json"), "[{\"Id\":\"before-restore\"}]");
+        File.WriteAllText(Path.Combine(_root, "download-speed-settings.json"), "{\"LimitMbps\":12}");
+        File.WriteAllText(Path.Combine(_root, "settings.json"), "{\"LibraryPath\":\"D:\\\\Changed\",\"PostersPath\":\"D:\\\\ChangedPosters\",\"Port\":9000}");
+        BackupService.RestoreArchive(database, posters, archive, _root);
+
+        Assert.Contains("قبل النسخة", File.ReadAllText(Path.Combine(_root, "profile.json")));
+        Assert.Contains("تنبيه قديم", File.ReadAllText(Path.Combine(_root, "announcement.json")));
+        Assert.Contains("\"ShowApps\":false", File.ReadAllText(Path.Combine(_root, "customer-page-settings.json")));
+        Assert.Equal("[]", File.ReadAllText(Path.Combine(_root, "customer-ads.json")));
+        Assert.True(File.Exists(Path.Combine(posters, "customer-ads", "sample.png")));
+        Assert.Contains("\"LimitMbps\":6", File.ReadAllText(Path.Combine(_root, "download-speed-settings.json")));
+        var restoredSettings = File.ReadAllText(Path.Combine(_root, "settings.json"));
+        Assert.Contains("C:", restoredSettings);
+        Assert.Contains("ffmpeg.exe", restoredSettings);
+        Assert.Contains("\"Port\":8097", restoredSettings);
+    }
+
+    public void Dispose()
+    {
+        try { Directory.Delete(_root, recursive: true); }
+        catch { }
+    }
+}

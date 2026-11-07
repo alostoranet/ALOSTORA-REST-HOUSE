@@ -5,7 +5,7 @@ namespace Alostora.RestHouse;
 
 public sealed record VideoMetadata(
     string VideoId, string Title, string Description, int? Year, string Genre, string Kind, string? PosterPath,
-    string? Director, string? Cast, double? Rating, int? RuntimeMinutes, string? ReleaseDate, string? Tags, string? CategoryId, string Section, bool IsPublished);
+    string? Director, string? Cast, double? Rating, int? RuntimeMinutes, string? ReleaseDate, string? Tags, string? CategoryId, string Section, bool IsPublished, string UpdatedUtc);
 
 public sealed record SaveVideoMetadataRequest(
     string VideoId, string Title, string? Description, int? Year, string? Genre, string? Kind, string? PosterPath,
@@ -78,7 +78,7 @@ public sealed class VideoMetadataService
         using var cmd = c.CreateCommand();
         cmd.CommandText = """
             SELECT VideoId,Title,Description,Year,Genre,Kind,PosterPath,
-                   Director,CastMembers,Rating,RuntimeMinutes,ReleaseDate,Tags,CategoryId,Section,IsPublished
+                   Director,CastMembers,Rating,RuntimeMinutes,ReleaseDate,Tags,CategoryId,Section,IsPublished,UpdatedUtc
             FROM VideoMetadata WHERE VideoId=$id
             """;
         cmd.Parameters.AddWithValue("$id", id);
@@ -93,7 +93,7 @@ public sealed class VideoMetadataService
         using var cmd = c.CreateCommand();
         cmd.CommandText = """
             SELECT VideoId,Title,Description,Year,Genre,Kind,PosterPath,
-                   Director,CastMembers,Rating,RuntimeMinutes,ReleaseDate,Tags,CategoryId,Section,IsPublished
+                   Director,CastMembers,Rating,RuntimeMinutes,ReleaseDate,Tags,CategoryId,Section,IsPublished,UpdatedUtc
             FROM VideoMetadata ORDER BY Title COLLATE NOCASE
             """;
         using var r = cmd.ExecuteReader();
@@ -111,7 +111,7 @@ public sealed class VideoMetadataService
             r.IsDBNull(9) ? null : r.GetDouble(9),
             r.IsDBNull(10) ? null : r.GetInt32(10),
             r.IsDBNull(11) ? null : r.GetString(11),
-            r.IsDBNull(12) ? null : r.GetString(12), r.IsDBNull(13) ? null : r.GetString(13), r.GetString(14), r.GetInt32(15) != 0);
+            r.IsDBNull(12) ? null : r.GetString(12), r.IsDBNull(13) ? null : r.GetString(13), r.GetString(14), r.GetInt32(15) != 0, r.GetString(16));
 
     public void Delete(string videoId)
     {

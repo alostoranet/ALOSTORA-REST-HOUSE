@@ -2,109 +2,384 @@
 <html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>استراحة الأسطورة نت</title>
 <style>
-:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#0c1727;color:#f5f7fb;font-family:Tahoma,Arial}
-header{background:#142d4a;padding:25px 5%;border-bottom:3px solid #c93640}h1{margin:0;font-size:27px}header p{color:#d4e3f1;margin:8px 0 0}.brand-bar{display:flex;align-items:center;gap:14px;min-height:62px}.brand-logo{width:64px;height:64px;object-fit:contain;border-radius:12px;background:#fff;padding:4px}.brand-logo[hidden]{display:none!important}
-.customer-nav{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.nav-button{border:1px solid #526b85;background:#1b3550;color:#f5f7fb;border-radius:9px;padding:11px 18px;font:inherit;font-weight:700;cursor:pointer}.nav-button.active{background:#c93640;border-color:#c93640}.nav-button:focus-visible{outline:3px solid #f2c56b;outline-offset:2px}
+:root{color-scheme:dark;--bg:#081522;--bg2:#0d1d2c;--panel:#12263a;--panel2:#193149;--line:#2a4359;--gold:#d6b779;--gold-soft:#ead7ad;--red:#bb4d56;--text:#f7f5ef;--muted:#b9c6d2;--soft:#8fa2b5}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -20%,#1a3852 0,#0c1c2b 45%,var(--bg) 78%);color:var(--text);font-family:system-ui,"Segoe UI",Tahoma,Arial,sans-serif;font-size:15px;line-height:1.65}
+/* Official rest-house logo watermark: visible behind customer-page content. */
+body{isolation:isolate}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background-image:var(--brand-watermark,none);background-repeat:no-repeat;background-position:center 58%;background-size:min(46vw,440px);opacity:.22;filter:drop-shadow(0 10px 26px #d6ad5844)}
+header,main{position:relative;z-index:1}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+[hidden]{display:none!important}
+header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;background:linear-gradient(118deg,#10263b 0%,#17344d 58%,#12283d 100%);border-bottom:1px solid #3b5268;box-shadow:0 12px 30px #0003}
+/* On catalog subpages keep the customer header minimal: only the Home button remains. */
+header.is-inner-page{padding:9px max(4%,calc((100% - 1280px)/2));min-height:0;box-shadow:0 5px 16px #0002}
+header.is-inner-page .brand-bar,header.is-inner-page .header-search{display:none!important}
+header.is-inner-page .customer-nav{margin:0;min-height:38px;justify-content:flex-start}
+header.is-inner-page .customer-nav>:not(#homeNav):not(#headerBackNav){display:none!important}
+header.is-inner-page #homeNav,header.is-inner-page #headerBackNav{display:inline-flex!important;min-height:36px;padding:6px 15px}
+header.is-inner-page #headerBackNav{background:linear-gradient(135deg,#203d55,#142c42);border-color:#49647a;color:#fff}
 
-main{max-width:1200px;margin:auto;padding:24px}h2{font-size:22px}
-.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.toolbar input,.toolbar select{background:#172a40;color:#fff;border:1px solid #38516d;border-radius:9px;padding:12px;font:inherit;min-width:180px}
-#library{display:grid;gap:22px}.main-category{padding:12px 0 20px;border-bottom:1px solid #38516d}.main-category-head,.sub-category-head{display:flex;align-items:center;gap:12px;margin:0 0 14px}.main-category-head h2,.sub-category-head h3{margin:0}.category-poster{width:76px;height:76px;object-fit:cover;border-radius:12px}.sub-category{margin:18px 0 22px;padding:12px;border:1px solid #314c68;border-radius:14px;background:rgba(20,45,74,.22)}.sub-category-poster{width:52px;height:52px;object-fit:cover;border-radius:9px}.new-badge{display:inline-flex;align-items:center;justify-content:center;background:#d94841;color:white;border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;margin-inline-start:8px}.content-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}.poster-empty{display:flex;width:100%;height:245px;align-items:center;justify-content:center;text-align:center;border-radius:9px;background:#24384d;color:#b7c6d8;font-size:14px;font-weight:bold;margin-bottom:10px;border:1px dashed #526b85}
-.movie{background:#1a2b40;border:1px solid #2c4058;border-radius:13px;padding:16px;min-width:0}.poster{display:block;width:100%;height:245px;object-fit:cover;border-radius:9px;background:#0b1420;margin-bottom:10px}.movie h3{overflow-wrap:anywhere;font-size:17px;margin:8px 0}.movie p{color:#c4d2e1;font-size:13px;line-height:1.7;margin:8px 0}
-.meta{font-size:12px;color:#e5b6b9;margin:5px 0 12px}.movie button,.action{background:#c93640;color:white;border:0;border-radius:8px;padding:11px 18px;cursor:pointer;font-weight:bold}.movie button.secondary{background:#315577}
-#continueGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin:12px 0 24px}.continue-card{background:#172d45;border:1px solid #38516d;border-radius:11px;padding:14px}.continue-card strong{display:block;margin-bottom:7px}.continue-card p{font-size:12px;color:#c4d2e1;margin:5px 0 10px}.progress-track{height:7px;background:#30445a;border-radius:8px;overflow:hidden;margin:10px 0}.progress-fill{height:100%;background:#c93640}#continueSection{margin:20px 0 26px}#continueSection h2{margin-bottom:8px}#continueEmpty{color:#bdcadd;font-size:13px}.continue-card button{background:#c93640;color:white;border:0;border-radius:7px;padding:9px 14px;cursor:pointer;font-weight:bold}#seriesDetails,#movieDetails{display:none;background:#14283e;border:1px solid #38516d;border-radius:14px;padding:18px;margin:18px 0 22px}
-#seriesDetails h2{margin:4px 0 8px}.series-head{display:flex;gap:18px;align-items:flex-start}.series-head img{width:145px;height:190px;object-fit:cover;border-radius:9px;background:#0b1420}.series-head .poster-empty{width:145px;height:190px;flex:0 0 145px}.series-copy{flex:1}.series-copy p{color:#c4d2e1;line-height:1.8}.season-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.season-tabs button{background:#263e58;color:white;border:1px solid #526b85;border-radius:8px;padding:9px 14px;cursor:pointer}.season-tabs button.active{background:#c93640;border-color:#c93640}
-.episode-list{display:grid;gap:8px}.episode{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#1c344d;padding:12px;border-radius:9px}.episode small{color:#c4d2e1}.empty{color:#bdcadd}
-#playerSection{display:none;background:#14283e;border:1px solid #38516d;border-radius:14px;padding:14px;margin:18px 0}#playerSection h2{margin:0 0 10px}video{display:block;width:100%;max-height:70vh;background:#000;border-radius:12px;margin:0}#message{color:#bdcadd}#audioControls{display:flex;gap:9px;align-items:center;flex-wrap:wrap;background:#172d45;border:1px solid #38516d;border-radius:10px;padding:11px;margin-top:10px}#audioControls select{background:#0c1727;color:#fff;border:1px solid #526b85;border-radius:7px;padding:9px;min-width:180px}#audioControls button{background:#c93640;color:white;border:0;border-radius:7px;padding:9px 14px;font-weight:bold;cursor:pointer}#playbackHint{color:#bdcadd;font-size:13px;line-height:1.7}
-.contact-box[hidden]{display:none!important}.contact-box{background:#14283e;border:1px solid #38516d;border-radius:14px;padding:16px;margin:16px 0 20px}.contact-box h2{margin:0 0 7px}.contact-box p{color:#c4d2e1;font-size:13px;line-height:1.7}.contact-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.contact-form input,.contact-form select,.contact-form textarea{width:100%;background:#0c1727;color:#fff;border:1px solid #526b85;border-radius:8px;padding:11px;font:inherit;min-width:0}.contact-form textarea{grid-column:1/-1;min-height:105px;resize:vertical}.contact-form button{justify-self:start;background:#c93640;color:white;border:0;border-radius:8px;padding:11px 20px;font-weight:bold;cursor:pointer}.contact-form button:disabled{opacity:.6;cursor:wait}#contactFeedback{margin:8px 0 0;font-weight:bold;min-height:20px}@media(max-width:600px){.contact-form{grid-template-columns:1fr}.contact-form textarea{grid-column:auto}}
-@media(max-width:600px){main{padding:16px}.series-head{display:block}.series-head img,.series-head .poster-empty{width:110px;height:145px;float:right;margin:0 0 10px 12px}.episode{align-items:flex-start}.episode button{white-space:nowrap;padding:9px 12px}}
-.developer-credit{margin:26px auto 14px;text-align:center;color:#64748b;font-size:13px;font-weight:700;padding:12px;border-top:1px solid #e2e8f0;max-width:1100px}
+.brand-bar{display:flex;align-items:center;gap:16px;min-height:66px}
+.brand-logo{width:78px;height:78px;object-fit:contain;border-radius:16px;background:#fff;padding:4px;box-shadow:0 5px 18px #0003;image-rendering:auto}
+.brand-bar h1{margin:0;color:#fff;font-size:clamp(22px,2.3vw,29px);font-weight:800;letter-spacing:.1px;line-height:1.35}
+.brand-bar p{margin:5px 0 0;color:#c4d2df;font-size:13px;line-height:1.6}
+.customer-nav{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:12px}
+.compact-top-nav{min-height:40px;padding:7px 13px;border-radius:10px;font-size:13px}
+.nav-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:8px 17px;border:1px solid #405970;border-radius:11px;background:#1b344b;color:#edf2f6;font-size:14px;font-weight:700;white-space:nowrap;transition:background .18s,border-color .18s,transform .18s}
+.nav-button:hover{border-color:var(--gold);background:#24435d}
+.nav-button.active{background:linear-gradient(135deg,#d9bd83,#b89354);border-color:#d9bd83;color:#17283a}
+/* Distinct, coordinated colors for the three compact header actions. */
+:root{--gold:#d6ad58}
+#homeNav{background:linear-gradient(135deg,#f0c96b,#b9852d);border-color:#ffe09a;color:#17283a;box-shadow:0 3px 11px #b9852d55}
+#homeNav:hover,#homeNav.active{background:linear-gradient(135deg,#ffdc82,#c18e36);border-color:#fff0bd;color:#17283a}
+#contactNav{background:linear-gradient(135deg,#176b70,#104c59);border-color:#3b9a9a;color:#f3ffff;box-shadow:0 3px 10px #0d596055}
+#contactNav:hover,#contactNav.active{background:linear-gradient(135deg,#21858a,#145d68);border-color:#72c5c2;color:#fff}
+#continueNav{background:linear-gradient(135deg,#4b477f,#302e60);border-color:#7772b5;color:#f7f5ff;box-shadow:0 3px 10px #28265355}
+#continueNav:hover,#continueNav.active{background:linear-gradient(135deg,#625da0,#3b3875);border-color:#aaa5e0;color:#fff}
+.developer-credit,.developer-credit strong,.developer-label{color:#d4aa55}
+.developer-icon{border-color:#8e6a2d;color:#e0b85f}
+.footer-contact-button{border-color:#48a5a2;background:linear-gradient(120deg,#176b70,#104c59);color:#f2ffff;box-shadow:0 5px 16px #0004}
+.footer-contact-button:hover{border-color:#8bd0ca;background:linear-gradient(120deg,#21858a,#145d68);transform:translateY(-1px)}
+.footer-contact-button span{color:#b8eeee}
+.continue-nav{font-size:13px;padding-inline:13px}
+.header-search{display:flex;align-items:center;gap:7px;margin-top:11px;width:100%;max-width:680px;min-width:0}
+.catalog-page-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.catalog-content-filters{display:flex;align-items:center;gap:6px;margin-inline-start:auto}
+.catalog-content-filters .header-filter{width:clamp(88px,20vw,116px);height:36px}
+@media(max-width:420px){.catalog-content-filters{gap:5px}.catalog-content-filters .header-filter{width:92px;height:35px;font-size:11px}}
+.search-box{display:flex;flex:1 1 auto;align-items:center;gap:7px;min-width:0;width:auto;height:40px;padding:0 11px;border:1px solid #3b566d;border-radius:22px;background:#0d2031;color:var(--gold);transition:border-color .18s,box-shadow .18s}
+.header-filter{flex:0 0 auto;width:clamp(84px,22vw,116px);height:40px;min-width:0;padding:5px 7px;border:1px solid #3b566d;border-radius:9px;background:#142b40;color:#edf2f6;font-size:12px;font-weight:700}
+.header-filter:focus{outline:2px solid #d6b779;outline-offset:1px}
+@media(max-width:420px){.header-search{gap:5px}.search-box{padding:0 8px}.search-box input{font-size:12px}.header-filter{width:86px;padding-inline:5px;font-size:11px}}
+.search-box:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px #d6b77920}
+.search-box>span{font-size:22px;line-height:1}
+.search-box input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#fff;font:inherit;font-size:13px;padding:7px 0;box-shadow:none}
+.search-box input::placeholder{color:#91a5b8}
+.header-search[hidden]{display:none!important}
+.announcement-banner{position:relative;display:flex;direction:rtl;align-items:center;gap:10px;max-width:1280px;min-height:43px;margin:13px auto 0;padding:5px 12px;overflow:hidden;border:1px solid #ef555b;border-right:4px solid #fff;border-radius:5px;background:linear-gradient(100deg,#9f1420,#d3232d 52%,#a91420);box-shadow:0 5px 16px #0003;color:#fff}
+.announcement-banner[hidden]{display:none!important}
+.announcement-banner strong{z-index:1;flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;padding:3px 9px;border-radius:3px;background:#fff;color:#b51622;font-size:12px;font-weight:900;white-space:nowrap;letter-spacing:.15px}
+.announcement-banner strong:before{content:"";width:7px;height:7px;border-radius:50%;background:#d3232d;box-shadow:0 0 0 3px #d3232d20,0 0 8px #d3232d80}
+.announcement-banner p{display:flex;align-items:center;justify-content:flex-start;flex:1 1 auto;min-width:0;max-width:100%;height:auto;min-height:32px;margin:0;overflow:hidden;white-space:nowrap;direction:rtl;padding:2px 0;box-sizing:border-box}
+.announcement-banner .announcement-track{display:flex;flex:0 0 auto;flex-direction:row;direction:ltr;align-items:center;width:max-content;white-space:nowrap;will-change:transform;animation:announcement-message-marquee 18s linear infinite;transform:translateX(0)}
+.announcement-banner #announcementMessage,.announcement-banner .announcement-copy{display:inline-block;flex:0 0 auto;width:max-content;max-width:none;white-space:nowrap;direction:rtl;unicode-bidi:plaintext;text-align:right;color:#fff;font-size:14px;font-weight:800;line-height:1.55;padding:4px 32px;vertical-align:middle;text-align:right;text-shadow:0 1px 3px #650a10}
+/* Both copies have identical width, so the loop returns exactly to the next full copy. */
+/* Keep the announcement moving continuously, including while the pointer is over it. */
+@keyframes announcement-message-reveal{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
+@keyframes announcement-message-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes announcement-message-entry{from{transform:translateX(var(--announcement-start,100vw))}to{transform:translateX(-50%)}}
+/* Repeated equal-width copies and a one-copy translation create a seamless right-to-left loop. */
+.announcement-banner .announcement-track{animation-direction:normal;gap:0}
+@media(max-width:600px){
+ header.is-inner-page{padding:7px 12px}
+ .announcement-banner{margin:8px 10px 0;min-height:39px;padding:4px 8px;gap:7px}
+ .announcement-banner strong{font-size:10px;padding:3px 6px;gap:5px}
+ .announcement-banner p{min-height:29px;flex:1 1 0;width:0}
+ .announcement-banner .announcement-track{animation-timing-function:linear}
+ .announcement-banner #announcementMessage,.announcement-banner .announcement-copy{font-size:12px;padding:4px 14px;line-height:1.5}
+}
 
-.catalog-page-head{display:flex;align-items:center;gap:14px;padding:12px 0 18px;border-bottom:1px solid #38516d;margin-bottom:20px}.catalog-back{border:1px solid #526b85;background:#1b3550;color:#fff;border-radius:9px;padding:10px 18px;font:inherit;font-weight:bold;cursor:pointer}.catalog-back:hover{background:#c93640}.catalog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:18px}.catalog-card{display:flex;flex-direction:column;text-align:right;gap:9px;background:#172b42;border:1px solid #38516d;border-radius:14px;padding:12px;color:#f5f7fb;cursor:pointer;min-width:0;transition:transform .16s,border-color .16s}.catalog-card:hover{transform:translateY(-3px);border-color:#c93640}.catalog-card img,.catalog-card .poster-empty{width:100%;height:230px;object-fit:cover;border-radius:9px;margin:0}.catalog-card h3{font-size:16px;margin:2px 0 0;overflow-wrap:anywhere}.catalog-card small{color:#bdcadd;line-height:1.7}.catalog-card button.secondary{background:#315577;color:#fff;border:0;border-radius:8px;padding:8px 10px;font:inherit;font-weight:bold;cursor:pointer}.catalog-hero{display:flex;gap:20px;align-items:flex-start;background:#14283e;border:1px solid #38516d;border-radius:15px;padding:18px;margin-bottom:22px}.catalog-hero img,.catalog-hero .poster-empty{width:170px;height:225px;object-fit:cover;border-radius:10px;flex:0 0 170px;margin:0}.catalog-hero-copy{min-width:0}.catalog-hero-copy h2{margin:0 0 10px}.catalog-hero-copy p{color:#c4d2e1;line-height:1.9}.catalog-section-title{margin:24px 0 12px;font-size:19px}.catalog-empty{padding:22px;border:1px dashed #526b85;border-radius:12px;color:#bdcadd;text-align:center}.catalog-episode{display:flex;align-items:center;justify-content:space-between;gap:14px;background:#1c344d;border:1px solid #38516d;border-radius:11px;padding:13px;margin:9px 0}.catalog-episode button{flex:0 0 auto}.catalog-episode strong{display:block;margin-bottom:5px}.catalog-episode small{color:#c4d2e1;line-height:1.7}.catalog-player-page{max-width:1050px;margin:0 auto}.catalog-player-page video{max-height:72vh}.catalog-hidden{display:none!important}@media(max-width:600px){.catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.catalog-card{padding:8px}.catalog-card img,.catalog-card .poster-empty{height:170px}.catalog-hero{display:block}.catalog-hero img,.catalog-hero .poster-empty{width:118px;height:155px;float:right;margin:0 0 10px 14px}.catalog-episode{align-items:flex-start}.catalog-episode button{white-space:nowrap;padding:9px 11px}}
- 
-:root{color-scheme:dark;--surface:#14263b;--surface2:#1b314b;--line:#304a66;--accent:#d3444d;--muted:#b8c8d9}
-body{background:radial-gradient(ellipse at 15% 0%,#1a3653 0,#0b1626 52%,#091321 100%);color:#f7f9fc}
-header{position:relative;background:linear-gradient(120deg,#10243a 0%,#193958 58%,#142d4a 100%);padding:24px max(5%,calc((100% - 1320px)/2));border-bottom:3px solid var(--accent);box-shadow:0 12px 32px #0004}
-.brand-bar{min-height:68px}.brand-logo{width:72px;height:72px;box-shadow:0 4px 18px #0004}
-.customer-nav{margin-top:16px}.nav-button{background:#203a56;border-color:#49627c;transition:background .15s,transform .15s}.nav-button:hover{transform:translateY(-1px)}.nav-button.active{background:var(--accent);border-color:var(--accent)}
-main{max-width:1320px;padding:26px 28px 18px}
-.welcome-panel{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:25px 30px;margin:4px 0 20px;border:1px solid #48627d;border-radius:18px;background:linear-gradient(115deg,#1c3854 0%,#14283e 58%,#352b3d 100%);box-shadow:0 18px 40px #0003}
-.welcome-kicker{font-size:10px;letter-spacing:2px;color:#f0a6aa;font-weight:800}.welcome-panel h2{font-size:25px;margin:8px 0}.welcome-panel p{margin:0;color:#d0dceb;line-height:1.8;font-size:14px}.welcome-mark{display:flex;align-items:center;justify-content:center;flex:0 0 76px;width:76px;height:76px;border-radius:50%;background:#d3444d;color:white;font-size:27px;box-shadow:0 0 0 10px #d3444d22}
-.toolbar{padding:12px;border:1px solid #2b425b;background:#101f32;border-radius:13px;margin:18px 0}.toolbar input,.toolbar select{background:#1a3049;border-color:#415a75;min-width:170px}
-.catalog-page-head{border-bottom-color:#304a66}.catalog-back{background:#1e3854;border-color:#4c6681}.catalog-back:hover{background:var(--accent)}
-.catalog-grid{grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:17px}
-.catalog-card{position:relative;overflow:hidden;background:linear-gradient(160deg,#1b314a,#12243a);border-color:#304a66;border-radius:16px;padding:11px;box-shadow:0 8px 22px #0002;transition:transform .18s,border-color .18s,box-shadow .18s}
-.catalog-card:hover{transform:translateY(-4px);border-color:#d3444d;box-shadow:0 15px 30px #0004}
-.catalog-card img,.catalog-card .poster-empty{height:auto;aspect-ratio:3/4;object-fit:cover;border-radius:11px;background:#223b55}
-.catalog-card h3{font-size:16px;line-height:1.5}.catalog-card small{color:#bdcddd}
-.catalog-hero{background:linear-gradient(120deg,#1a3450,#14283e);border-color:#3a536e;box-shadow:0 10px 26px #0002}
-.catalog-hero img,.catalog-hero .poster-empty{aspect-ratio:3/4;height:auto;max-height:245px}
-.catalog-episode{background:#1a3048;border-color:#36516d}
-.catalog-episode button,.action{background:var(--accent)}
-.catalog-empty{background:#13263b;border-color:#49627d;color:#d0dceb}
-#continueSection{margin:25px 0 20px;padding:18px;border:1px solid #304a66;border-radius:16px;background:#101f32}
-#continueSection h2{margin-top:0}#continueEmpty{color:#bdcddd}
-.continue-card{background:#1a3048;border-color:#36516d}
-.continue-card button{background:var(--accent)}
-#playerSection{background:#101f32;border-color:#3b5671}
-.contact-box{background:#14283e;border-color:#3a536e}
-.developer-credit{color:#91a6bb;border-top-color:#2c425b}
-@media(max-width:600px){main{padding:16px 12px}.welcome-panel{padding:19px 17px}.welcome-panel h2{font-size:20px}.welcome-mark{flex-basis:52px;width:52px;height:52px;font-size:20px}.catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.catalog-card{padding:8px}}
-/* Remote-control, keyboard and touch accessibility for Smart TVs and phones. */
-:where(button,a,input,select,video,audio,[tabindex]):focus-visible{outline:3px solid #f2c56b!important;outline-offset:3px!important;box-shadow:0 0 0 2px #0b1626!important}
-.catalog-card button,.catalog-card a,.nav-button,.catalog-back,.movie button,.continue-card button{min-height:44px}
-@media (hover:none),(pointer:coarse){.nav-button,.catalog-card button,.catalog-card a,.catalog-back{min-height:48px;padding-block:12px}.catalog-card{scroll-margin-inline:12px}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
-#welcomePanel[hidden],#catalogToolbar[hidden],#continueSection[hidden],#message[hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+.customer-ads{max-width:1280px;margin:13px auto 0;padding:0 14px}
+.customer-ads[hidden]{display:none!important}
+.customer-ad-stage{position:relative;aspect-ratio:16/5;min-height:110px;max-height:250px;overflow:hidden;border:1px solid #344e65;border-radius:15px;background:#142b40;box-shadow:0 9px 24px #0003}
+.customer-ad-stage>a,.customer-ad-stage>div{position:relative;display:block;width:100%;height:100%;color:inherit}
+.customer-ad-stage img{display:block;width:100%;height:100%;object-fit:cover}
+.customer-ad-caption{position:absolute;inset:auto 0 0;padding:14px 18px;background:linear-gradient(transparent,#061421dc);color:#fff;font-size:clamp(14px,2vw,19px);font-weight:800;text-shadow:0 1px 3px #0008}
+.customer-ad-controls{display:flex;justify-content:center;align-items:center;gap:12px;padding:7px 0}
+.customer-ad-controls>button{min-height:32px;padding:4px 11px;border:1px solid #405970;border-radius:8px;background:#172f46;color:#edf2f6;font-size:12px}
+.customer-ad-dots{display:flex;align-items:center;gap:7px}
+.customer-ad-dot{width:7px;height:7px;padding:0;border:0;border-radius:50%;background:#657a8e}
+.customer-ad-dot.active{width:18px;border-radius:8px;background:var(--gold)}
+main{width:min(100%,1280px);margin:0 auto;padding:22px 24px 32px}
+#welcomePanel,#customerOverview{display:none!important}
+#message{margin:8px 0;color:#f0c4c4;font-size:13px}
+#catalogPageHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 13px;padding:0 0 12px;border-bottom:1px solid #263e54}
+/* Inner-page back navigation is placed in the compact header; suppress the old duplicate control. */
+#catalogPageHead #catalogBack{display:none!important}
+#catalogPageHead[hidden]{display:none!important}
+#catalogBreadcrumb{min-width:0;flex:1;color:#e8edf2;font-size:16px;font-weight:800}
+.catalog-back,.catalog-home{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:7px 13px;border:1px solid #435d73;border-radius:10px;background:#1a344c;color:#fff;font-size:13px;font-weight:750;white-space:nowrap}
+.catalog-home{border-color:#8b754f;background:linear-gradient(135deg,#263d50,#172d42);color:#f0d9a8}
+.catalog-back:hover,.catalog-home:hover{border-color:var(--gold);background:#23435c}
+.catalog-home[hidden],.catalog-back[hidden]{display:none!important}
+#catalogToolbar{display:flex;align-items:center;gap:8px;margin:7px 0 15px;padding:0;border:0;background:transparent}
+#catalogToolbar[hidden]{display:none!important}
+#catalogToolbar select{min-width:130px;min-height:37px;padding:7px 12px;border:1px solid #344f66;border-radius:9px;background:#142b40;color:#e8edf2;font-size:12px}
+.catalog-section-title{margin:22px 0 13px;color:#f5f1e8;font-size:22px;font-weight:850;line-height:1.45;letter-spacing:.05px}
+.catalog-grid,.catalog-rail{display:flex;flex-wrap:nowrap;gap:16px;overflow-x:auto;overflow-y:hidden;padding:3px 2px 13px;scroll-snap-type:x mandatory;scrollbar-width:thin;scrollbar-color:#536b7e transparent;-webkit-overflow-scrolling:touch}
+.catalog-grid>.catalog-card,.catalog-rail>.catalog-card{flex:0 0 174px;width:174px;scroll-snap-align:start}
+.catalog-grid>.catalog-empty,.catalog-rail>.catalog-empty{flex:0 0 100%}
+.catalog-grid::-webkit-scrollbar,.catalog-rail::-webkit-scrollbar{height:5px}
+.catalog-grid::-webkit-scrollbar-thumb,.catalog-rail::-webkit-scrollbar-thumb{background:#536b7e;border-radius:9px}
+.catalog-card{display:flex;min-width:0;width:100%;flex-direction:column;gap:8px;padding:7px;border:1px solid #2b4358;border-radius:13px;background:linear-gradient(155deg,#142b40,#0d1d2c);color:var(--text);text-align:right;box-shadow:0 5px 16px #0002;transition:transform .18s,border-color .18s,box-shadow .18s}
+.catalog-card:hover{transform:translateY(-3px);border-color:#b99c68;box-shadow:0 9px 22px #0004}
+.catalog-open-button{display:flex;width:100%;min-width:0;flex-direction:column;align-items:stretch;gap:9px;padding:0;border:0;background:transparent;color:inherit;text-align:right;font:inherit;cursor:pointer}
+.catalog-open-button:focus-visible{outline:3px solid var(--gold);outline-offset:4px;border-radius:13px}
+.catalog-card img.catalog-poster,.catalog-card .catalog-poster,.catalog-card .poster-empty{display:block;width:100%;height:auto;aspect-ratio:3/4;object-fit:cover;margin:0;border:1px solid #40566a;border-radius:13px;background:linear-gradient(145deg,#1b344b,#0e2031);box-shadow:0 8px 20px #0003}
+.catalog-card .poster-empty{display:flex;align-items:center;justify-content:center;padding:12px;color:#b8c7d4;font-size:13px;font-weight:700;text-align:center}
+.catalog-card h3{margin:1px 0 0;color:#f7f4ed;font-size:19px;font-weight:800;line-height:1.5;overflow-wrap:anywhere}
+.catalog-card small{color:#aebdca;font-size:12px;line-height:1.6}
+.catalog-card button.secondary{min-height:37px;padding:7px 10px;border:1px solid #405970;border-radius:9px;background:#1a344b;color:#f1e6cf;font-size:12px;font-weight:700}
+.catalog-card .catalog-card-badge{align-self:flex-start;padding:3px 9px;border-radius:20px;background:#b64a52;color:#fff;font-size:11px;font-weight:800}
+.new-arrivals{margin:0 0 24px;padding:0 0 17px;border-bottom:1px solid #263e54;background:transparent;overflow:hidden}
+.new-arrivals[hidden]{display:none!important}
+.new-arrivals-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}
+.new-arrivals-heading h2{margin:2px 0 0;color:#f7f3e9;font-size:22px;font-weight:850}
+.new-kicker{color:var(--gold);font-size:10px;font-weight:800;letter-spacing:.8px}
+.new-count{color:#aebdca;font-size:11px}
+.new-arrivals-grid{display:flex;flex-wrap:nowrap;gap:14px;overflow-x:auto;overflow-y:hidden;padding:2px 2px 12px;scroll-snap-type:x mandatory;scrollbar-width:thin;scrollbar-color:#536b7e transparent;-webkit-overflow-scrolling:touch}
+.new-arrivals-grid>.catalog-card{flex:0 0 166px;width:166px;scroll-snap-align:start}
+.new-arrivals-grid::-webkit-scrollbar{height:5px}.new-arrivals-grid::-webkit-scrollbar-thumb{background:#536b7e;border-radius:9px}
+.new-arrivals .catalog-card h3{font-size:17px}
+.new-arrivals .catalog-card .catalog-poster,.new-arrivals .catalog-card .poster-empty{aspect-ratio:3/4}
+.catalog-hero{display:flex;align-items:flex-start;gap:20px;margin:8px 0 22px;padding:0 0 19px;border:0;border-bottom:1px solid #2a4359;border-radius:0;background:transparent;box-shadow:none}
+.catalog-hero img,.catalog-hero .poster-empty{width:155px;height:auto;max-height:225px;aspect-ratio:3/4;flex:0 0 155px;object-fit:cover;border:1px solid #40566a;border-radius:13px;background:#152c42}
+.catalog-hero-copy{min-width:0}
+.catalog-hero-copy h2{margin:0 0 8px;color:#f7f4ed;font-size:24px;font-weight:850;line-height:1.5}
+.catalog-hero-copy p{margin:10px 0 0;color:#c1ccd6;font-size:14px;line-height:1.9}
+.meta{margin:5px 0 10px;color:#c7b58f;font-size:12px;line-height:1.7}
+.catalog-list-row{display:flex;width:100%;min-height:58px;align-items:center;justify-content:space-between;gap:14px;margin:8px 0;padding:12px 15px;border:1px solid #2c465d;border-radius:11px;background:#12283d;color:#f7f4ed;text-align:right}
+.catalog-list-row:hover{border-color:var(--gold);background:#18344c}
+.catalog-list-copy{display:flex;min-width:0;flex-direction:column;gap:4px}
+.catalog-list-copy strong{font-size:15px;font-weight:800}
+.catalog-list-copy small,.catalog-compact-meta{color:#aebdca;font-size:12px}
+.catalog-list-arrow{color:var(--gold);font-size:24px;line-height:1}
+.catalog-subheading{margin:19px 0 8px;padding-right:10px;border-right:3px solid var(--gold);color:#e9dfc9;font-size:15px;font-weight:800}
+.catalog-compact-meta{margin:0 0 12px;line-height:1.6}
+.catalog-episode{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:9px 0;padding:13px 15px;border:1px solid #2d465c;border-radius:11px;background:#132a40}
+.catalog-episode strong{display:block;margin-bottom:5px;color:#f7f4ed}
+.catalog-episode small{color:#b5c3cf;line-height:1.7}
+.catalog-episode button,.action{min-height:40px;padding:8px 14px;border:0;border-radius:9px;background:linear-gradient(135deg,#d9bd83,#b89155);color:#17283a;font-weight:800}
+.catalog-empty{margin:14px 0;padding:22px 16px;border:1px dashed #425b70;border-radius:12px;background:#102338;color:#bdc9d4;text-align:center;font-size:14px}
+.catalog-player-page{max-width:1050px;margin:0 auto}
+.catalog-player-page video{max-height:72vh}
+.catalog-hidden{display:none!important}
+#playerSection{margin:15px 0;padding:clamp(12px,2vw,20px);border:1px solid #2d465c;border-radius:15px;background:#0d2032;box-shadow:0 12px 28px #0003}
+#playerSection h2{margin:0 0 11px;color:#f6f1e7;font-size:21px;font-weight:800}
+#playerSection video{display:block;width:100%;max-height:72vh;min-height:180px;object-fit:contain;border-radius:12px;background:#000}
+#audioControls{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:12px;padding:12px;border:1px solid #2c465d;border-radius:10px;background:#132a40}
+#audioControls select{min-height:38px;padding:7px 10px;border:1px solid #3c566c;border-radius:8px;background:#0c1d2d;color:#fff}
+#audioControls button{min-height:38px;padding:7px 13px;border:0;border-radius:8px;background:var(--gold);color:#17283a;font-weight:800}
+#playbackHint,#subtitleHint{color:#b7c5d0;font-size:13px;line-height:1.8}
+#continueSection{margin:0;padding:0;border:0;background:transparent}
+#continueSection h2{margin:10px 0 13px;color:#f6f1e7;font-size:22px;font-weight:850}
+.watch-section-heading{display:flex;align-items:center;gap:9px;margin:12px 0 7px}
+.watch-section-heading:before{content:"";width:4px;height:23px;border-radius:4px;background:var(--gold)}
+.watch-section-heading h2{margin:0;font-size:19px}
+#continueEmpty,#watchedEmpty{color:#aebdca;font-size:13px}
+#watchedSection{margin-top:24px;padding-top:16px;border-top:1px solid #2a4359}
+#watchedGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:13px;margin:12px 0 22px}
+.watched-card{padding:13px;border:1px solid #2d465c;border-radius:12px;background:linear-gradient(145deg,#142b40,#102338)}
+.watched-card strong{display:block;margin-bottom:6px;color:#fff;font-size:14px}
+.watched-card p{margin:5px 0 10px;color:#b7c5d0;font-size:12px}
+.watched-card button{min-height:36px;padding:7px 12px;border:1px solid #526a7e;border-radius:8px;background:#1a344b;color:#f4e8d0;font-size:12px;font-weight:800}
+.contact-cta-wrap{display:flex;justify-content:center;margin:24px auto 5px;padding:17px 12px 0;border-top:1px solid #263e54}
+.contact-cta-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:45px;padding:10px 24px;border:1px solid #b99b68;border-radius:12px;background:linear-gradient(120deg,#1a3a50,#142b40);color:#f0d9a8;font-size:14px;font-weight:850;box-shadow:0 7px 18px #0003;transition:transform .18s,border-color .18s,background .18s}
+.contact-cta-button:hover{transform:translateY(-2px);border-color:#e1c58f;background:linear-gradient(120deg,#23465d,#19354c)}
+.contact-cta-button:before{content:"✉";font-size:17px;color:#d9bd83}
+#continueGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:13px;margin:12px 0 22px}
+.continue-card{padding:14px;border:1px solid #2d465c;border-radius:12px;background:#132a40}
+.continue-card strong{display:block;margin-bottom:6px;color:#fff;font-size:14px}
+.continue-card p{margin:5px 0 10px;color:#b7c5d0;font-size:12px}
+.progress-track{height:6px;margin:10px 0;overflow:hidden;border-radius:8px;background:#30485d}
+.progress-fill{height:100%;background:var(--gold)}
+.continue-card button{min-height:38px;padding:7px 12px;border:0;border-radius:8px;background:#b94c55;color:#fff;font-size:12px;font-weight:800}
+.media-quick-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:24px 0 13px;padding:13px 0;border-top:1px solid #263e54}
+.media-quick-nav[hidden]{display:none!important}
+.media-quick-nav>span{margin-inline-end:5px;color:#b5c3cf;font-size:12px;font-weight:700}
+.media-quick-nav .nav-button{min-height:36px;padding:6px 13px;font-size:12px}
+#mediaLibrary{margin:16px 0 22px}
+#mediaLibrary h2{margin:0 0 14px;font-size:22px;font-weight:850}
+#mediaGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:16px}
+#mediaPlayerHint{color:#b8c5d0;font-size:13px}
+#downloadCenter{margin:20px 0;padding:16px;border:1px solid #2e485f;border-radius:13px;background:#10253a;color:#f7f4ed}
+#downloadCenter h2{margin:0 0 7px;color:#fff;font-size:20px}
+#downloadCenter .meta,#downloadCenter .download-status,#downloadCenter .download-row small{color:#b8c5d0}
+.download-row{display:grid;gap:8px;padding:12px 0;border-top:1px solid #2d465c}
+.download-row-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.download-row progress{width:100%;height:10px;accent-color:var(--gold)}
+.download-status{font-size:12px}
+.download-remove{justify-self:start;min-height:34px;padding:5px 10px;border:1px solid #405970;border-radius:8px;background:#19344b;color:#fff;font-size:12px}
+.contact-box{margin:0;padding:20px;border:1px solid #2d465c;border-radius:15px;background:linear-gradient(145deg,#142c42,#102338);box-shadow:0 12px 28px #0002}
+.contact-box h2{margin:0 0 7px;font-size:22px;font-weight:850}
+.contact-box p{margin:0 0 16px;color:#b8c5d0;font-size:13px;line-height:1.8}
+.contact-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.contact-form input,.contact-form select,.contact-form textarea{width:100%;min-width:0;min-height:44px;padding:10px 12px;border:1px solid #3a566e;border-radius:9px;background:#0c1e2e;color:#fff;font:inherit}
+.contact-form textarea{grid-column:1/-1;min-height:115px;resize:vertical}
+.contact-form button{justify-self:start;min-height:42px;padding:9px 18px;border:0;border-radius:9px;background:linear-gradient(135deg,#d9bd83,#b89155);color:#17283a;font-weight:850}
+.contact-form button:disabled{opacity:.6;cursor:wait}
+#contactFeedback{min-height:20px;margin:8px 0 0;font-weight:700}
+.footer-contact-wrap{display:flex;justify-content:center;align-items:center;margin:18px auto 5px;padding:12px 8px 0;border-top:1px solid #263e54}.developer-credit{max-width:1100px;margin:4px auto 8px;padding:9px 6px;border-top:1px solid #263e54;color:#e4d1a8;text-align:center;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:5px 8px;flex-wrap:wrap}.developer-credit strong{color:#e4d1a8;font-size:14px;font-weight:800}.credit-pair{display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap}.developer-label{display:inline-flex;align-items:center;gap:4px;color:#e4d1a8;font-size:14px;font-weight:800}.developer-icon{display:inline-grid;place-items:center;width:17px;height:17px;border:1px solid #536b7e;border-radius:50%;color:#d9bd83;font-size:10px}
+.footer-contact-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;min-width:min(300px,90vw);padding:9px 20px;border:1px solid #d5b879;border-radius:7px;background:linear-gradient(110deg,#17364b,#244b60);color:#f0dfba;font-size:14px;font-weight:850;white-space:nowrap;flex:0 0 auto;cursor:pointer;box-shadow:0 5px 15px #0004}.footer-contact-button span{font-size:17px;color:#e5c98e}.developer-credit a{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid #315b50;border-radius:16px;background:#102d2a;color:#a9e3c7;text-decoration:none;font-size:10px;font-weight:800;direction:ltr;white-space:nowrap;flex:0 0 auto;transition:background .2s,border-color .2s}.developer-credit a:hover{background:#174238;border-color:#4b9678}.developer-credit .copy-phone{display:inline-flex;align-items:center;justify-content:center;min-height:27px;padding:3px 12px;border:1px solid #d6ad58;border-radius:16px;background:#d6ad58;color:#142d4a;font-size:12px;font-weight:900;white-space:nowrap;cursor:pointer;flex:0 0 auto;transition:background .2s,border-color .2s}.developer-credit .copy-phone:hover{background:#f0cf7e;border-color:#f0cf7e}.whatsapp-mark{font-size:12px;color:#7bd6a6}
+.app-toast{position:fixed;z-index:9999;right:18px;bottom:18px;max-width:min(92vw,420px);padding:13px 17px;border-radius:11px;background:#176b3a;color:#fff;box-shadow:0 12px 34px #0006;font-weight:700;line-height:1.7;opacity:0;transform:translateY(14px);pointer-events:none;transition:opacity .2s,transform .2s}
+.app-toast.visible{opacity:1;transform:translateY(0)}
+.app-toast[data-kind="error"]{background:#9f2630}
+.app-toast[data-kind="info"]{background:#245b87}
+:where(button,a,input,select,textarea,video,[tabindex]):focus-visible{outline:3px solid var(--gold)!important;outline-offset:3px!important}
+button:disabled{cursor:not-allowed;opacity:.58}
+@media(max-width:760px){
+ header{padding:16px 15px 12px}
+ .brand-bar{min-height:54px;gap:12px}
+ .brand-logo{width:64px;height:64px;border-radius:13px}
+ .brand-bar h1{font-size:22px}
+ .brand-bar p{font-size:12px}
+ .customer-nav{gap:7px;margin-top:12px}
+ .nav-button{min-height:39px;padding:7px 12px;font-size:12px}
+ .header-search{max-width:none;margin-top:10px}
+ .search-box{height:38px}
+ .announcement-banner{min-height:42px;margin:10px 10px 0;padding:7px 9px;gap:8px}
+ .announcement-banner strong{padding:5px 8px;font-size:10px}
+ .announcement-banner #announcementMessage{font-size:12px;line-height:1.4;padding-block:4px}
+ .customer-ads{margin:10px 0 0;padding:0 10px}
+ .customer-ad-stage{aspect-ratio:16/7;min-height:95px;max-height:170px}
+ main{padding:15px 13px 25px}
+ .catalog-grid,.catalog-rail{gap:11px;padding-bottom:10px}
+ .catalog-grid>.catalog-card,.catalog-rail>.catalog-card{flex-basis:142px;width:142px}
+ .catalog-card{gap:6px;padding:6px;border-radius:11px}
+ .catalog-card img.catalog-poster,.catalog-card .catalog-poster,.catalog-card .poster-empty{border-radius:11px}
+ .catalog-card h3{font-size:18px;line-height:1.45}
+ .new-arrivals{margin-bottom:17px;padding-bottom:14px}
+ .new-arrivals-heading h2{font-size:20px}
+ .new-arrivals-grid{gap:10px;padding-bottom:10px}
+ .new-arrivals-grid>.catalog-card{flex-basis:142px;width:142px}
+ .new-arrivals .catalog-card h3{font-size:16px}
+ .catalog-section-title{margin:17px 0 11px;font-size:20px}
+ #catalogToolbar{gap:7px}
+ #catalogToolbar select{flex:1 1 0;min-width:0;font-size:11px;padding:6px 8px}
+ .catalog-hero{gap:13px}
+ .catalog-hero img,.catalog-hero .poster-empty{width:112px;flex-basis:112px;max-height:160px}
+ .catalog-hero-copy h2{font-size:19px}
+ .catalog-hero-copy p{font-size:12px;line-height:1.8}
+ .catalog-episode{align-items:flex-start;padding:11px}
+ .catalog-episode button{flex:0 0 auto;white-space:nowrap}
+ #continueGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ #watchedGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .watched-card{padding:10px}
+ .watched-card button{width:100%;padding:7px 8px;font-size:11px}
+ .continue-card{padding:11px}
+ .continue-card button{width:100%;padding:7px 8px;font-size:11px}
+ #mediaGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ .contact-box{padding:15px}
+ .contact-form{grid-template-columns:1fr}
+ .contact-form textarea{grid-column:auto}
+}
+@media(max-width:390px){
+ .brand-bar h1{font-size:20px}
+ .brand-logo{width:49px;height:49px}
+ .nav-button{padding-inline:9px;font-size:11px}
+ .catalog-card h3{font-size:16px}
+ .catalog-grid,.catalog-rail{gap:9px}
+ .catalog-grid>.catalog-card,.catalog-rail>.catalog-card,.new-arrivals-grid>.catalog-card{flex-basis:132px;width:132px}
+ .catalog-card img.catalog-poster,.catalog-card .catalog-poster,.catalog-card .poster-empty{border-radius:9px}
+ .catalog-hero img,.catalog-hero .poster-empty{width:96px;flex-basis:96px}
+}
 
-/* Emby-inspired horizontal library rails: each card remains a separate page link. */
-.catalog-rail{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;gap:16px;padding:4px 2px 16px;scroll-snap-type:x mandatory;overscroll-behavior-inline:contain;scrollbar-width:thin;scrollbar-color:#526b85 transparent}
-.catalog-rail .catalog-card{flex:0 0 clamp(170px,19vw,225px);scroll-snap-align:start}
-.catalog-rail .catalog-card img,.catalog-rail .catalog-card .poster-empty{height:auto;aspect-ratio:3/4}
-.catalog-section-title{font-size:20px;font-weight:800;color:#f5f7fb;margin:24px 0 12px}
-.catalog-page-head{position:sticky;top:0;z-index:5;background:rgba(12,23,39,.94);backdrop-filter:blur(12px);padding:12px 0;border-radius:0 0 10px 10px}
-@media(max-width:600px){.catalog-rail{gap:10px}.catalog-rail .catalog-card{flex-basis:155px}.catalog-section-title{font-size:18px}}
+/* Unified premium visual finish: deep navy, restrained champagne gold, teal and violet accents. */
+:root{--bg:#071321;--bg2:#0b1b2b;--panel:#11263a;--panel2:#18334a;--line:#304b62;--gold:#d8b66d;--gold-soft:#f0dba9;--text:#f8f5ee;--muted:#b9c7d3;--soft:#8fa3b6}
+body{background:radial-gradient(ellipse at 50% -18%,#1a3852 0,#0b1b2b 48%,#071321 82%);color:var(--text)}
+header{border-bottom:1px solid #3a5369;box-shadow:0 12px 34px #0005}
+main{isolation:isolate}
+.catalog-card,.watched-card,.continue-card,.contact-box,#downloadCenter,#playerSection{border-color:#34516a;background:linear-gradient(150deg,#173149 0%,#10263a 58%,#0d2032 100%);box-shadow:0 8px 22px #0003}
+.catalog-card{border-radius:15px;padding:8px}
+.catalog-card:hover{border-color:#d0ad66;box-shadow:0 12px 26px #0005,0 0 0 1px #d0ad6620}
+.catalog-card img.catalog-poster,.catalog-card .catalog-poster,.catalog-card .poster-empty,.catalog-hero img,.catalog-hero .poster-empty{border-color:#52677a;border-radius:12px}
+.catalog-card h3,.catalog-hero-copy h2,.catalog-section-title,#playerSection h2,#mediaLibrary h2,#downloadCenter h2,.contact-box h2{color:#fbf6e9;text-shadow:0 1px 0 #0002}
+.catalog-section-title{position:relative;padding-right:13px}
+.catalog-section-title:before{content:"";position:absolute;right:0;top:5px;bottom:5px;width:4px;border-radius:5px;background:linear-gradient(180deg,#f0d99e,#b98a3b)}
+.catalog-list-row,.catalog-episode{border-color:#34516a;border-radius:13px;background:linear-gradient(120deg,#18334a,#11263a);box-shadow:0 4px 14px #0002}
+.catalog-list-row:hover,.catalog-episode:hover{border-color:#cba75e;background:linear-gradient(120deg,#1d3c54,#142d43)}
+.catalog-empty{border-color:#587086;background:#10263a;border-radius:14px}
+#playerSection{border-radius:17px;padding:clamp(14px,2.2vw,22px)}
+#playerSection video{border:1px solid #344e64;border-radius:13px;box-shadow:0 10px 26px #0005}
+#audioControls{border-color:#3b566c;border-radius:12px;background:#142d43}
+.search-box,.header-filter,#catalogToolbar select,.contact-form input,.contact-form select,.contact-form textarea,#audioControls select{border-color:#405d75;background:#0e2235;border-radius:11px}
+.search-box:focus-within,.header-filter:focus,.contact-form input:focus,.contact-form select:focus,.contact-form textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px #d8b66d22;outline:none}
+button.secondary,.watched-card button,.download-remove,.customer-ad-controls>button{border:1px solid #526a7e;border-radius:10px;background:linear-gradient(135deg,#203d55,#173149);color:#f5ead1;transition:transform .16s,border-color .16s,filter .16s}
+button.secondary:hover,.watched-card button:hover,.download-remove:hover,.customer-ad-controls>button:hover{border-color:var(--gold);filter:brightness(1.12);transform:translateY(-1px)}
+.catalog-episode button,.action,.contact-form button,#audioControls button{border:1px solid #f0d79c;background:linear-gradient(135deg,#f0d38d,#c3974d);color:#17283a;border-radius:10px;box-shadow:0 4px 12px #0002}
+.catalog-episode button:hover,.action:hover,.contact-form button:hover,#audioControls button:hover{filter:brightness(1.07);transform:translateY(-1px)}
+.continue-card button{border:1px solid #d77880;border-radius:10px;background:linear-gradient(135deg,#b94d5b,#883746);color:#fff}
+.progress-track{height:7px;background:#304b62}
+.progress-fill{border-radius:8px;background:linear-gradient(90deg,#b98b3e,#f0d99e)}
+.catalog-card .catalog-card-badge{background:#8d3c4a}
+#catalogPageHead{border-color:#344e64}
+.catalog-back{border-color:#49647a;background:linear-gradient(135deg,#203d55,#142c42);border-radius:10px}
+.catalog-home{border-color:#e2c17b;background:linear-gradient(135deg,#f0d38d,#b98b3e);color:#17283a}
+.contact-cta-button{border-color:#48a5a2;background:linear-gradient(120deg,#176b70,#104c59);color:#f2ffff;border-radius:11px}
+.contact-cta-button:before{color:#b8eeee}
+.footer-contact-button{border-radius:10px}
+.developer-credit,.developer-credit strong,.developer-label{color:#e0c27e}
+.customer-ad-stage{border-color:#52677b;border-radius:16px;box-shadow:0 10px 26px #0004}
+.announcement-banner{border-radius:7px;box-shadow:0 5px 17px #0004}
+:where(button,a,input,select,textarea):focus-visible{outline:3px solid #e2c17b!important;outline-offset:3px!important}
+@media(max-width:760px){
+ .catalog-card{border-radius:13px;padding:6px}
+ .catalog-card h3{font-size:16px}
+ .catalog-list-row,.catalog-episode{border-radius:11px}
+ #playerSection{padding:11px;border-radius:13px}
+ #playerSection video{min-height:170px;border-radius:10px}
+ .contact-cta-button{width:min(100%,360px);padding:10px 14px}
+}
 
-/* Final coordinated palette: gold for Home, red for administration/contact actions, blue for live viewing. */
-#homeNav.active{background:#d6aa3b;border-color:#e7c66b;color:#182536;box-shadow:0 5px 16px #d6aa3b33}
-#contactNav.active{background:#c93640;border-color:#e35b63;color:#fff}
-#liveNav.active{background:#276b91;border-color:#55a0c5;color:#fff}
-.media-tab.active{background:#354f6b;border-color:#d6aa3b;color:#fff}
+
+#homeNav{background:linear-gradient(135deg,#f0c96b,#b9852d);border-color:#ffe09a;color:#17283a}
+#homeNav:hover,#homeNav.active{background:linear-gradient(135deg,#ffdc82,#c18e36);border-color:#fff0bd;color:#17283a}
+#liveBroadcastNav{background:linear-gradient(135deg,#a52b35,#74202b);border-color:#e35b63;color:#fff;text-decoration:none}#liveBroadcastNav:hover{background:linear-gradient(135deg,#c93640,#8e202b);border-color:#ff9da3;color:#fff;text-decoration:none}
+#contactNav{background:linear-gradient(135deg,#c93640,#8e202b);border-color:#e35b63;color:#fff}
+#contactNav:hover,#contactNav.active{background:linear-gradient(135deg,#e04b55,#a92834);border-color:#ff9da3;color:#fff}
 .catalog-card:hover{border-color:#d6aa3b}
-.catalog-back:hover{background:#d6aa3b;color:#172638}
 .catalog-section-title{color:#f0d58b}
 #playerSection{border-color:#42617e;box-shadow:0 10px 26px #0003}
-#liveView{border-color:#347da5;background:linear-gradient(135deg,#142d43,#102337)}
-#liveView h2{color:#8dc9e8}
-#liveOpenLink{background:#276b91}
-@media(max-width:600px){.nav-button{padding:10px 13px;font-size:13px}.catalog-card h3{font-size:14px}}
+@media(max-width:600px){.nav-button{padding:10px 13px;font-size:13px}}
 </style></head><body>
-<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="قائمة العملاء"><button id="homeNav" class="nav-button active" type="button" aria-pressed="true">الرئيسية</button><button id="contactNav" class="nav-button" type="button" aria-pressed="false">التواصل مع الإدارة</button><button id="liveNav" class="nav-button" type="button" aria-pressed="false">البث المباشر</button><button class="nav-button media-tab active" data-kind="all" type="button">الكل</button><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav></header>
-<main><section id="homeView">
-<section class="welcome-panel" id="welcomePanel">
-<div><span class="welcome-kicker">ALOSTORA MEDIA LIBRARY</span><h2>كل مكتبتك الترفيهية في مكان واحد</h2><p>تصفح الأقسام، اكتشف البرامج والمسلسلات والأفلام، وتابع المشاهدة من حيث توقفت.</p></div>
-<div class="welcome-mark" aria-hidden="true">▶</div>
+<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="homeNav" class="nav-button compact-top-nav" type="button" hidden>⌂ الرئيسية</button><button id="headerBackNav" class="nav-button compact-top-nav" type="button" hidden>رجوع</button><a id="liveBroadcastNav" class="nav-button compact-top-nav" href="#" target="_blank" rel="noopener noreferrer" hidden>▶ البث المباشر</a><button id="contactNav" class="nav-button compact-top-nav" type="button">✉ تواصل مع الإدارة</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
+<div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p><span class="announcement-track"><span id="announcementMessage"></span><span class="announcement-copy" aria-hidden="true"></span></span></p></div>
+<section id="customerAds" class="customer-ads" aria-label="إعلانات الاستراحة" hidden>
+ <div id="customerAdStage" class="customer-ad-stage"></div>
+ <div class="customer-ad-controls"><button id="customerAdPrev" type="button" aria-label="الإعلان السابق">السابق</button><div id="customerAdDots" class="customer-ad-dots"></div><button id="customerAdNext" type="button" aria-label="الإعلان التالي">التالي</button></div>
 </section>
-<div class="toolbar" id="catalogToolbar">
-<input id="search" type="search" placeholder="ابحث عن قسم أو برنامج أو فيلم...">
-<select id="categoryFilter" aria-label="القسم" hidden><option value="">كل الأقسام</option></select>
-<select id="collection"><option value="">كل الأعمال المنشورة</option><option value="favorites">المفضلة</option></select>
-<select id="sort" aria-label="ترتيب المكتبة"><option value="title">ترتيب حسب الاسم</option><option value="year">الأحدث إنتاجاً</option><option value="rating">الأعلى تقييماً</option></select>
-</div>
+<main><section id="homeView">
+<section class="welcome-panel" id="welcomePanel"><div><span class="welcome-kicker">ALOSTORA REST HOUSE</span><h2>خدمات الاستراحة ومكتبتها في مكان واحد</h2><p>تصفح الأفلام والمسلسلات، واستمع إلى الصوتيات، وافتح الكتب وحمّل التطبيقات المتاحة على الشبكة المحلية.</p></div><div class="welcome-mark" aria-hidden="true">▶</div></section>
+<section id="customerOverview" class="customer-overview" aria-label="ملخص المكتبة">
+ <div class="overview-stats">
+  <article class="overview-stat"><span>الأقسام المنشورة</span><strong id="overviewCategoryCount">—</strong></article>
+  <article class="overview-stat"><span>الأفلام والفيديوهات</span><strong id="overviewVideoCount">—</strong></article>
+  <article class="overview-stat"><span>المسلسلات والبرامج</span><strong id="overviewSeriesCount">—</strong></article>
+ </div>
+ <section id="popularSection" class="popular-section" hidden>
+  <div class="popular-heading"><h2>الأكثر مشاهدة</h2><span>اختيارات روّاد الاستراحة</span></div>
+  <div id="popularGrid" class="catalog-grid"></div>
+ </section>
+</section>
 <p id="message">يتم تحميل المكتبة...</p>
-<section id="mediaLibrary" hidden><h2 id="mediaLibraryTitle">المكتبات الإضافية</h2><div id="mediaGrid" class="catalog-grid"></div><p id="mediaPlayerHint" class="empty"></p></section>
+<nav id="mediaQuickNav" class="media-quick-nav" aria-label="المكتبات الإضافية" hidden><span>مكتبات إضافية</span><button class="nav-button media-tab" data-kind="Audio" type="button">الصوتيات</button><button class="nav-button media-tab" data-kind="Books" type="button">الكتب</button><button class="nav-button media-tab" data-kind="Apps" type="button">التطبيقات</button></nav><section id="mediaLibrary" hidden><h2 id="mediaLibraryTitle">الصوتيات والكتب والتطبيقات</h2><div id="mediaGrid" class="catalog-grid"></div><p id="mediaPlayerHint" class="empty" role="status"></p></section>
+<section id="downloadCenter" class="download-center" hidden>
+<h2>مركز التنزيلات</h2>
+<p class="meta">تظهر هنا حالة تنزيلات هذا الجهاز. عند انقطاع الاتصال، استخدم «استئناف» من مدير التنزيلات في المتصفح إذا كان يدعم استكمال التحميل.</p>
+<div id="downloadList"></div>
+</section>
 <section id="catalogView" aria-live="polite">
-<div class="catalog-page-head"><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div></div>
-<div id="catalogContent">
+<div class="catalog-page-head" id="catalogPageHead"><button id="catalogBack" class="catalog-back" type="button" hidden>رجوع</button><div id="catalogBreadcrumb">الرئيسية</div><div id="catalogContentFilters" class="catalog-content-filters" hidden><select id="categoryFilter" class="header-filter" aria-label="تصفية حسب القسم"><option value="">كل الأقسام</option></select><select id="sort" class="header-filter" aria-label="ترتيب المحتوى"><option value="title">الاسم</option><option value="year">الأحدث</option><option value="rating">التقييم</option></select></div></div>
+<div class="toolbar" id="catalogToolbar">
+<select id="collection" aria-label="نوع العرض"><option value="">كل المحتوى</option><option value="favorites">المفضلة فقط</option></select>
+</div>
+<section id="newArrivals" class="new-arrivals" hidden aria-label="المضاف حديثاً"><div class="new-arrivals-heading"><div><span class="new-kicker">اكتشف الآن</span><h2>أُضيف حديثاً</h2></div><span class="new-count" id="newArrivalsCount"></span></div><div id="newArrivalsGrid" class="new-arrivals-grid"></div></section><div id="catalogContent"></div>
 <section id="playerSection" aria-live="polite" hidden>
-<h2 id="nowPlayingTitle">المشغل</h2><video id="player" controls playsinline preload="metadata"></video>
+<p id="nowPlayingViews" class="meta" aria-live="polite">👁 عدد المشاهدات: —</p>
+<video id="player" controls playsinline preload="metadata"></video>
 <div id="audioControls" hidden><label for="audioTrack">المسار الصوتي:</label><select id="audioTrack"></select><button id="applyAudio" type="button">تشغيل بالصوت المحدد</button></div>
 <p id="playbackHint"></p><p id="subtitleHint" class="meta">تُكتشف الترجمات الخارجية تلقائياً بجانب ملف الفيديو.</p>
 </section>
-</div>
 </section>
-<section id="continueSection"><h2>متابعة المشاهدة</h2><p id="continueEmpty">جارٍ تحميل سجل المشاهدة...</p><div id="continueGrid"></div></section>
+<section id="continueSection" class="watch-hub">
+ <section id="resumeSection"><div class="watch-section-heading"><h2>أكمل المشاهدة</h2></div><p id="continueEmpty">جارٍ تحميل سجل المشاهدة...</p><div id="continueGrid"></div></section>
+ <section id="watchedSection"><div class="watch-section-heading"><h2>شاهدتها مؤخرًا</h2></div><p id="watchedEmpty">جارٍ تحميل سجل المشاهدة...</p><div id="watchedGrid"></div></section>
 </section>
-<section id="liveView" class="contact-box" aria-labelledby="liveTitle" hidden><h2 id="liveTitle">البث المباشر</h2><p id="liveStreamMessage">جارٍ تحميل رابط البث...</p><video id="livePlayer" controls playsinline preload="none" hidden></video><iframe id="liveFrame" title="مشغل البث المباشر" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="display:none;width:100%;height:min(70vh,560px);border:0;border-radius:12px;background:#000"></iframe><p id="livePlaybackHint" class="meta">إذا لم يعمل البث داخل المشغل، يمكنك فتح الرابط مباشرة.</p><a id="liveOpenLink" class="action" href="#" target="_blank" rel="noopener" hidden>فتح رابط البث مباشرة</a></section>
+</section>
 <section id="contactView" class="contact-box" aria-labelledby="contactTitle" hidden>
 <h2 id="contactTitle">تواصل مع إدارة الاستراحة</h2>
 <p>اختر نوع الرسالة، واكتب طلبك أو ملاحظتك، وستصل مباشرة إلى برنامج إدارة الاستراحة.</p>
@@ -118,48 +393,271 @@ main{max-width:1320px;padding:26px 28px 18px}
 <button id="customerMessageSend" type="submit">إرسال الرسالة للإدارة</button>
 </form>
 <p id="contactFeedback" role="status" aria-live="polite"></p>
-</section></main>
-<footer class="developer-credit">تصميم وبرمجة: محمد النظاري</footer>
+</section><div id="appToast" class="app-toast" role="status" aria-live="polite"></div></main>
+<div class="footer-contact-wrap"><button id="contactCta" class="footer-contact-button" type="button"><span aria-hidden="true">✉</span> تواصل مع الإدارة للطلب والاستفسار</button></div>
+<footer class="developer-credit"><span class="credit-pair"><span class="developer-label"><span class="developer-icon" aria-hidden="true">✦</span> تصميم وبرمجة الاستراحة :</span></span><strong>م/ أبو عبيدة محمد النظاري</strong><a href="https://wa.me/967777824918" target="_blank" rel="noopener noreferrer" aria-label="تواصل عبر واتساب على الرقم 777824918"><span class="whatsapp-mark" aria-hidden="true">◉</span><bdi dir="ltr">777824918</bdi></a><button id="copyFooterPhone" class="copy-phone" type="button" aria-label="نسخ رقم التواصل">نسخ</button></footer>
 <script>
+const defaultCustomerSettings={showCatalog:true,showContinueWatching:true,showAudio:true,showBooks:true,showApps:true,showContact:true,showWelcome:true,showAnnouncement:true,showDownloads:true,showImageAds:true};
+let customerSettings={...defaultCustomerSettings};
+let customerAdItems=[],customerAdIndex=0,customerAdTimer=null;
+let innerAnnouncementTimer=null;
+async function loadCustomerSettings(){
+ const previousMedia=[customerSettings.showAudio,customerSettings.showBooks,customerSettings.showApps].join('|');
+ try{
+  const response=await fetch('/api/customer-settings',{cache:'no-store'});
+  if(response.ok)customerSettings={...defaultCustomerSettings,...await response.json()};
+ }catch{}
+ const currentMedia=[customerSettings.showAudio,customerSettings.showBooks,customerSettings.showApps].join('|');
+ applyCustomerSettings(previousMedia!==currentMedia);
+}
+function applyCustomerSettings(refreshMedia=false){
+ const enabled={Audio:customerSettings.showAudio!==false,Books:customerSettings.showBooks!==false,Apps:customerSettings.showApps!==false};
+ document.querySelectorAll('.media-tab').forEach(button=>{
+  const kind=button.dataset.kind||'all';
+  button.hidden=kind==='all'?!customerSettings.showCatalog&&!enabled.Audio&&!enabled.Books&&!enabled.Apps:!enabled[kind];
+ });
+ const liveBroadcastNav=document.querySelector('#liveBroadcastNav');if(liveBroadcastNav){const liveUrl=String(customerSettings.liveBroadcastUrl||'').trim();const validLiveUrl=/^https?:\/\//i.test(liveUrl);liveBroadcastNav.hidden=!validLiveUrl;liveBroadcastNav.href=validLiveUrl?liveUrl:'#';}
+ const contactNav=document.querySelector('#contactNav');if(contactNav)contactNav.hidden=customerSettings.showContact===false;
+ document.querySelector('#continueNav').hidden=customerSettings.showContinueWatching===false;
+ if(customerSettings.showContact===false&&!document.querySelector('#contactView').hidden)showCustomerView('home');
+ if(activeMediaKind!=='all'&&!enabled[activeMediaKind])activeMediaKind='all';
+ const mediaOnly=activeMediaKind!=='all';
+ document.querySelector('.header-search').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all'||!document.querySelector('#contactView').hidden;
+ document.querySelector('#catalogView').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all';
+ document.querySelector('#catalogToolbar').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all';
+ document.querySelector('#welcomePanel').hidden=customerSettings.showWelcome===false||activeMediaKind!=='all';
+ document.querySelector('#customerOverview').hidden=customerSettings.showWelcome===false||activeMediaKind!=='all';
+ document.querySelector('#continueSection').hidden=customerSettings.showContinueWatching===false||activeMediaKind!=='all'||catalogPage.type!=='continue';
+ document.querySelector('#message').hidden=customerSettings.showCatalog===false||activeMediaKind!=='all';
+ document.querySelectorAll('.media-tab').forEach(button=>button.classList.toggle('active',(button.dataset.kind||'all')===activeMediaKind));
+ document.querySelector('#mediaLibrary').hidden=activeMediaKind==='all'&&!mediaItems.some(x=>enabled[x.kind]);
+ document.querySelector('#announcementBanner').hidden=customerSettings.showAnnouncement===false||document.querySelector('#announcementBanner').dataset.active!=='true';
+ document.querySelector('#downloadCenter').hidden=customerSettings.showDownloads===false||!downloadRows.length;
+ document.querySelector('#customerAds').hidden=customerSettings.showImageAds===false||customerAdItems.length===0||!document.querySelector('#contactView').hidden;
+ if(refreshMedia)renderMediaLibraries();
+}
+function isCustomerHomeLanding(){
+ return !!catalogPage&&catalogPage.type==='home'&&activeMediaKind==='all'&&document.querySelector('#contactView')?.hidden!==false&&document.querySelector('#homeView')?.hidden!==true&&document.querySelector('#mediaLibrary')?.hidden!==false;
+}
+function syncCustomerAdVisibility(){
+ const section=document.querySelector('#customerAds');
+ if(!section)return;
+ const visible=isCustomerHomeLanding()&&customerSettings.showImageAds!==false&&customerAdItems.length>0;
+ section.hidden=!visible;
+ if(!visible&&customerAdTimer){clearTimeout(customerAdTimer);customerAdTimer=null;}
+ if(visible)scheduleCustomerAd();
+}
+function scheduleCustomerAd(){
+ if(customerAdTimer){clearTimeout(customerAdTimer);customerAdTimer=null;}
+ if(!isCustomerHomeLanding()||customerSettings.showImageAds===false||customerAdItems.length<2||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ const current=customerAdItems[customerAdIndex];
+ const delay=Math.max(5,Math.min(120,Number(current.durationSeconds)||10))*1000;
+ customerAdTimer=setTimeout(()=>{if(isCustomerHomeLanding())renderCustomerAd(customerAdIndex+1);},delay);
+}
+function renderCustomerAd(index=customerAdIndex){
+ const section=document.querySelector('#customerAds'),stage=document.querySelector('#customerAdStage'),dots=document.querySelector('#customerAdDots');
+ if(customerAdTimer){clearTimeout(customerAdTimer);customerAdTimer=null;}
+ if(!customerAdItems.length){stage.replaceChildren();dots.replaceChildren();section.hidden=true;return;}
+ customerAdIndex=((index%customerAdItems.length)+customerAdItems.length)%customerAdItems.length;
+ const item=customerAdItems[customerAdIndex];
+ const image=document.createElement('img');
+ image.src='/api/customer-ads/'+encodeURIComponent(item.id)+'/image';
+ image.alt=item.title||'إعلان الاستراحة';
+ image.loading='lazy';
+ let surface;
+ if(item.linkUrl){surface=document.createElement('a');surface.href=item.linkUrl;surface.target='_blank';surface.rel='noopener noreferrer';surface.setAttribute('aria-label',item.title||'فتح رابط الإعلان');}
+ else{surface=document.createElement('div');surface.setAttribute('role','group');surface.setAttribute('aria-label',item.title||'إعلان الاستراحة');}
+ surface.append(image);
+ if(item.title){const caption=document.createElement('div');caption.className='customer-ad-caption';caption.textContent=item.title;surface.append(caption);}
+ stage.replaceChildren(surface);
+ dots.replaceChildren();
+ customerAdItems.forEach((ad,i)=>{
+  const dot=document.createElement('button');dot.type='button';dot.className='customer-ad-dot'+(i===customerAdIndex?' active':'');
+  dot.setAttribute('aria-label','عرض الإعلان '+(i+1));dot.setAttribute('aria-pressed',String(i===customerAdIndex));
+  dot.addEventListener('click',()=>renderCustomerAd(i));dots.append(dot);
+ });
+ syncCustomerAdVisibility();
+}
+async function loadCustomerAds(){
+ try{
+  const response=await fetch('/api/customer-ads',{cache:'no-store'});
+  if(!response.ok)return;
+  const rows=await response.json();
+  const oldId=customerAdItems[customerAdIndex]?.id;
+  customerAdItems=Array.isArray(rows)?rows:[];
+  const sameIndex=customerAdItems.findIndex(x=>x.id===oldId);
+  customerAdIndex=sameIndex>=0?sameIndex:0;
+  renderCustomerAd(customerAdIndex);
+ }catch{}
+}
+function startAnnouncementTrack(track,duration){
+ const viewportWidth=track.parentElement?.clientWidth||window.innerWidth;
+ track.onanimationend=null;
+ track.style.setProperty('--announcement-start',viewportWidth+'px');
+ track.style.animation='none';
+ track.style.transform='translateX(0)';
+ void track.offsetWidth;
+ track.onanimationend=(event)=>{
+  if(event.animationName!=='announcement-message-entry')return;
+  track.onanimationend=null;
+  track.style.animation='announcement-message-marquee '+duration+'s linear infinite';
+ };
+ track.style.animation='announcement-message-entry '+duration+'s linear 1 forwards';
+}
+async function loadAnnouncement(){
+ try{
+  const response=await fetch('/api/announcement',{cache:'no-store'});
+  if(!response.ok)return;
+  const item=await response.json();
+  const banner=document.querySelector('#announcementBanner');
+  if(!item.isActive||!item.message){banner.dataset.active='false';banner.hidden=true;return;}
+  const title=item.title|| (item.kind==='ad'?'إعلان':'تنبيه من الإدارة');
+  const message=document.querySelector('#announcementMessage');
+  const track=document.querySelector('.announcement-track');
+  const copy=document.querySelector('.announcement-copy');
+  const contentKey=title+'\\n'+item.message;
+  const changed=banner.dataset.contentKey!==contentKey;
+  document.querySelector('#announcementTitle').textContent=title;
+  message.textContent=item.message;
+  copy.textContent=item.message;
+  const duration=Math.max(5,Math.min(60,Number(item.speedSeconds)||18));
+  track.style.animationDuration=duration+'s';
+  track.style.animationDirection='normal';
+  track.style.animationTimingFunction='linear';
+  if(changed){
+   banner.dataset.contentKey=contentKey;
+   banner.classList.remove('is-entering');
+   void banner.offsetWidth;
+   banner.classList.add('is-entering');
+  }
+  startAnnouncementTrack(track,duration);
+  banner.dataset.active='true';
+  syncAnnouncementVisibility(catalogPage?.type==='home'&&document.querySelector('#contactView')?.hidden!==false);
+ }catch{}
+}
+function syncAnnouncementVisibility(isHome){
+ const banner=document.querySelector('#announcementBanner');
+ if(!banner)return;
+ if(innerAnnouncementTimer){clearTimeout(innerAnnouncementTimer);innerAnnouncementTimer=null;}
+ const active=customerSettings.showAnnouncement!==false&&banner.dataset.active==='true';
+ // The announcement ticker belongs to the home landing page only; never reveal it later on subpages.
+ const shouldShow=active&&isHome;
+ const wasHidden=banner.hidden;
+ banner.hidden=!shouldShow;
+ if(shouldShow&&wasHidden){
+  const track=banner.querySelector('.announcement-track');
+  if(track){
+   const duration=Math.max(5,Math.min(60,Number(track.style.animationDuration.replace('s',''))||18));
+   startAnnouncementTrack(track,duration);
+  }
+ }
+}
 function createViewerId(){try{if(window.crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();if(window.crypto&&crypto.getRandomValues){const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}}catch{}return 'viewer-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);}
 let viewerId='';try{viewerId=localStorage.getItem('alostora-viewer')||'';if(!viewerId){viewerId=createViewerId();localStorage.setItem('alostora-viewer',viewerId);}}catch{viewerId=createViewerId();}
 let favorites=new Set();try{favorites=new Set(JSON.parse(localStorage.getItem('alostora-favorites')||'[]'));}catch{}
-let activeVideo=null,loadedVideoId=null,items=[],seriesItems=[],categories=[],mediaItems=[],activeMediaKind="all",progressRows=[],saveTimer=null,playbackGeneration=0,catalogStack=[],catalogPage={type:'home'};const player=document.querySelector('#player');
+let activeVideo=null,loadedVideoId=null,items=[],seriesItems=[],categories=[],mediaItems=[],activeMediaKind="all",progressRows=[],watchHistoryRows=[],downloadRows=[],saveTimer=null,playbackGeneration=0,catalogStack=[],catalogPage={type:'home'};const player=document.querySelector('#player');
  
+
+function startMediaDownload(item){
+ const downloadId=createViewerId();
+ const baseUrl=item.url.endsWith('/')?item.url.slice(0,-1):item.url;
+ const url=baseUrl+'/download?clientId='+encodeURIComponent(viewerId)+'&downloadId='+encodeURIComponent(downloadId);
+ const link=document.createElement('a');link.href=url;link.download=item.fileName||item.title;link.rel='noopener';document.body.append(link);link.click();link.remove();
+ setTimeout(loadDownloads,350);
+}
+function formatDownloadBytes(value){
+ const units=['بايت','KB','MB','GB'];let amount=Number(value||0),unit=0;
+ while(amount>=1024&&unit<units.length-1){amount/=1024;unit++;}
+ return amount.toFixed(unit===0?0:1)+' '+units[unit];
+}
+function renderDownloads(){
+ const section=document.querySelector('#downloadCenter'),list=document.querySelector('#downloadList');
+ section.hidden=customerSettings.showDownloads===false||!downloadRows.length;
+ list.replaceChildren();
+ for(const row of downloadRows){
+  const card=document.createElement('article');card.className='download-row';
+  const title=document.createElement('strong');title.textContent=row.fileName||'ملف';
+  const status=document.createElement('span');status.className='download-status';status.textContent=row.status;
+  const progress=document.createElement('progress');progress.max=100;progress.value=row.percent||0;progress.setAttribute('aria-label','تقدم التنزيل');
+  const detail=document.createElement('small');detail.textContent=formatDownloadBytes(row.bytesTransferred)+' من '+formatDownloadBytes(row.totalBytes)+' · '+(row.percent||0)+'%';
+  const remove=document.createElement('button');remove.type='button';remove.className='download-remove';remove.textContent='إزالة من القائمة';
+  remove.addEventListener('click',async()=>{await fetch('/api/downloads/'+encodeURIComponent(viewerId)+'/'+encodeURIComponent(row.downloadId),{method:'DELETE'});await loadDownloads();});
+  const top=document.createElement('div');top.className='download-row-head';top.append(title,status);
+  card.append(top,progress,detail,remove);list.append(card);
+ }
+}
+async function loadDownloads(){
+ try{
+  const response=await fetch('/api/downloads/'+encodeURIComponent(viewerId),{cache:'no-store'});
+  if(!response.ok)return;
+  downloadRows=await response.json();renderDownloads();
+ }catch{}
+}
 function renderMediaLibraries(){
  const section=document.querySelector('#mediaLibrary'),grid=document.querySelector('#mediaGrid'),hint=document.querySelector('#mediaPlayerHint');
- const rows=mediaItems.filter(x=>activeMediaKind==='all'||x.kind===activeMediaKind);
+ const enabledKinds={Audio:customerSettings.showAudio!==false,Books:customerSettings.showBooks!==false,Apps:customerSettings.showApps!==false};
+ const rows=mediaItems.filter(x=>(activeMediaKind==='all'||x.kind===activeMediaKind)&&enabledKinds[x.kind]!==false);
+ const quickNav=document.querySelector('#mediaQuickNav');
+ const availableKinds=['Audio','Books','Apps'].filter(kind=>enabledKinds[kind]&&mediaItems.some(x=>x.kind===kind));
+ if(quickNav){quickNav.hidden=availableKinds.length===0;for(const button of quickNav.querySelectorAll('.media-tab')){button.hidden=!availableKinds.includes(button.dataset.kind);button.classList.toggle('active',button.dataset.kind===activeMediaKind);}}
  const titles={all:'الصوتيات والكتب والتطبيقات',Audio:'مكتبة الصوتيات',Books:'مكتبة الكتب',Apps:'مكتبة التطبيقات'};
  document.querySelector('#mediaLibraryTitle').textContent=titles[activeMediaKind]||titles.all;
- section.hidden=activeMediaKind==='all'&&rows.length===0;
+ section.hidden=activeMediaKind==='all';
+ const oldAudio=document.querySelector('#sharedAudioPlayer');
+ if(oldAudio){oldAudio.pause();oldAudio.remove();}
  grid.replaceChildren();hint.textContent='';
- if(!rows.length){grid.innerHTML='<div class="catalog-empty">لا توجد ملفات في هذا القسم حالياً. ستظهر الملفات بعد إضافتها إلى مجلد المكتبة وفحصها من الإدارة.</div>';return;}
+ if(!rows.length){const empty=document.createElement('div');empty.className='catalog-empty';empty.textContent='لا توجد ملفات في هذا القسم حالياً. ستظهر الملفات بعد إضافتها وفحص المكتبة من لوحة الإدارة.';grid.append(empty);return;}
  for(const item of rows){
   const card=document.createElement('article');card.className='catalog-card';
   const title=document.createElement('h3');title.textContent=item.title;
-  const details=document.createElement('small');details.textContent=(item.kind==='Audio'?'ملف صوتي':item.kind==='Books'?'كتاب / مستند':'تطبيق أندرويد')+' · '+(item.sizeBytes/1048576).toFixed(1)+' MB';
-  const action=document.createElement('button');action.className='action';
+  const details=document.createElement('small');details.textContent=(item.kind==='Audio'?'ملف صوتي':item.kind==='Books'?'كتاب أو مستند':'تطبيق أندرويد')+' · '+(Number(item.sizeBytes||0)/1048576).toFixed(1)+' MB';
+  const action=document.createElement('button');action.className='action';action.type='button';
   if(item.kind==='Audio'){
    action.textContent='استمع الآن';action.addEventListener('click',()=>{
     let audio=document.querySelector('#sharedAudioPlayer');
     if(!audio){audio=document.createElement('audio');audio.id='sharedAudioPlayer';audio.controls=true;audio.style.cssText='width:100%;margin:12px 0';section.insertBefore(audio,grid);}
-    audio.pause();audio.src=item.url;audio.setAttribute('aria-label','مشغل الصوتيات: '+item.title);audio.load();audio.play().catch(()=>{hint.textContent='تعذر التشغيل التلقائي. اضغط زر التشغيل في المشغل.';});hint.textContent='يتم تشغيل: '+item.title;
+    audio.pause();audio.src=item.url;audio.setAttribute('aria-label','مشغل الصوتيات: '+item.title);audio.load();
+    audio.play().catch(()=>{hint.textContent='تعذر التشغيل التلقائي. اضغط زر التشغيل في مشغل الصوتيات.';});
+    hint.textContent='يتم تشغيل: '+item.title;
    });
   }else if(item.kind==='Books'){
    action.textContent='افتح الكتاب';action.addEventListener('click',()=>{const link=document.createElement('a');link.href=item.url;link.target='_blank';link.rel='noopener';document.body.append(link);link.click();link.remove();});
-   const download=document.createElement('a');download.className='action';download.textContent='تنزيل الكتاب';download.href=item.url;download.download=item.fileName;download.rel='noopener';card.append(title,details,action,download);grid.append(card);continue;
+   const download=document.createElement('button');download.type='button';download.className='action';download.textContent='تنزيل الكتاب';download.addEventListener('click',()=>startMediaDownload(item));
+   card.append(title,details,action,download);grid.append(card);continue;
   }else{
-   action.textContent='تحميل التطبيق';action.addEventListener('click',()=>{const link=document.createElement('a');link.href=item.url;link.download=item.fileName;link.rel='noopener';document.body.append(link);link.click();link.remove();});
+   action.textContent='تحميل التطبيق';action.addEventListener('click',()=>startMediaDownload(item));
   }
-  card.append(title,details,action);grid.append(card);
+  if(item.kind==='Audio'){
+   const download=document.createElement('button');download.type='button';download.className='action';download.textContent='تنزيل الصوت';download.addEventListener('click',()=>startMediaDownload(item));card.append(title,details,action,download);
+  }else card.append(title,details,action);
+  grid.append(card);
  }
 }
 async function saveProgress(snapshot=activeVideo,refresh=false){if(!snapshot||!loadedVideoId||snapshot.id!==loadedVideoId||player.readyState<1||!Number.isFinite(player.currentTime)||!Number.isFinite(player.duration)||player.duration<=0)return;const duration=player.duration,position=Math.min(player.currentTime,duration);try{const response=await fetch('/api/progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({viewerId,videoId:snapshot.id,positionSeconds:position,durationSeconds:duration})});if(response.ok&&refresh)await loadProgress();}catch{}}
 function flushProgress(){if(!activeVideo||!loadedVideoId||activeVideo.id!==loadedVideoId||player.readyState<1||!Number.isFinite(player.currentTime)||!Number.isFinite(player.duration)||player.duration<=0)return;const payload=JSON.stringify({viewerId,videoId:activeVideo.id,positionSeconds:Math.min(player.currentTime,player.duration),durationSeconds:player.duration});try{fetch('/api/progress',{method:'POST',headers:{'Content-Type':'application/json'},body:payload,keepalive:true}).catch(()=>{});}catch{}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushProgress();});
 window.addEventListener('pagehide',flushProgress);
-async function loadProgress(){try{const response=await fetch('/api/progress/'+encodeURIComponent(viewerId));if(!response.ok)return;progressRows=await response.json();renderContinue();}catch{document.querySelector('#continueEmpty').textContent='تعذر تحميل سجل المشاهدة.';}}
+async function loadWatchHistory(){try{const response=await fetch('/api/watch-history/'+encodeURIComponent(viewerId));if(!response.ok)return;watchHistoryRows=await response.json();renderWatched();}catch{document.querySelector('#watchedEmpty').textContent='تعذر تحميل سجل المشاهدة.';}}
+async function loadProgress(){try{const response=await fetch('/api/progress/'+encodeURIComponent(viewerId));if(!response.ok)return;progressRows=await response.json();renderContinue();}catch{document.querySelector('#continueEmpty').textContent='تعذر تحميل سجل المشاهدة.';}await loadWatchHistory();}
 function renderContinue(){const grid=document.querySelector('#continueGrid'),empty=document.querySelector('#continueEmpty');grid.replaceChildren();const episodeMap=new Map(),visibleIds=new Set(items.filter(x=>x.isPublished===true).map(x=>x.id));for(const series of seriesItems)if(series.isPublished===true)for(const season of series.seasons||[])for(const ep of season.episodes||[]){episodeMap.set(ep.videoId,{series:series.title,season:season.title||('الموسم '+season.seasonNumber),episode:ep.episodeNumber});visibleIds.add(ep.videoId);}const libraryMap=new Map(items.map(x=>[x.id,x]));const rows=[...progressRows].filter(x=>visibleIds.has(x.videoId)&&libraryMap.has(x.videoId)&&x.positionSeconds>3&&(!x.durationSeconds||x.positionSeconds<x.durationSeconds-15)).sort((a,b)=>new Date(b.updatedUtc)-new Date(a.updatedUtc)).slice(0,8);empty.textContent=rows.length?'آخر ما شاهدته — يمكنك المتابعة من حيث توقفت.':'لا توجد مشاهدات سابقة بعد.';for(const row of rows){const video=libraryMap.get(row.videoId),episode=episodeMap.get(row.videoId);const title=episode?'الحلقة '+episode.episode+' — '+(video?.title||'حلقة'):video?.title||'فيديو من المكتبة';const card=document.createElement('article');card.className='continue-card';const name=document.createElement('strong');name.textContent=episode?episode.series+' — '+title:title;const details=document.createElement('p');details.textContent=episode?episode.season+' • '+formatTime(row.positionSeconds)+' من '+formatTime(row.durationSeconds):'وصلت إلى '+formatTime(row.positionSeconds)+' من '+formatTime(row.durationSeconds);const track=document.createElement('div');track.className='progress-track';const fill=document.createElement('div');fill.className='progress-fill';fill.style.width=(row.durationSeconds>0?Math.min(100,row.positionSeconds/row.durationSeconds*100):0)+'%';track.append(fill);const btn=document.createElement('button');btn.textContent='استكمال المشاهدة';btn.onclick=()=>{const item=video?{id:video.id,url:video.url,title:video.title}:{id:row.videoId,url:'/media/'+row.videoId,title};if(item.url)play(item);};card.append(name,details,track,btn);grid.append(card);}}
+function renderWatched(){
+ const grid=document.querySelector('#watchedGrid'),empty=document.querySelector('#watchedEmpty');if(!grid||!empty)return;
+ grid.replaceChildren();
+ const visibleIds=new Set(items.filter(x=>x.isPublished===true).map(x=>x.id)),libraryMap=new Map(items.map(x=>[x.id,x]));
+ const episodeMap=new Map();
+ for(const series of seriesItems.filter(x=>x.isPublished===true))for(const season of series.seasons||[])for(const ep of season.episodes||[])if(ep.videoId)episodeMap.set(ep.videoId,{series:series.title,season:season.title||('الموسم '+season.seasonNumber),episode:ep.episodeNumber});
+ const rows=(Array.isArray(watchHistoryRows)?watchHistoryRows:[]).filter(row=>visibleIds.has(row.videoId)&&libraryMap.has(row.videoId));
+ empty.textContent=rows.length?'أحدث الفيديوهات التي شاهدتها على هذا الجهاز.':'لا توجد فيديوهات في سجل المشاهدة حتى الآن.';
+ for(const row of rows){
+  const video=libraryMap.get(row.videoId),episode=episodeMap.get(row.videoId);
+  const title=episode?episode.series+' — الحلقة '+episode.episode:video.title||'فيديو من المكتبة';
+  const card=document.createElement('article');card.className='watched-card';
+  const name=document.createElement('strong');name.textContent=title;
+  const date=document.createElement('p');const watchedAt=new Date(row.startedUtc);date.textContent='آخر مشاهدة: '+(Number.isNaN(watchedAt.getTime())?'غير محدد':watchedAt.toLocaleString('ar'));
+  const button=document.createElement('button');button.type='button';button.textContent='إعادة المشاهدة';button.disabled=!video.url;button.addEventListener('click',()=>{if(video.url)play({id:video.id,url:video.url,title:video.title});});
+  card.append(name,date,button);grid.append(card);
+ }
+}
 function formatTime(value){if(!Number.isFinite(value)||value<=0)return '0:00';const n=Math.floor(value),h=Math.floor(n/3600),m=Math.floor(n%3600/60),sec=n%60;return h?h+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0'):m+':'+String(sec).padStart(2,'0');}
 player.addEventListener('timeupdate',()=>{if(!saveTimer&&activeVideo){const snapshot=activeVideo,generation=playbackGeneration;saveTimer=setTimeout(()=>{saveTimer=null;if(generation===playbackGeneration)saveProgress(snapshot);},10000);}});
 player.addEventListener('pause',()=>{if(activeVideo)saveProgress(activeVideo,true);});
@@ -176,27 +674,88 @@ function toggleFavorite(item){const key=favoriteKey(item);if(!key)return;if(favo
 function addFavoriteButton(card,item){const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent=favorites.has(favoriteKey(item))?'★ إزالة من المفضلة':'☆ أضف للمفضلة';button.onclick=event=>{event.stopPropagation();toggleFavorite(item);};card.append(button);}
 function isNew(dateValue){if(!dateValue)return false;const date=new Date(dateValue);return !Number.isNaN(date.getTime())&&(Date.now()-date.getTime())<14*24*60*60*1000;}
 function makeNewBadge(){const badge=document.createElement('span');badge.className='new-badge';badge.textContent='جديد';return badge;}
+function isRecentlyAdded(value){if(!value)return false;const date=new Date(value);const age=Date.now()-date.getTime();return Number.isFinite(date.getTime())&&age>=0&&age<=14*24*60*60*1000;}
+function renderNewArrivals(){
+ const section=document.querySelector('#newArrivals'),grid=document.querySelector('#newArrivalsGrid'),count=document.querySelector('#newArrivalsCount');
+ if(!section||!grid||!count)return;
+ const linkedVideoIds=new Set();
+ for(const show of seriesItems.filter(x=>x.isPublished===true)){for(const video of show.directVideos||[])if(video.videoId)linkedVideoIds.add(video.videoId);for(const season of show.seasons||[])for(const episode of season.episodes||[])if(episode.videoId)linkedVideoIds.add(episode.videoId);}
+ const recentVideos=items.filter(x=>x.isPublished===true&&x.kind!=='Series'&&!linkedVideoIds.has(x.id)&&isRecentlyAdded(x.updatedUtc)).map(x=>({...x,_arrivalType:'فيلم أو فيديو',_arrivalKind:'video'}));
+ const recentSeries=seriesItems.filter(x=>x.isPublished===true&&isRecentlyAdded(x.updatedUtc)).map(x=>({...x,_arrivalType:'مسلسل أو برنامج',_arrivalKind:'series'}));
+ const videoById=new Map(items.map(x=>[x.id,x]));
+ const recentEpisodes=[];
+ for(const show of seriesItems.filter(x=>x.isPublished===true)){
+  for(const season of show.seasons||[])for(const episode of season.episodes||[]){
+   const video=videoById.get(episode.videoId);
+   if(video&&video.isPublished===true&&isRecentlyAdded(video.updatedUtc))
+    recentEpisodes.push({...video,_arrivalType:'حلقة جديدة • '+show.title,_arrivalKind:'video',_arrivalOrder:video.updatedUtc});
+  }
+ }
+ const rows=[...recentVideos,...recentSeries,...recentEpisodes].sort((a,b)=>new Date(b._arrivalOrder||b.updatedUtc)-new Date(a._arrivalOrder||a.updatedUtc)).slice(0,8);
+ grid.replaceChildren();
+ for(const item of rows){
+  const type=item._arrivalKind;
+  const subtitle=[item._arrivalType,item.year,item.genre].filter(Boolean).join(' • ');
+  const action=type==='series'
+   ?()=>navigateCatalog({type:'series',seriesId:item.seriesId,title:item.title})
+   :()=>play({id:item.id,url:item.url,title:item.title});
+  grid.append(catalogCard(item.title,subtitle,item.posterPath,action,'جديد',type==='video'?item:null));
+ }
+ count.textContent=rows.length?rows.length.toLocaleString('ar')+' إضافات جديدة':'';
+ section.hidden=rows.length===0;
+}
 function render(){renderCatalogPage();}
+function renderCustomerOverview(){
+ const publishedVideos=items.filter(item=>item.isPublished===true&&item.kind!=='Series');
+ const publishedSeries=seriesItems.filter(item=>item.isPublished===true);
+ const publishedCategories=categories.filter(item=>item.parentId==null&&item.isPublished===true);
+ document.querySelector('#overviewCategoryCount').textContent=publishedCategories.length.toLocaleString('ar');
+ document.querySelector('#overviewVideoCount').textContent=publishedVideos.length.toLocaleString('ar');
+ document.querySelector('#overviewSeriesCount').textContent=publishedSeries.length.toLocaleString('ar');
+ const section=document.querySelector('#popularSection'),grid=document.querySelector('#popularGrid');
+ const popular=publishedVideos.filter(item=>Number(item.viewCount||0)>0)
+  .sort((a,b)=>Number(b.viewCount||0)-Number(a.viewCount||0)||String(a.title||'').localeCompare(String(b.title||''),'ar'))
+  .slice(0,6);
+ grid.replaceChildren();
+ for(const item of popular){
+  const views=Number(item.viewCount||0);
+  grid.append(catalogCard(item.title,views.toLocaleString('ar')+' مشاهدة',item.posterPath,
+   ()=>play({id:item.id,url:item.url,title:item.title}),null,item));
+ }
+ section.hidden=popular.length===0;
+}
 function catalogCard(title,subtitle,posterPath,action,badge,favoriteItem){
- const card=document.createElement('article');card.className='catalog-card';card.tabIndex=0;card.setAttribute('role','button');card.addEventListener('click',action);card.addEventListener('keydown',event=>{if(event.target===card&&(event.key==='Enter'||event.key===' ')){event.preventDefault();action();}});
- const poster=makePoster(posterPath,title);if(poster){poster.className=poster.tagName==='IMG'?'':'poster-empty';card.append(poster);}
- const heading=document.createElement('h3');heading.textContent=title;card.append(heading);
- if(subtitle){const detail=document.createElement('small');detail.textContent=subtitle;card.append(detail);}
- if(badge){const tag=document.createElement('small');tag.textContent=badge;tag.style.color='#f0b7bb';card.append(tag);}
+ const card=document.createElement('article');card.className='catalog-card';
+ const open=document.createElement('button');open.type='button';open.className='catalog-open-button';open.addEventListener('click',action);
+ open.setAttribute('aria-label',(title||'فتح المحتوى')+(subtitle?' — '+subtitle:''));
+ const poster=makePoster(posterPath,title);if(poster){poster.className=poster.tagName==='IMG'?'':'poster-empty';poster.classList.add('catalog-poster');open.append(poster);}
+ const heading=document.createElement('h3');heading.textContent=title;open.append(heading);
+ if(subtitle){const detail=document.createElement('small');detail.textContent=subtitle;open.append(detail);}
+ if(badge){const tag=document.createElement('small');tag.className='catalog-card-badge';tag.textContent=badge;open.append(tag);}
+ card.append(open);
  if(favoriteItem)addFavoriteButton(card,favoriteItem);
  return card;
 }
-function catalogHero(title,posterPath,metaText,description){
+function catalogHero(title,posterPath,metaText,description,showTitle=true){
  const hero=document.createElement('section');hero.className='catalog-hero';
- const poster=makePoster(posterPath,title);if(poster)hero.append(poster);
+ const poster=makePoster(posterPath,title||'العنوان');if(poster)hero.append(poster);
  const copy=document.createElement('div');copy.className='catalog-hero-copy';
- const heading=document.createElement('h2');heading.textContent=title;copy.append(heading);
+ if(showTitle){const heading=document.createElement('h2');heading.textContent=title;copy.append(heading);}
  if(metaText){const meta=document.createElement('div');meta.className='meta';meta.textContent=metaText;copy.append(meta);}
  if(description){const desc=document.createElement('p');desc.textContent=description;copy.append(desc);}
  hero.append(copy);return hero;
 }
 function catalogSectionTitle(text){const h=document.createElement('h2');h.className='catalog-section-title';h.textContent=text;return h;}
 function catalogEmpty(text){const p=document.createElement('p');p.className='catalog-empty';p.textContent=text;return p;}
+function catalogRow(title,detail,onClick){
+ const row=document.createElement('button');row.type='button';row.className='catalog-list-row';
+ const copy=document.createElement('span');copy.className='catalog-list-copy';
+ const name=document.createElement('strong');name.textContent=title;
+ const meta=document.createElement('small');meta.textContent=detail||'';
+ copy.append(name,meta);
+ const arrow=document.createElement('span');arrow.className='catalog-list-arrow';arrow.textContent='‹';
+ row.append(copy,arrow);row.addEventListener('click',onClick);return row;
+}
 function navigateCatalog(page,push=true){
  if(push)catalogStack.push(catalogPage);
  catalogPage=page;renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});
@@ -204,120 +763,211 @@ function navigateCatalog(page,push=true){
 function goCatalogBack(){
  if(!catalogStack.length)return;
  if(catalogPage.type==='player'){
-  flushProgress();player.pause();player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;
+  playbackGeneration++;
+  flushProgress();
+  if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
+  player.pause();player.onerror=null;player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;
  }
  catalogPage=catalogStack.pop();renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});
 }
 function renderCatalogPage(){
  const content=document.querySelector('#catalogContent'),back=document.querySelector('#catalogBack'),crumb=document.querySelector('#catalogBreadcrumb');
- const toolbar=document.querySelector('#catalogToolbar'),continueSection=document.querySelector('#continueSection'),message=document.querySelector('#message');
- const welcomePanel=document.querySelector('#welcomePanel');
+ const pageHead=document.querySelector('#catalogPageHead'),toolbar=document.querySelector('#catalogToolbar'),continueSection=document.querySelector('#continueSection'),message=document.querySelector('#message');
+ 
  const playerSection=document.querySelector('#playerSection');
- if(!content||!catalogPage)return;
- content.replaceChildren();
+ if(!content||!catalogPage||!playerSection)return;
  const pageType=catalogPage.type||'home';
- toolbar.hidden=pageType==='player';
- if(welcomePanel)welcomePanel.hidden=pageType!=='home';
- continueSection.hidden=pageType!=='home';
- message.hidden=pageType!=='home';
+ const contentFilters=document.querySelector('#catalogContentFilters');
+ if(contentFilters)contentFilters.hidden=!(pageType==='category'||pageType==='series'||pageType==='season'||pageType==='continue');
+ const categoryFilter=document.querySelector('#categoryFilter');
+ if(categoryFilter)categoryFilter.value=(pageType==='main'||pageType==='category')?String(catalogPage.categoryId||''):'';
+ const customerNav=document.querySelector('.customer-nav');if(customerNav)customerNav.hidden=false;
+ const homeNav=document.querySelector('#homeNav');
+ const headerBack=document.querySelector('#headerBackNav');
+ const isHomeLanding=pageType==='home'&&document.querySelector('#contactView').hidden;
+ if(homeNav)homeNav.hidden=isHomeLanding;
+ if(headerBack)headerBack.hidden=isHomeLanding;
+ const appHeader=document.querySelector('header');
+ if(appHeader)appHeader.classList.toggle('is-inner-page',!isHomeLanding);
+ syncAnnouncementVisibility(isHomeLanding);
+ syncCustomerAdVisibility();
+ const quickNav=document.querySelector('#mediaQuickNav');if(quickNav&&pageType!=='home')quickNav.hidden=true;
+ const arrivals=document.querySelector('#newArrivals');if(arrivals&&pageType!=='home')arrivals.hidden=true;
+ pageHead.hidden=pageType==='home';
+ const breadcrumb=document.querySelector('#catalogBreadcrumb');if(breadcrumb)breadcrumb.hidden=pageType!=='home';
+
+ toolbar.hidden=pageType!=='category';
+ continueSection.hidden=pageType!=='continue'||customerSettings.showContinueWatching===false;
+ message.hidden=true;
  back.hidden=pageType==='home'||catalogStack.length===0;
  back.textContent='رجوع';
- const titles={home:'الرئيسية',main:'الأقسام الداخلية',category:'المحتوى',series:'تفاصيل البرنامج',season:'الحلقات',player:'المشاهدة الآن'};
- crumb.textContent=catalogStack.map(x=>x.title||titles[x.type]||'').concat(catalogPage.title||titles[pageType]||'المكتبة').filter(Boolean).join('  /  ');
+ const titles={home:'الرئيسية',main:'الأقسام',category:'المحتوى',series:'المسلسل',season:'الحلقات',player:'المشاهدة الآن',continue:'مشاهداتي'};
+ crumb.textContent=catalogPage.title||titles[pageType]||'المكتبة';
  const query=(document.querySelector('#search')?.value||'').trim().toLocaleLowerCase('ar');
+ if(arrivals&&query)arrivals.hidden=true;
+ // Keep the landing page focused on the main content categories.
+ document.querySelector('#welcomePanel').hidden=true;
+ document.querySelector('#customerOverview').hidden=true;
  const collection=document.querySelector('#collection')?.value||'';
  const sort=document.querySelector('#sort')?.value||'title';
  const matches=item=>!collection||(collection==='favorites'&&favorites.has(favoriteKey(item)));
- const matchesQuery=item=>[item.title,item.description,item.genre].join(' ').toLocaleLowerCase('ar').includes(query);
+ const matchesQuery=item=>[item.title,item.description,item.genre,item.director,item.cast,item.tags,item.year].join(' ').toLocaleLowerCase('ar').includes(query);
  const sorted=rows=>rows.filter(matches).filter(matchesQuery).sort((a,b)=>{
   if(sort==='year'&&(b.year||0)!==(a.year||0))return (b.year||0)-(a.year||0);
   if(sort==='rating'&&Number(b.rating||0)!==Number(a.rating||0))return Number(b.rating||0)-Number(a.rating||0);
   return String(a.title||'').localeCompare(String(b.title||''),'ar',{sensitivity:'base'});
  });
  if(pageType==='player'){
-  content.className='catalog-player-page';playerSection.hidden=false;playerSection.style.display='block';content.append(playerSection);
-  document.querySelector('#nowPlayingTitle').textContent='يتم تشغيل: '+(catalogPage.title||'الفيديو المحدد');
+  content.hidden=true;
+  playerSection.hidden=false;playerSection.style.display='block';
   return;
  }
+ content.hidden=false;
+ playerSection.hidden=true;playerSection.style.display='none';
+ content.replaceChildren();
  content.className='';
+ if(query){
+  continueSection.hidden=true;
+  message.hidden=true;
+  crumb.textContent='نتائج البحث عن: '+query;
+  const addResults=(heading,rows)=>{
+   if(!rows.length)return;
+   content.append(catalogSectionTitle(heading));
+   const grid=document.createElement('div');grid.className='catalog-grid';
+   for(const row of rows)grid.append(row);
+   content.append(grid);
+  };
+  const matchedCategories=categories.filter(x=>x.isPublished===true&&matchesQuery(x))
+   .sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'ar',{sensitivity:'base'}));
+  addResults('الأقسام والتصنيفات',matchedCategories.map(category=>catalogCard(
+   category.title,'',category.posterPath,
+   ()=>navigateCatalog({type:category.parentId==null?'main':'category',categoryId:category.categoryId,title:category.title})
+  )));
+  const matchedSeries=sorted(seriesItems.filter(x=>x.isPublished===true));
+  addResults('المسلسلات والبرامج',matchedSeries.map(show=>catalogCard(
+   show.title,[show.year,show.genre].filter(Boolean).join(' • ')||'مسلسل أو برنامج',show.posterPath,
+   ()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title}),null,show
+  )));
+  const linkedVideoIds=new Set();
+  const directResults=[],episodeResults=[];
+  for(const show of seriesItems.filter(x=>x.isPublished===true)){
+   for(const video of show.directVideos||[]){
+    if(video.videoId)linkedVideoIds.add(video.videoId);
+    const haystack=[video.title,show.title,show.description,show.genre].join(' ').toLocaleLowerCase('ar');
+    if(haystack.includes(query))directResults.push(catalogCard(
+     video.title||show.title,'فيديو ضمن '+show.title,video.posterPath||show.posterPath,
+     ()=>{if(!video.isMissing&&video.url)play({id:video.videoId,url:video.url,title:video.title||show.title});}
+    ));
+   }
+   for(const season of show.seasons||[]){
+    for(const episode of season.episodes||[]){
+     if(episode.videoId)linkedVideoIds.add(episode.videoId);
+     const episodeName='الحلقة '+episode.episodeNumber+(episode.title?' — '+episode.title:'');
+     const haystack=[episodeName,episode.title,episode.episodeNumber,season.title,show.title,show.description,show.genre].join(' ').toLocaleLowerCase('ar');
+     if(haystack.includes(query))episodeResults.push(catalogCard(
+      episodeName,[show.title,season.title||('الموسم '+season.seasonNumber)].filter(Boolean).join(' • '),
+      episode.posterPath||season.posterPath||show.posterPath,
+      ()=>{if(!episode.isMissing&&episode.url)play({id:episode.videoId,url:episode.url,title:episodeName});}
+     ));
+    }
+   }
+  }
+  addResults('الحلقات والفيديوهات المرتبطة',directResults.concat(episodeResults));
+  const matchedVideos=sorted(items.filter(x=>x.isPublished===true&&x.kind!=='Series'&&!linkedVideoIds.has(x.id)));
+  addResults('الأفلام والفيديوهات',matchedVideos.map(video=>catalogCard(
+   video.title,[video.year,video.genre,video.runtimeMinutes?video.runtimeMinutes+' دقيقة':''].filter(Boolean).join(' • '),
+   video.posterPath,()=>play({id:video.id,url:video.url,title:video.title}),null,video
+  )));
+  if(!content.children.length)content.append(catalogEmpty('لم نعثر على نتائج مطابقة. جرّب اسماً آخر أو جزءاً من العنوان.'));
+  return;
+ }
+ if(pageType==='continue'){
+  renderContinue();renderWatched();
+  return;
+ }
  if(pageType==='home'){
+  renderNewArrivals();
   const mains=categories.filter(x=>x.parentId==null&&x.isPublished===true).filter(main=>{
    if(matchesQuery(main))return true;
    const children=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true);
    return children.some(sub=>matchesQuery(sub)||(sub.contentKind==='Series'
     ?seriesItems.some(show=>show.categoryId===sub.categoryId&&show.isPublished===true&&matches(show)&&matchesQuery(show))
     :items.some(video=>video.categoryId===sub.categoryId&&video.isPublished===true&&matches(video)&&matchesQuery(video))));
-  });
+  }).sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'ar',{sensitivity:'base'}));
   content.append(catalogSectionTitle('الأقسام الرئيسية'));
-  const grid=document.createElement('div');grid.className='catalog-grid catalog-rail';
+  const grid=document.createElement('div');grid.className='catalog-grid';
   for(const main of mains){
-   const subs=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true);
-   const count=subs.length;
-   grid.append(catalogCard(main.title,count+' أقسام داخلية',main.posterPath,()=>navigateCatalog({type:'main',categoryId:main.categoryId,title:main.title})));
+   grid.append(catalogCard(main.title,'',main.posterPath,()=>navigateCatalog({type:'main',categoryId:main.categoryId,title:main.title})));
   }
   content.append(grid);
-  message.textContent=mains.length?'اختر القسم الذي تريد تصفحه.':'لا توجد أقسام رئيسية منشورة حالياً.';
+  message.textContent='';
   if(!mains.length)content.append(catalogEmpty('أنشئ قسماً رئيسياً من لوحة الإدارة ثم أضف الأقسام الفرعية تحته.'));
   return;
  }
  if(pageType==='main'){
   const main=categories.find(x=>x.categoryId===catalogPage.categoryId);
   if(!main){content.append(catalogEmpty('القسم غير موجود أو لم يعد منشوراً.'));return;}
-  content.append(catalogHero(main.title,main.posterPath,'الأقسام الداخلية','اختر القسم الفرعي لعرض البرامج أو الأفلام الموجودة بداخله.'));
-  const subs=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true&&(matchesQuery(x)||(x.contentKind==='Series'
-   ?seriesItems.some(show=>show.categoryId===x.categoryId&&show.isPublished===true&&matches(show)&&matchesQuery(show))
-   :items.some(video=>video.categoryId===x.categoryId&&video.isPublished===true&&matches(video)&&matchesQuery(video)))));
-  content.append(catalogSectionTitle('الأقسام الفرعية'));
-  const grid=document.createElement('div');grid.className='catalog-grid catalog-rail';
+  const subs=categories.filter(x=>x.parentId===main.categoryId&&x.isPublished===true).sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'ar',{sensitivity:'base'}));
+  const grid=document.createElement('div');grid.className='catalog-grid';
+  let shown=0;
   for(const sub of subs){
-   const label=sub.contentKind==='Series'?'مسلسلات وبرامج':sub.contentKind==='Movie'?'أفلام':'محتوى';
-   grid.append(catalogCard(sub.title,label,sub.posterPath,()=>navigateCatalog({type:'category',categoryId:sub.categoryId,title:sub.title})));
+   if(sub.contentKind==='Series'){
+    const shows=seriesItems.filter(x=>x.isPublished===true&&x.categoryId===sub.categoryId&&matches(x)&&matchesQuery(x));
+    if(!shows.length&&!matchesQuery(sub))continue;
+    grid.append(catalogCard(sub.title,'',sub.posterPath,()=>navigateCatalog({type:'category',categoryId:sub.categoryId,title:sub.title})));shown++;
+   }else{
+    grid.append(catalogCard(sub.title,'',sub.posterPath,()=>navigateCatalog({type:'category',categoryId:sub.categoryId,title:sub.title})));shown++;
+   }
   }
-  content.append(grid);
-  if(!subs.length)content.append(catalogEmpty('لا توجد أقسام فرعية منشورة هنا بعد.'));
+  if(shown)content.append(grid);else content.append(catalogEmpty('لا توجد مسلسلات أو عناصر منشورة في هذا القسم بعد.'));
   return;
  }
  if(pageType==='category'){
   const category=categories.find(x=>x.categoryId===catalogPage.categoryId);
   if(!category){content.append(catalogEmpty('القسم غير موجود أو لم يعد منشوراً.'));return;}
-  content.append(catalogHero(category.title,category.posterPath,category.contentKind==='Series'?'البرامج والمسلسلات':'الأفلام والمحتوى', 'اختر العمل لفتح صفحته المستقلة.'));
-  const grid=document.createElement('div');grid.className='catalog-grid';
   if(category.contentKind==='Series'){
    const shows=sorted(seriesItems.filter(x=>x.isPublished===true&&x.categoryId===category.categoryId));
+   const grid=document.createElement('div');grid.className='catalog-grid';
    for(const show of shows){
-    const seasons=show.seasons||[],direct=show.directVideos||[];
-    const summary=[show.year,seasons.length+(show.organizationType==='Parts'?' جزء':' موسم'),direct.length+' فيديو مباشر'].filter(Boolean).join(' • ');
-    grid.append(catalogCard(show.title,summary,show.posterPath,()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title}),null,show));
+    const seasons=show.seasons||[];
+    grid.append(catalogCard(show.title,'',show.posterPath,()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title})));
    }
-   if(!shows.length)content.append(catalogEmpty('لا توجد برامج أو مسلسلات منشورة في هذا القسم بعد.'));
+   if(shows.length)content.append(grid);else content.append(catalogEmpty('لا توجد مسلسلات منشورة في هذا القسم بعد.'));
   }else{
    const movies=sorted(items.filter(x=>x.isPublished===true&&x.kind!=='Series'&&x.categoryId===category.categoryId));
+   const grid=document.createElement('div');grid.className='catalog-grid';
    for(const movie of movies){
-    const summary=[movie.year,movie.genre,movie.runtimeMinutes?movie.runtimeMinutes+' دقيقة':'','المشاهدات: '+(movie.viewCount||0)].filter(Boolean).join(' • ');
+    const summary=[movie.year,movie.genre].filter(Boolean).join(' • ');
     grid.append(catalogCard(movie.title,summary,movie.posterPath,()=>play({id:movie.id,url:movie.url,title:movie.title}),null,movie));
    }
+   content.append(grid);
    if(!movies.length)content.append(catalogEmpty('لا توجد أفلام أو فيديوهات منشورة في هذا القسم بعد.'));
   }
-  content.append(grid);return;
+  return;
  }
  if(pageType==='series'){
   const show=seriesItems.find(x=>x.seriesId===catalogPage.seriesId&&x.isPublished===true);
   if(!show){content.append(catalogEmpty('البرنامج أو المسلسل غير متاح حالياً.'));return;}
   const seasons=show.seasons||[],direct=show.directVideos||[];
-  content.append(catalogHero(show.title,show.posterPath,[show.year,show.genre,seasons.length+(show.organizationType==='Parts'?' جزء':' موسم')].filter(Boolean).join(' • '),show.description||''));
+  const episodeCount=seasons.reduce((total,season)=>total+(season.episodes||[]).length,0);
+  const seasonLabel=show.organizationType==='Parts'?'جزء':'موسم';
+  // Keep the series page focused on its season/part tiles; do not repeat the series poster and metadata above them.
   if(direct.length){
-   content.append(catalogSectionTitle('فيديوهات مباشرة'));
+   content.append(catalogSectionTitle('حلقات أو فيديوهات مباشرة'));
    const directGrid=document.createElement('div');directGrid.className='catalog-grid';
-   for(const video of direct)directGrid.append(catalogCard(video.title||'فيديو',video.isMissing?'الملف غير موجود':'تشغيل مباشر',show.posterPath,()=>{if(!video.isMissing&&video.url)play({id:video.videoId,url:video.url,title:video.title||'فيديو'});}));
+   for(const video of direct){
+    const title=video.title||'فيديو';
+    directGrid.append(catalogCard(title,video.isMissing?'الملف غير موجود':'تشغيل الفيديو',video.posterPath||show.posterPath,()=>{if(!video.isMissing&&video.url)play({id:video.videoId,url:video.url,title});}));
+   }
    content.append(directGrid);
   }
   if(seasons.length){
-   content.append(catalogSectionTitle(show.organizationType==='Parts'?'الأجزاء':'المواسم'));
+   const heading=document.createElement('h3');heading.className='catalog-subheading';heading.textContent=show.organizationType==='Parts'?'الأجزاء':'المواسم';content.append(heading);
    const seasonGrid=document.createElement('div');seasonGrid.className='catalog-grid';
    for(const season of seasons){
     const episodes=season.episodes||[];
     const name=season.title||((show.organizationType==='Parts'?'الجزء ':'الموسم ')+season.seasonNumber);
-    seasonGrid.append(catalogCard(name,episodes.length+' حلقة',show.posterPath,()=>navigateCatalog({type:'season',seriesId:show.seriesId,seasonId:season.seasonId,title:name})));
+    seasonGrid.append(catalogCard(name,'',season.posterPath||show.posterPath,()=>navigateCatalog({type:'season',seriesId:show.seriesId,seasonId:season.seasonId,title:name})));
    }
    content.append(seasonGrid);
   }
@@ -329,17 +979,22 @@ function renderCatalogPage(){
   const season=show?.seasons?.find(x=>String(x.seasonId)===String(catalogPage.seasonId));
   if(!show||!season){content.append(catalogEmpty('الموسم أو الجزء غير موجود.'));return;}
   const name=season.title||((show.organizationType==='Parts'?'الجزء ':'الموسم ')+season.seasonNumber);
-  content.append(catalogHero(name,show.posterPath,show.title,'اختر الحلقة لبدء تشغيلها مباشرة.'));
   const episodes=season.episodes||[];
+  // The season page starts directly with its episode list; no duplicate season/show hero image or side metadata.
+  content.append(catalogSectionTitle('حلقات '+name));
   if(!episodes.length){content.append(catalogEmpty('لا توجد حلقات في هذا الموسم بعد.'));return;}
+  const episodeGrid=document.createElement('div');episodeGrid.className='catalog-grid';
   for(const ep of episodes){
-   const row=document.createElement('article');row.className='catalog-episode';
-   const copy=document.createElement('div');const title=document.createElement('strong');title.textContent='الحلقة '+ep.episodeNumber+' — '+(ep.title||'بدون عنوان');
-   const detail=document.createElement('small');const episodeVideo=items.find(video=>video.id===ep.videoId);detail.textContent=(ep.isMissing?'ملف الحلقة غير موجود حالياً.':(ep.runtimeMinutes?ep.runtimeMinutes+' دقيقة':'تشغيل الحلقة واستكمال المشاهدة من آخر موضع'))+(episodeVideo?' • المشاهدات: '+(episodeVideo.viewCount||0):'');
-   copy.append(title,detail);const button=document.createElement('button');button.className='action';button.type='button';button.textContent=ep.isMissing?'الملف مفقود':'تشغيل الحلقة';button.disabled=!!ep.isMissing||!ep.url;
-   if(!button.disabled)button.addEventListener('click',()=>play({id:ep.videoId,url:ep.url,title:ep.title||('الحلقة '+ep.episodeNumber)}));
-   row.append(copy,button);content.append(row);
+   const episodeTitle='الحلقة '+ep.episodeNumber+(ep.title?' — '+ep.title:'');
+   const card=catalogCard(episodeTitle,'',ep.posterPath||season.posterPath||show.posterPath,()=>{
+    if(ep.isMissing||!ep.url)return;
+    play({id:ep.videoId,url:ep.url,title:episodeTitle});
+   });
+   if(ep.isMissing||!ep.url){card.style.opacity='.5';card.style.cursor='not-allowed';}
+   episodeGrid.append(card);
   }
+  content.append(episodeGrid);
+  return;
  }
 }
 function showMovie(item){play(item);}
@@ -363,13 +1018,32 @@ async function startTranscodedPlayback(item,audioIndex,generation,saved){
  throw new Error('استغرق تحويل الفيديو وقتاً أطول من المتوقع. يمكنك المحاولة مرة أخرى.');
 }
 async function play(item){
- if(!item||!item.id||!item.url)return;
+ if(!item||!item.id)return;
+ // Use the canonical local media endpoint if a catalog item omitted its playback URL.
+ if(typeof item.url!=='string'||!item.url.trim())item={...item,url:'/media/'+encodeURIComponent(item.id)};
  navigateCatalog({type:'player',title:item.title});
  const playerSection=document.querySelector('#playerSection');
  playerSection.hidden=false;playerSection.style.display='block';
- document.querySelector('#nowPlayingTitle').textContent='يتم تشغيل: '+(item.title||'الفيديو المحدد');
  playerSection.scrollIntoView({behavior:'smooth',block:'start'});
  const generation=++playbackGeneration,previous=activeVideo;
+ const playbackId=(globalThis.crypto?.randomUUID?.()||(`${Date.now()}-${Math.random().toString(16).slice(2)}`));
+ const viewsElement=document.querySelector('#nowPlayingViews');
+ const initialViews=Number(item.viewCount??items.find(x=>x.id===item.id)?.viewCount??0);
+ if(viewsElement)viewsElement.textContent='👁 عدد المشاهدات: '+initialViews.toLocaleString('ar');
+ let playbackRecorded=false,playbackCountTimer=null;
+ const cancelPlaybackCount=()=>{if(playbackCountTimer){clearTimeout(playbackCountTimer);playbackCountTimer=null;}};
+ const recordPlayback=()=>{
+  if(playbackRecorded||generation!==playbackGeneration)return;
+  playbackRecorded=true;
+  fetch("/api/watch-events",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({viewerId,videoId:item.id,playbackId})})
+   .then(async response=>{if(!response.ok)throw new Error('تعذر تسجيل المشاهدة');const countResponse=await fetch('/api/view-count/'+encodeURIComponent(item.id));if(countResponse.ok){const countData=await countResponse.json();if(viewsElement)viewsElement.textContent='👁 عدد المشاهدات: '+Number(countData.viewCount||0).toLocaleString('ar');}return loadWatchHistory();})
+   .catch(()=>{playbackRecorded=false;});
+ };
+ const schedulePlaybackCount=()=>{cancelPlaybackCount();if(!playbackRecorded&&generation===playbackGeneration)playbackCountTimer=setTimeout(recordPlayback,10000);};
+ player.addEventListener("playing",schedulePlaybackCount);
+ player.addEventListener("pause",cancelPlaybackCount);
+ player.addEventListener("waiting",cancelPlaybackCount);
+ player.addEventListener("ended",cancelPlaybackCount);
  player.dataset.transcodeAttempted='0';
  if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
  const previousSave=previous?saveProgress(previous,false):Promise.resolve();
@@ -475,23 +1149,37 @@ document.querySelector('#customerMessageForm').addEventListener('submit',async e
   if(!response.ok)throw new Error(result.error||'تعذر إرسال الرسالة.');
   document.querySelector('#customerMessageForm').reset();
   feedback.textContent=result.message||'تم إرسال رسالتك بنجاح.';
- }catch(error){feedback.textContent=error.message||'حدث خطأ أثناء الإرسال. حاول مرة أخرى.';}
+   showAppToast(result.message||'تم إرسال رسالتك بنجاح.','success');
+ }catch(error){feedback.textContent=error.message||'حدث خطأ أثناء الإرسال. حاول مرة أخرى.';
+   showAppToast(error.message||'حدث خطأ أثناء الإرسال. حاول مرة أخرى.','error');}
  finally{button.disabled=false;button.textContent='إرسال الرسالة للإدارة';}
 });
+let appToastTimer=null;
+function showAppToast(message,kind='success'){
+ const toast=document.querySelector('#appToast');
+ if(!toast)return;
+ toast.textContent=message;
+ toast.dataset.kind=kind;
+ toast.classList.add('visible');
+ if(appToastTimer)clearTimeout(appToastTimer);
+ appToastTimer=setTimeout(()=>toast.classList.remove('visible'),4500);
+}
 async function load(){try{
+ await loadCustomerSettings();
+ await loadAnnouncement();
  const [libraryResponse,seriesResponse,categoryResponse]=await Promise.all([fetch('/api/library'),fetch('/api/series'),fetch('/api/catalog-categories')]);
  if(!libraryResponse.ok||!seriesResponse.ok||!categoryResponse.ok){
   const failed=[['الأفلام',libraryResponse],['المسلسلات',seriesResponse],['الأقسام',categoryResponse]].filter(([,r])=>!r.ok).map(([name,r])=>name+' ('+r.status+')');
   throw Error('تعذر تحميل '+failed.join('، '));
  }
- items=await libraryResponse.json();seriesItems=await seriesResponse.json();categories=await categoryResponse.json();
- try{const mr=await fetch('/api/media-libraries');if(mr.ok)mediaItems=await mr.json();}catch{}renderMediaLibraries();
+ items=await libraryResponse.json();seriesItems=await seriesResponse.json();categories=await categoryResponse.json();renderNewArrivals();
+ try{const mr=await fetch('/api/media-libraries');if(mr.ok)mediaItems=await mr.json();}catch{mediaItems=[];}renderMediaLibraries();
  const select=document.querySelector('#categoryFilter');select.replaceChildren();
  const all=document.createElement('option');all.value='';all.textContent='كل الأقسام';select.append(all);
  for(const main of categories.filter(x=>x.parentId==null&&x.isPublished)){const option=document.createElement('option');option.value=main.categoryId;option.textContent=main.title;select.append(option);}
  for(const sub of categories.filter(x=>x.parentId!=null&&x.isPublished)){const parent=categories.find(x=>x.categoryId===sub.parentId);const option=document.createElement('option');option.value=sub.categoryId;option.textContent=(parent?parent.title+' / ':'')+sub.title;select.append(option);}
- render();await loadProgress();
- }catch(error){document.querySelector('#message').textContent=error.message||'تعذر الاتصال بالسيرفر أو تحميل بيانات المكتبة.';document.querySelector('#continueEmpty').textContent='تعذر تحميل سجل المشاهدة.';}}
+ render();await loadProgress();await loadDownloads();
+ }catch(error){const status=document.querySelector('#message');status.textContent=error.message||'تعذر الاتصال بالسيرفر أو تحميل بيانات المكتبة.';status.hidden=false;document.querySelector('#continueEmpty').textContent='تعذر تحميل سجل المشاهدة.';}}
 async function loadBrandProfile(){
  try{
   const response=await fetch('/api/profile');
@@ -503,45 +1191,93 @@ async function loadBrandProfile(){
   document.querySelector('#brandNetwork').textContent=network+' — مكتبة المشاهدة';
   document.title=restHouse+' | مكتبة المشاهدة';
   const logo=document.querySelector('#brandLogo');
-  if(profile.logoPath){logo.src=profile.logoPath;logo.hidden=false;logo.onerror=()=>{logo.hidden=true;};}
-  else{logo.hidden=true;logo.removeAttribute('src');}
+  const logoPath=profile.logoPath||'/assets/alostora.ico';
+  logo.src=logoPath;
+  logo.hidden=false;
+  if(profile.logoPath)document.documentElement.style.setProperty('--brand-watermark','url('+JSON.stringify(profile.logoPath)+')');
+  else document.documentElement.style.removeProperty('--brand-watermark');
+  logo.onerror=()=>{if(logo.src!==new URL('/assets/alostora.ico',location.href).href){logo.src='/assets/alostora.ico';}else{logo.hidden=true;document.documentElement.style.removeProperty('--brand-watermark');}};
  }catch{}
 }
 document.querySelector('#catalogBack').addEventListener('click',goCatalogBack);
-async function loadLiveStream(){
- const message=document.querySelector('#liveStreamMessage'),video=document.querySelector('#livePlayer'),frame=document.querySelector('#liveFrame'),link=document.querySelector('#liveOpenLink');
- video.pause();video.hidden=true;video.removeAttribute('src');video.load();frame.style.display='none';frame.removeAttribute('src');link.hidden=true;message.textContent='جارٍ تحميل رابط البث...';
- try{
-  const response=await fetch('/api/live-stream');if(!response.ok)throw new Error('تعذر تحميل إعداد البث.');
-  const data=await response.json();if(!data.url){message.textContent='لا يوجد بث مباشر متاح حالياً. يرجى مراجعة إدارة الاستراحة.';return;}
-  const url=data.url;message.textContent='تم العثور على رابط البث. اضغط تشغيل لبدء المشاهدة.';
-  link.href=url;link.hidden=false;video.hidden=false;video.src=url;video.load();
-  video.onerror=()=>{document.querySelector('#livePlaybackHint').textContent='المتصفح لم يتعرف على صيغة البث كرابط فيديو مباشر. استخدم فتح الرابط مباشرة، أو أرسل نوع جهاز البث لتجهيز المشغل المناسب.';};
- }catch(error){message.textContent=error.message||'تعذر تحميل البث المباشر.';}
-}
+document.querySelector('#headerBackNav').addEventListener('click',()=>{
+ if(!document.querySelector('#contactView').hidden){showCustomerView('home');return;}
+ if(catalogStack.length)goCatalogBack();else goCatalogHome();
+});
 function showCustomerView(view){
- const home=view==='home',contact=view==='contact',live=view==='live';
- document.querySelector('#homeView').hidden=!home;
- document.querySelector('#contactView').hidden=!contact;
- document.querySelector('#liveView').hidden=!live;
- for(const [id,active] of [['homeNav',home],['contactNav',contact],['liveNav',live]]){
-  document.querySelector('#'+id).classList.toggle('active',active);
-  document.querySelector('#'+id).setAttribute('aria-pressed',String(active));
- }
- if(live)loadLiveStream();
+ const home=view==='home',homeView=document.querySelector('#homeView'),contactView=document.querySelector('#contactView');
+ homeView.hidden=!home;contactView.hidden=home;
+ const contactNav=document.querySelector('#contactNav');if(contactNav){contactNav.classList.toggle('active',!home);contactNav.setAttribute('aria-pressed',String(!home));}
+ const homeNav=document.querySelector('#homeNav');if(homeNav)homeNav.hidden=home&&catalogPage.type==='home';
+ const headerBack=document.querySelector('#headerBackNav');if(headerBack)headerBack.hidden=home&&catalogPage.type==='home';
+ const appHeader=document.querySelector('header');
+ if(appHeader)appHeader.classList.toggle('is-inner-page',!home||catalogPage.type!=='home');
+ syncAnnouncementVisibility(home&&catalogPage.type==='home');
+ syncCustomerAdVisibility();
+ document.querySelector('.header-search').hidden=!home||customerSettings.showCatalog===false||activeMediaKind!=='all';
  window.scrollTo({top:0,behavior:'smooth'});
 }
-document.querySelector('#homeNav').addEventListener('click',()=>showCustomerView('home'));
-document.querySelector('#contactNav').addEventListener('click',()=>showCustomerView('contact'));
-document.querySelector('#liveNav').addEventListener('click',()=>showCustomerView('live'));
+function goCatalogHome(){
+ if(catalogPage.type==='player'){
+  playbackGeneration++;flushProgress();if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
+  player.pause();player.onerror=null;player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;
+ }
+ catalogStack=[];catalogPage={type:'home'};activeMediaKind='all';
+ const categoryFilter=document.querySelector('#categoryFilter');if(categoryFilter)categoryFilter.value='';
+ document.querySelectorAll('.media-tab').forEach(x=>x.classList.remove('active'));
+ document.querySelector('#mediaLibrary').hidden=true;
+ document.querySelector('#catalogView').hidden=false;
+ document.querySelector('#catalogToolbar').hidden=false;
+ document.querySelector('#welcomePanel').hidden=customerSettings.showWelcome===false;
+ document.querySelector('#customerOverview').hidden=customerSettings.showWelcome===false;
+ renderCatalogPage();
+}
+function openCustomerContact(){goCatalogHome();document.querySelector('#sharedAudioPlayer')?.pause();showCustomerView('contact');}
+document.querySelector('#contactNav').addEventListener('click',openCustomerContact);
+document.querySelector('#contactCta').addEventListener('click',openCustomerContact);
+async function copyFooterPhoneNumber(){
+ const phone='777824918';
+ try{
+  if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(phone);
+  else throw new Error('clipboard unavailable');
+ }catch{
+  const field=document.createElement('textarea');
+  field.value=phone;field.setAttribute('readonly','');
+  field.style.position='fixed';field.style.opacity='0';field.style.left='-9999px';
+  document.body.append(field);field.select();
+  const copied=document.execCommand('copy');field.remove();
+  if(!copied)throw new Error('copy failed');
+ }
+ showAppToast('تم نسخ رقم التواصل: '+phone);
+}
+document.querySelector('#copyFooterPhone')?.addEventListener('click',()=>copyFooterPhoneNumber().catch(()=>showAppToast('تعذر نسخ الرقم. يمكنك تحديده ونسخه يدوياً.','error')));
+
+document.querySelector('#homeNav').addEventListener('click',()=>{showCustomerView('home');goCatalogHome();});
+document.querySelector('#continueNav').addEventListener('click',()=>{activeMediaKind='all';document.querySelectorAll('.media-tab').forEach(x=>x.classList.remove('active'));document.querySelector('#mediaLibrary').hidden=true;showCustomerView('home');document.querySelector('#catalogView').hidden=false;navigateCatalog({type:'continue',title:'متابعة المشاهدة'});});
 document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener('click',()=>{
  activeMediaKind=button.dataset.kind||'all';
  document.querySelectorAll('.media-tab').forEach(x=>x.classList.toggle('active',x===button));
- const videoCatalog=document.querySelector('#catalogView'),toolbar=document.querySelector('#catalogToolbar'),welcome=document.querySelector('#welcomePanel');
+ showCustomerView('home');
+ goCatalogHome();
  const mediaOnly=activeMediaKind!=='all';
- videoCatalog.hidden=mediaOnly;toolbar.hidden=mediaOnly;welcome.hidden=mediaOnly;
- if(mediaOnly){document.querySelector('#mediaLibrary').hidden=false;renderMediaLibraries();}
- else{document.querySelector('#mediaLibrary').hidden=mediaItems.length===0;renderMediaLibraries();}
+ document.querySelector('#catalogView').hidden=mediaOnly;
+ document.querySelector('#catalogToolbar').hidden=mediaOnly;
+ document.querySelector('#welcomePanel').hidden=mediaOnly;
+ document.querySelector('#message').hidden=mediaOnly;
+ applyCustomerSettings();if(mediaOnly){document.querySelector('#mediaLibrary').hidden=false;renderMediaLibraries();}
+ else{document.querySelector('#catalogView').hidden=false;document.querySelector('#catalogToolbar').hidden=false;document.querySelector('#welcomePanel').hidden=false;renderMediaLibraries();}
 }));
-for(const id of ['search','categoryFilter','collection','sort']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}loadBrandProfile();load();
+document.querySelector('#customerAdPrev').addEventListener('click',()=>renderCustomerAd(customerAdIndex-1));
+document.querySelector('#customerAdNext').addEventListener('click',()=>renderCustomerAd(customerAdIndex+1));
+for(const id of ['search','sort','collection']){const el=document.getElementById(id);if(el)el.addEventListener(id==='search'?'input':'change',render);}
+document.querySelector('#categoryFilter').addEventListener('change',()=>{
+ const value=document.querySelector('#categoryFilter').value;
+ if(!value){goCatalogHome();return;}
+ const category=categories.find(x=>String(x.categoryId)===String(value));
+ if(!category)return;
+ navigateCatalog({type:category.parentId==null?'main':'category',categoryId:category.categoryId,title:category.title});
+});
+loadBrandProfile();load();loadCustomerSettings();loadAnnouncement();loadCustomerAds();
+setInterval(async()=>{await loadCustomerSettings();await loadAnnouncement();await loadCustomerAds();},60000);
+setInterval(()=>{if(downloadRows.length)loadDownloads();},2000);
 </script></body></html>

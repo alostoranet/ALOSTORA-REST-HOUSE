@@ -52,6 +52,55 @@ public sealed class CatalogCategoryServiceTests : IDisposable
 
 
     [Fact]
+    public void RejectsSubcategoryWhoseParentIsAnotherSubcategory()
+    {
+        _categories.Save(new SaveCatalogCategoryRequest(null, null, "القسم الرئيسي", "Group", null, true));
+        var main = Assert.Single(_categories.List());
+        _categories.Save(new SaveCatalogCategoryRequest(null, main.CategoryId, "قسم الأفلام", "Movie", null, true));
+        var child = Assert.Single(_categories.List(), x => x.ContentKind == "Movie");
+
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            _categories.Save(new SaveCatalogCategoryRequest(null, child.CategoryId, "قسم متداخل", "Series", null, true)));
+
+        Assert.Contains("المستوى الأول", error.Message);
+        Assert.Equal(2, _categories.List().Count);
+    }
+
+    [Fact]
+    public void RejectsConvertingMainCategoryWithChildrenIntoSubcategory()
+    {
+        _categories.Save(new SaveCatalogCategoryRequest(null, null, "الرئيسي الأول", "Group", null, true));
+        var first = _categories.List().Single(x => x.Title == "الرئيسي الأول");
+        _categories.Save(new SaveCatalogCategoryRequest(null, null, "الرئيسي الثاني", "Group", null, true));
+        var second = _categories.List().Single(x => x.Title == "الرئيسي الثاني");
+        _categories.Save(new SaveCatalogCategoryRequest(null, first.CategoryId, "قسم فرعي", "Movie", null, true));
+
+        Assert.Throws<InvalidOperationException>(() =>
+            _categories.Save(new SaveCatalogCategoryRequest(first.CategoryId, second.CategoryId, "الرئيسي الأول", "Series", null, true)));
+
+        var unchanged = _categories.Get(first.CategoryId);
+        Assert.NotNull(unchanged);
+        Assert.Null(unchanged.ParentId);
+        Assert.Equal("Group", unchanged.ContentKind);
+        Assert.Equal(3, _categories.List().Count);
+    }
+
+    [Fact]
+    public void RejectsSelfParentingCategory()
+    {
+        _categories.Save(new SaveCatalogCategoryRequest(null, null, "قسم رئيسي", "Group", null, true));
+        var main = Assert.Single(_categories.List());
+
+        Assert.Throws<InvalidOperationException>(() =>
+            _categories.Save(new SaveCatalogCategoryRequest(main.CategoryId, main.CategoryId, "قسم فرعي", "Series", null, true)));
+
+        var unchanged = _categories.Get(main.CategoryId);
+        Assert.NotNull(unchanged);
+        Assert.Null(unchanged.ParentId);
+        Assert.Equal("Group", unchanged.ContentKind);
+    }
+
+    [Fact]
     public void DeletingMainCategoryRemovesCategoryTreeAndUnpublishesLinkedContentWithoutDeletingMedia()
     {
         const string videoId = "0123456789abcdef01234567";
