@@ -704,7 +704,85 @@ public partial class App : Application
     }
     series.SaveSeries(request); return Results.Ok(new{saved=true});
    });
-   _server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalogService series)=>{ if(!IsAdmin(c)) return Results.NotFound(); return Results.Ok(series.ListSeasons(seriesId)); });
+       _server.MapGet("/api/admin/series/{seriesId}/preview",(HttpContext c,string seriesId,SeriesCatalogService series,LibraryService files)=>
+    {
+     if(!IsAdmin(c)) return Results.NotFound();
+     var owner=series.GetSeries(seriesId);
+     if(owner is null) return Results.NotFound(new{error="المسلسل غير موجود"});
+     if(string.IsNullOrWhiteSpace(owner.FolderPath)||!Directory.Exists(owner.FolderPath)) return Results.BadRequest(new{error="اختر مجلد المسلسل واحفظ مساره أولاً"});
+     try
+     {
+      var root=Path.GetFullPath(owner.FolderPath);
+      var usedNumbers=series.ListDirectEpisodeNumbers(seriesId).ToHashSet();
+      var knownFiles=files.List().Select(video=>(video,resolved:files.Resolve(video.Id)))
+       .Where(x=>x.resolved is not null)
+       .GroupBy(x=>Path.GetFullPath(x.resolved!.FullPath),StringComparer.OrdinalIgnoreCase)
+       .ToDictionary(group=>group.Key,group=>group.First().video,StringComparer.OrdinalIgnoreCase);
+      var candidates=files.PreviewFolder(root).Select(file=>{
+       var path=Path.GetFullPath(file.FullPath);
+       knownFiles.TryGetValue(path,out var known);
+       var number=ParseEpisodeNumber(file.FileName);
+       var placement=known is null?null:series.GetVideoPlacement(known.Id);
+       return new { videoId=known?.Id??"", filePath=path, fileName=file.FileName,
+        title=known?.Title??Path.GetFileNameWithoutExtension(file.FileName), episodeNumber=number,
+        isAlreadyLinked=placement is not null && placement.SeriesId==seriesId,
+        isNumberUsed=number is int n&&usedNumbers.Contains(n) };
+      }).ToArray();
+      var duplicateNumbers=candidates.Where(x=>x.episodeNumber.HasValue)
+       .GroupBy(x=>x.episodeNumber!.Value).Where(g=>g.Count()>1).Select(g=>g.Key).ToHashSet();
+      return Results.Ok(candidates.Select(x=>new { x.videoId,x.filePath,x.fileName,x.title,x.episodeNumber,x.isAlreadyLinked,
+       isNumberUsed=x.isNumberUsed||(x.episodeNumber.HasValue&&duplicateNumbers.Contains(x.episodeNumber.Value)) }));
+     }
+     catch(UnauthorizedAccessException){return Results.BadRequest(new{error="لا توجد صلاحية لقراءة بعض محتويات المجلد المحدد."});}
+     catch(IOException ex){return Results.BadRequest(new{error="تعذر فحص المجلد: "+ex.Message});}
+    });
+    _server.MapPost("/api/admin/series/{seriesId}/link-detected",(HttpContext c,string seriesId,LinkDetectedEpisodesRequest request,SeriesCatalogService series,LibraryService files)=>{
+     if(!IsAdmin(c)) return Results.NotFound();
+     if(request?.Episodes is null||request.Episodes.Count>1000) return Results.BadRequest(new{error="قائمة الحلقات غير صالحة"});
+     var owner=series.GetSeries(seriesId);
+     if(owner is null) return Results.NotFound(new{error="المسلسل غير موجود"});
+     if(string.IsNullOrWhiteSpace(owner.FolderPath)||!Directory.Exists(owner.FolderPath)) return Results.BadRequest(new{error="مجلد المسلسل غير متاح"});
+     var root=Path.GetFullPath(owner.FolderPath).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar)+Path.DirectorySeparatorChar;
+     var selected=request.Episodes.Where(x=>x.Selected).ToArray();
+     if(selected.Length==0) return Results.BadRequest(new{error="حدد الحلقات التي تريد إضافتها"});
+     if(selected.Any(x=>x.EpisodeNumber<1||x.EpisodeNumber>10000||string.IsNullOrWhiteSpace(x.FilePath)||x.FilePath.Length>2000))
+      return Results.BadRequest(new{error="تأكد من رقم الحلقة ومسار كل ملف محدد."});
+     var paths=new List<string>();
+     foreach(var item in selected)
+     {
+      string full;
+      try{full=Path.GetFullPath(item.FilePath!);}
+      catch{return Results.BadRequest(new{error="يوجد مسار ملف غير صالح."});}
+      if(!full.StartsWith(root,StringComparison.OrdinalIgnoreCase)||!File.Exists(full))
+       return Results.BadRequest(new{error="أحد الملفات المحددة لم يعد موجوداً داخل مجلد المسلسل."});
+      paths.Add(full);
+     }
+     if(paths.Distinct(StringComparer.OrdinalIgnoreCase).Count()!=paths.Count)
+      return Results.BadRequest(new{error="تم تحديد الملف نفسه أكثر من مرة."});
+     var usedNumbers=series.ListDirectEpisodeNumbers(seriesId).ToHashSet();
+     var duplicateNumbers=selected.GroupBy(x=>x.EpisodeNumber).Where(g=>g.Count()>1).Select(g=>g.Key).ToHashSet();
+     if(selected.Any(x=>duplicateNumbers.Contains(x.EpisodeNumber)||usedNumbers.Contains(x.EpisodeNumber)))
+      return Results.Conflict(new{error="يوجد تعارض في أرقام الحلقات المحددة. عدّل الأرقام في المعاينة قبل الاعتماد."});
+     try
+     {
+      files.RegisterSelectedFiles(owner.FolderPath!,paths);
+      var idByPath=files.List().Select(video=>(video,resolved:files.Resolve(video.Id)))
+       .Where(x=>x.resolved is not null)
+       .GroupBy(x=>Path.GetFullPath(x.resolved!.FullPath),StringComparer.OrdinalIgnoreCase)
+       .ToDictionary(group=>group.Key,group=>group.First().video.Id,StringComparer.OrdinalIgnoreCase);
+      var linkedCount=0; var skipped=0;
+      foreach(var item in selected)
+      {
+       if(!idByPath.TryGetValue(Path.GetFullPath(item.FilePath!),out var videoId)){skipped++;continue;}
+       try{series.SetDirectEpisode(seriesId,videoId,item.EpisodeNumber,item.Title);linkedCount++;}
+       catch(Microsoft.Data.Sqlite.SqliteException){skipped++;}
+      }
+      return Results.Ok(new{linkedCount,skipped});
+     }
+     catch(Exception ex) when(ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+     {return Results.BadRequest(new{error="تعذر تسجيل الملفات المحددة وربطها: "+ex.Message});}
+    });
+_server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalogService series)=>{ if(!IsAdmin(c)) return Results.NotFound(); return Results.Ok(series.ListSeasons(seriesId)); });
    _server.MapPost("/api/admin/seasons",(HttpContext c,SaveSeasonRequest request,SeriesCatalogService series)=>{
     if(!IsAdmin(c)) return Results.NotFound();
     if(string.IsNullOrWhiteSpace(request.SeriesId)||request.SeasonNumber<1||request.SeasonNumber>500||(request.Title?.Length??0)>120||(request.FolderPath?.Length??0)>1000||(request.FolderPath is not null&&!Directory.Exists(request.FolderPath))) return Results.BadRequest(new{error="بيانات الموسم أو الجزء غير صحيحة أو مجلده غير موجود"});
@@ -1010,7 +1088,7 @@ public partial class App : Application
     var fileName="series-"+Guid.NewGuid().ToString("N")+ext;
     var fullPath=Path.Combine(posters,fileName);
     await File.WriteAllBytesAsync(fullPath,bytes);
-    try { series.SaveSeries(new SaveSeriesRequest(old.SeriesId,old.Title,old.Description,old.Year,old.Genre,"/posters/"+fileName,old.FolderPath,old.Section,old.IsPublished,old.CategoryId)); }
+    try { series.SaveSeries(new SaveSeriesRequest(old.SeriesId,old.Title,old.Description,old.Year,old.Genre,"/posters/"+fileName,old.FolderPath,old.Section,old.IsPublished,old.CategoryId,old.OrganizationType)); }
     catch { File.Delete(fullPath); throw; }
     return Results.Ok(new{posterPath="/posters/"+fileName});
    });
