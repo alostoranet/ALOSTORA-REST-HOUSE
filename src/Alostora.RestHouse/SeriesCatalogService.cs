@@ -53,6 +53,12 @@ public sealed class SeriesCatalogService
         EnsureColumn(c, "SeriesCatalog", "OrganizationType", "TEXT NOT NULL DEFAULT 'Seasons'");
         EnsureColumn(c, "SeriesSeasons", "FolderPath", "TEXT NULL");
         EnsureColumn(c, "SeriesEpisodes", "PosterPath", "TEXT NULL");
+        EnsureColumn(c, "SeriesDirectVideos", "EpisodeNumber", "INTEGER NULL");
+        using (var directIndex = c.CreateCommand())
+        {
+            directIndex.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS UX_SeriesDirectVideos_SeriesEpisode ON SeriesDirectVideos(SeriesId, EpisodeNumber) WHERE EpisodeNumber IS NOT NULL";
+            directIndex.ExecuteNonQuery();
+        }
     }
     private static void EnsureColumn(SqliteConnection c, string table, string column, string type)
     {
@@ -122,7 +128,7 @@ public sealed class SeriesCatalogService
             FROM SeriesEpisodes se JOIN SeriesSeasons ss ON ss.SeasonId=se.SeasonId
             WHERE se.VideoId=$video
             UNION ALL
-            SELECT SeriesId, NULL, NULL, Title FROM SeriesDirectVideos WHERE VideoId=$video
+            SELECT SeriesId, NULL, EpisodeNumber, Title FROM SeriesDirectVideos WHERE VideoId=$video
             LIMIT 1
             """;
         cmd.Parameters.AddWithValue("$video", videoId);
@@ -196,13 +202,62 @@ public sealed class SeriesCatalogService
             using var direct = c.CreateCommand();
             direct.Transaction = transaction;
             direct.CommandText = """
-                INSERT INTO SeriesDirectVideos(VideoId,SeriesId,Title) VALUES($video,$series,$title)
-                ON CONFLICT(VideoId) DO UPDATE SET SeriesId=excluded.SeriesId,Title=excluded.Title
+                INSERT INTO SeriesDirectVideos(VideoId,SeriesId,EpisodeNumber,Title) VALUES($video,$series,NULL,$title)
+                ON CONFLICT(VideoId) DO UPDATE SET SeriesId=excluded.SeriesId,EpisodeNumber=NULL,Title=excluded.Title
                 """;
             direct.Parameters.AddWithValue("$video", videoId);
             direct.Parameters.AddWithValue("$series", seriesId);
             direct.Parameters.AddWithValue("$title", title?.Trim() ?? "");
             direct.ExecuteNonQuery();
+        }
+        transaction.Commit();
+    }
+
+    public IReadOnlyList<int> ListDirectEpisodeNumbers(string seriesId)
+    {
+        using var c = Open();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "SELECT EpisodeNumber FROM SeriesDirectVideos WHERE SeriesId=$series AND EpisodeNumber IS NOT NULL";
+        cmd.Parameters.AddWithValue("$series", seriesId);
+        using var r = cmd.ExecuteReader();
+        var numbers = new List<int>();
+        while (r.Read()) numbers.Add(r.GetInt32(0));
+        return numbers;
+    }
+
+    public void SetDirectEpisode(string seriesId, string videoId, int episodeNumber, string? title)
+    {
+        if (episodeNumber < 1 || episodeNumber > 10000)
+            throw new ArgumentOutOfRangeException(nameof(episodeNumber), "رقم الحلقة يجب أن يكون بين 1 و10000.");
+        using var c = Open();
+        using var transaction = c.BeginTransaction();
+        using (var exists = c.CreateCommand())
+        {
+            exists.Transaction = transaction;
+            exists.CommandText = "SELECT COUNT(*) FROM SeriesCatalog WHERE SeriesId=$series";
+            exists.Parameters.AddWithValue("$series", seriesId);
+            if (Convert.ToInt32(exists.ExecuteScalar()) == 0) throw new KeyNotFoundException("المسلسل غير موجود.");
+        }
+        using (var removeEpisode = c.CreateCommand())
+        {
+            removeEpisode.Transaction = transaction;
+            removeEpisode.CommandText = "DELETE FROM SeriesEpisodes WHERE VideoId=$video";
+            removeEpisode.Parameters.AddWithValue("$video", videoId);
+            removeEpisode.ExecuteNonQuery();
+        }
+        using (var upsert = c.CreateCommand())
+        {
+            upsert.Transaction = transaction;
+            upsert.CommandText = """
+                INSERT INTO SeriesDirectVideos(VideoId,SeriesId,EpisodeNumber,Title)
+                VALUES($video,$series,$number,$title)
+                ON CONFLICT(VideoId) DO UPDATE SET SeriesId=excluded.SeriesId,EpisodeNumber=excluded.EpisodeNumber,Title=excluded.Title
+                """;
+            upsert.Parameters.AddWithValue("$video", videoId);
+            upsert.Parameters.AddWithValue("$series", seriesId);
+            upsert.Parameters.AddWithValue("$number", episodeNumber);
+            upsert.Parameters.AddWithValue("$title", title?.Trim() ?? "");
+            upsert.ExecuteNonQuery();
         }
         transaction.Commit();
     }
@@ -384,13 +439,19 @@ public sealed class SeriesCatalogService
         if (allowedSeriesIds is not null)
             seriesRows = seriesRows.Where(x => allowedSeriesIds.Contains(x.SeriesId)).ToArray();
 
-        var directVideoMap = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        var directVideoMap = new Dictionary<string, List<(string VideoId, int? EpisodeNumber, string Title)>>(StringComparer.OrdinalIgnoreCase);
         using (var c = Open())
         using (var cmd = c.CreateCommand())
         {
-            cmd.CommandText = "SELECT SeriesId, VideoId FROM SeriesDirectVideos ORDER BY Title COLLATE NOCASE";
+            cmd.CommandText = "SELECT SeriesId, VideoId, EpisodeNumber, Title FROM SeriesDirectVideos ORDER BY COALESCE(EpisodeNumber, 2147483647), Title COLLATE NOCASE";
             using var r = cmd.ExecuteReader();
-            while (r.Read()) { var videoId = r.GetString(1); if (allowedVideoIds is not null && !allowedVideoIds.Contains(videoId)) continue; if (!directVideoMap.TryGetValue(r.GetString(0), out var ids)) directVideoMap[r.GetString(0)] = ids = new List<string>(); ids.Add(videoId); }
+            while (r.Read())
+            {
+                var videoId = r.GetString(1);
+                if (allowedVideoIds is not null && !allowedVideoIds.Contains(videoId)) continue;
+                if (!directVideoMap.TryGetValue(r.GetString(0), out var rows)) directVideoMap[r.GetString(0)] = rows = new List<(string VideoId, int? EpisodeNumber, string Title)>();
+                rows.Add((videoId, r.IsDBNull(2) ? null : r.GetInt32(2), r.GetString(3)));
+            }
         }
 
         var seasonMap = new Dictionary<long, (SeasonRecord Season, List<EpisodeRecord> Episodes)>();
@@ -478,11 +539,12 @@ public sealed class SeriesCatalogService
                 seriesId = series.SeriesId,
                 title = series.Title,
                 organizationType = series.OrganizationType,
-                directVideos = directVideoMap.TryGetValue(series.SeriesId, out var directIds) ? directIds.Select(videoId =>
+                directVideos = directVideoMap.TryGetValue(series.SeriesId, out var directIds) ? directIds.Select(entry =>
                 {
+                    var videoId = entry.VideoId;
                     var hasFile = files.TryGetValue(videoId, out var file);
                     metadataById.TryGetValue(videoId, out var videoMetadata);
-                    return new { videoId, title = videoMetadata?.Title ?? file?.Title ?? "فيديو", url = hasFile ? file!.Url : null, isMissing = !hasFile, director = videoMetadata?.Director, cast = videoMetadata?.Cast, rating = videoMetadata?.Rating, runtimeMinutes = videoMetadata?.RuntimeMinutes, releaseDate = videoMetadata?.ReleaseDate };
+                    return new { videoId, episodeNumber = entry.EpisodeNumber, title = string.IsNullOrWhiteSpace(entry.Title) ? (videoMetadata?.Title ?? file?.Title ?? "فيديو") : entry.Title, url = hasFile ? file!.Url : null, isMissing = !hasFile, director = videoMetadata?.Director, cast = videoMetadata?.Cast, rating = videoMetadata?.Rating, runtimeMinutes = videoMetadata?.RuntimeMinutes, releaseDate = videoMetadata?.ReleaseDate };
                 }).ToArray() : Array.Empty<object>(),
                 description = series.Description,
                 year = series.Year,
