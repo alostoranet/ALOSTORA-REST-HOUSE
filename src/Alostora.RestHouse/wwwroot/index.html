@@ -18,8 +18,9 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 header.is-inner-page{padding:9px max(4%,calc((100% - 1280px)/2));min-height:0;box-shadow:0 5px 16px #0002}
 header.is-inner-page .brand-bar,header.is-inner-page .header-search{display:none!important}
 header.is-inner-page .customer-nav{margin:0;min-height:38px;justify-content:flex-start}
-header.is-inner-page .customer-nav>:not(#homeNav){display:none!important}
-header.is-inner-page #homeNav{display:inline-flex!important;min-height:36px;padding:6px 15px}
+header.is-inner-page .customer-nav>:not(#homeNav):not(#headerBackNav){display:none!important}
+header.is-inner-page #homeNav,header.is-inner-page #headerBackNav{display:inline-flex!important;min-height:36px;padding:6px 15px}
+header.is-inner-page #headerBackNav{background:linear-gradient(135deg,#203d55,#142c42);border-color:#49647a;color:#fff}
 
 .brand-bar{display:flex;align-items:center;gap:16px;min-height:66px}
 .brand-logo{width:78px;height:78px;object-fit:contain;border-radius:16px;background:#fff;padding:4px;box-shadow:0 5px 18px #0003;image-rendering:auto}
@@ -69,8 +70,8 @@ header.is-inner-page #homeNav{display:inline-flex!important;min-height:36px;padd
 /* Keep the announcement moving continuously, including while the pointer is over it. */
 @keyframes announcement-message-reveal{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
 @keyframes announcement-message-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-/* Reverse the track so the complete Arabic announcement enters from the opposite edge. */
-.announcement-banner .announcement-track{animation-direction:reverse}
+/* Two identical text copies make a seamless full-message loop. */
+.announcement-banner .announcement-track{animation-direction:normal}
 @media(max-width:600px){
  header.is-inner-page{padding:7px 12px}
  .announcement-banner{margin:8px 10px 0;min-height:39px;padding:4px 8px;gap:7px}
@@ -331,7 +332,7 @@ button.secondary:hover,.watched-card button:hover,.download-remove:hover,.custom
 #playerSection{border-color:#42617e;box-shadow:0 10px 26px #0003}
 @media(max-width:600px){.nav-button{padding:10px 13px;font-size:13px}}
 </style></head><body>
-<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="homeNav" class="nav-button compact-top-nav" type="button" hidden>⌂ الرئيسية</button><a id="liveBroadcastNav" class="nav-button compact-top-nav" href="#" target="_blank" rel="noopener noreferrer" hidden>▶ البث المباشر</a><button id="contactNav" class="nav-button compact-top-nav" type="button">✉ تواصل مع الإدارة</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
+<header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="homeNav" class="nav-button compact-top-nav" type="button" hidden>⌂ الرئيسية</button><button id="headerBackNav" class="nav-button compact-top-nav" type="button" hidden>رجوع</button><a id="liveBroadcastNav" class="nav-button compact-top-nav" href="#" target="_blank" rel="noopener noreferrer" hidden>▶ البث المباشر</a><button id="contactNav" class="nav-button compact-top-nav" type="button">✉ تواصل مع الإدارة</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
 <div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p><span class="announcement-track"><span id="announcementMessage"></span><span class="announcement-copy" aria-hidden="true"></span></span></p></div>
 <section id="customerAds" class="customer-ads" aria-label="إعلانات الاستراحة" hidden>
  <div id="customerAdStage" class="customer-ad-stage"></div>
@@ -502,7 +503,7 @@ async function loadAnnouncement(){
   message.textContent=item.message;
   copy.textContent=item.message;
   track.style.animationDuration=Math.max(5,Math.min(60,Number(item.speedSeconds)||18))+'s';
-  track.style.animationDirection='reverse';
+  track.style.animationDirection='normal';
   track.style.animationTimingFunction='linear';
   if(changed){
    banner.dataset.contentKey=contentKey;
@@ -519,15 +520,8 @@ function syncAnnouncementVisibility(isHome){
  if(!banner)return;
  if(innerAnnouncementTimer){clearTimeout(innerAnnouncementTimer);innerAnnouncementTimer=null;}
  const active=customerSettings.showAnnouncement!==false&&banner.dataset.active==='true';
- if(!active){banner.hidden=true;return;}
- if(isHome){banner.hidden=false;return;}
- banner.hidden=true;
- // On subpages show only the text ticker after a short pause; image ads remain home-only.
- innerAnnouncementTimer=setTimeout(()=>{
-  innerAnnouncementTimer=null;
-  const stillInner=catalogPage?.type!=='home'||document.querySelector('#contactView')?.hidden===false;
-  if(stillInner&&customerSettings.showAnnouncement!==false&&banner.dataset.active==='true')banner.hidden=false;
- },5000);
+ // The announcement ticker belongs to the home landing page only; never reveal it later on subpages.
+ banner.hidden=!(active&&isHome);
 }
 function createViewerId(){try{if(window.crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();if(window.crypto&&crypto.getRandomValues){const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}}catch{}return 'viewer-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);}
 let viewerId='';try{viewerId=localStorage.getItem('alostora-viewer')||'';if(!viewerId){viewerId=createViewerId();localStorage.setItem('alostora-viewer',viewerId);}}catch{viewerId=createViewerId();}
@@ -760,8 +754,10 @@ function renderCatalogPage(){
  if(categoryFilter)categoryFilter.value=(pageType==='main'||pageType==='category')?String(catalogPage.categoryId||''):'';
  const customerNav=document.querySelector('.customer-nav');if(customerNav)customerNav.hidden=false;
  const homeNav=document.querySelector('#homeNav');
+ const headerBack=document.querySelector('#headerBackNav');
  const isHomeLanding=pageType==='home'&&document.querySelector('#contactView').hidden;
  if(homeNav)homeNav.hidden=isHomeLanding;
+ if(headerBack)headerBack.hidden=isHomeLanding;
  const appHeader=document.querySelector('header');
  if(appHeader)appHeader.classList.toggle('is-inner-page',!isHomeLanding);
  syncAnnouncementVisibility(isHomeLanding);
@@ -769,6 +765,7 @@ function renderCatalogPage(){
  const quickNav=document.querySelector('#mediaQuickNav');if(quickNav&&pageType!=='home')quickNav.hidden=true;
  const arrivals=document.querySelector('#newArrivals');if(arrivals&&pageType!=='home')arrivals.hidden=true;
  pageHead.hidden=pageType==='home';
+ const breadcrumb=document.querySelector('#catalogBreadcrumb');if(breadcrumb)breadcrumb.hidden=pageType!=='home';
 
  toolbar.hidden=pageType!=='category';
  continueSection.hidden=pageType!=='continue'||customerSettings.showContinueWatching===false;
@@ -1174,6 +1171,10 @@ async function loadBrandProfile(){
  }catch{}
 }
 document.querySelector('#catalogBack').addEventListener('click',goCatalogBack);
+document.querySelector('#headerBackNav').addEventListener('click',()=>{
+ if(!document.querySelector('#contactView').hidden){showCustomerView('home');return;}
+ if(catalogStack.length)goCatalogBack();else goCatalogHome();
+});
 function showCustomerView(view){
  const home=view==='home',homeView=document.querySelector('#homeView'),contactView=document.querySelector('#contactView');
  homeView.hidden=!home;contactView.hidden=home;
