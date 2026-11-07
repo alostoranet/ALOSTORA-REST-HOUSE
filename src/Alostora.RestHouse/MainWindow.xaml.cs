@@ -32,6 +32,19 @@ public partial class MainWindow : Window
         }
     }
 
+    private void CopyWhatsAppNumber_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Clipboard.SetText("777824918");
+            MessageBox.Show("تم نسخ رقم التواصل: 777824918", "نسخ رقم التواصل", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("تعذر نسخ رقم التواصل: " + ex.Message, "نسخ رقم التواصل", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
     private sealed record MultiMediaScanResult(bool Scanned, string Kind, int Count, MultiMediaAdminItem[] Items);
 
     private sealed record MultiMediaAdminItem(string Id, string Kind, string Title, string FileName, string RelativePath, long SizeBytes, string ModifiedUtc, string Url)

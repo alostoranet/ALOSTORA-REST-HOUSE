@@ -15,7 +15,7 @@ button{cursor:pointer}
 [hidden]{display:none!important}
 header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;background:linear-gradient(118deg,#10263b 0%,#17344d 58%,#12283d 100%);border-bottom:1px solid #3b5268;box-shadow:0 12px 30px #0003}
 .brand-bar{display:flex;align-items:center;gap:16px;min-height:66px}
-.brand-logo{width:66px;height:66px;object-fit:contain;border-radius:16px;background:#fff;padding:4px;box-shadow:0 5px 18px #0003}
+.brand-logo{width:78px;height:78px;object-fit:contain;border-radius:16px;background:#fff;padding:4px;box-shadow:0 5px 18px #0003;image-rendering:auto}
 .brand-bar h1{margin:0;color:#fff;font-size:clamp(22px,2.3vw,29px);font-weight:800;letter-spacing:.1px;line-height:1.35}
 .brand-bar p{margin:5px 0 0;color:#c4d2df;font-size:13px;line-height:1.6}
 .customer-nav{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:12px}
@@ -192,7 +192,7 @@ main{width:min(100%,1280px);margin:0 auto;padding:22px 24px 32px}
 .contact-form button:disabled{opacity:.6;cursor:wait}
 #contactFeedback{min-height:20px;margin:8px 0 0;font-weight:700}
 .footer-contact-wrap{display:flex;justify-content:center;align-items:center;margin:18px auto 5px;padding:12px 8px 0;border-top:1px solid #263e54}.developer-credit{max-width:1100px;margin:4px auto 8px;padding:9px 6px;border-top:1px solid #263e54;color:#e4d1a8;text-align:center;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:5px 8px;flex-wrap:wrap}.developer-credit strong{color:#e4d1a8;font-size:14px;font-weight:800}.credit-pair{display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap}.developer-label{display:inline-flex;align-items:center;gap:4px;color:#e4d1a8;font-size:14px;font-weight:800}.developer-icon{display:inline-grid;place-items:center;width:17px;height:17px;border:1px solid #536b7e;border-radius:50%;color:#d9bd83;font-size:10px}
-.footer-contact-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;min-width:min(300px,90vw);padding:9px 20px;border:1px solid #d5b879;border-radius:7px;background:linear-gradient(110deg,#17364b,#244b60);color:#f0dfba;font-size:14px;font-weight:850;white-space:nowrap;flex:0 0 auto;cursor:pointer;box-shadow:0 5px 15px #0004}.footer-contact-button span{font-size:17px;color:#e5c98e}.developer-credit a{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid #315b50;border-radius:16px;background:#102d2a;color:#a9e3c7;text-decoration:none;font-size:10px;font-weight:800;direction:ltr;white-space:nowrap;flex:0 0 auto;transition:background .2s,border-color .2s}.developer-credit a:hover{background:#174238;border-color:#4b9678}.whatsapp-mark{font-size:12px;color:#7bd6a6}
+.footer-contact-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;min-width:min(300px,90vw);padding:9px 20px;border:1px solid #d5b879;border-radius:7px;background:linear-gradient(110deg,#17364b,#244b60);color:#f0dfba;font-size:14px;font-weight:850;white-space:nowrap;flex:0 0 auto;cursor:pointer;box-shadow:0 5px 15px #0004}.footer-contact-button span{font-size:17px;color:#e5c98e}.developer-credit a{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid #315b50;border-radius:16px;background:#102d2a;color:#a9e3c7;text-decoration:none;font-size:10px;font-weight:800;direction:ltr;white-space:nowrap;flex:0 0 auto;transition:background .2s,border-color .2s}.developer-credit a:hover{background:#174238;border-color:#4b9678}.developer-credit .copy-phone{display:inline-flex;align-items:center;justify-content:center;min-height:27px;padding:3px 12px;border:1px solid #d6ad58;border-radius:16px;background:#d6ad58;color:#142d4a;font-size:12px;font-weight:900;white-space:nowrap;cursor:pointer;flex:0 0 auto;transition:background .2s,border-color .2s}.developer-credit .copy-phone:hover{background:#f0cf7e;border-color:#f0cf7e}.whatsapp-mark{font-size:12px;color:#7bd6a6}
 .app-toast{position:fixed;z-index:9999;right:18px;bottom:18px;max-width:min(92vw,420px);padding:13px 17px;border-radius:11px;background:#176b3a;color:#fff;box-shadow:0 12px 34px #0006;font-weight:700;line-height:1.7;opacity:0;transform:translateY(14px);pointer-events:none;transition:opacity .2s,transform .2s}
 .app-toast.visible{opacity:1;transform:translateY(0)}
 .app-toast[data-kind="error"]{background:#9f2630}
@@ -202,7 +202,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
 @media(max-width:760px){
  header{padding:16px 15px 12px}
  .brand-bar{min-height:54px;gap:12px}
- .brand-logo{width:54px;height:54px;border-radius:13px}
+ .brand-logo{width:64px;height:64px;border-radius:13px}
  .brand-bar h1{font-size:22px}
  .brand-bar p{font-size:12px}
  .customer-nav{gap:7px;margin-top:12px}
@@ -373,7 +373,7 @@ button.secondary:hover,.watched-card button:hover,.download-remove:hover,.custom
 <p id="contactFeedback" role="status" aria-live="polite"></p>
 </section><div id="appToast" class="app-toast" role="status" aria-live="polite"></div></main>
 <div class="footer-contact-wrap"><button id="contactCta" class="footer-contact-button" type="button"><span aria-hidden="true">✉</span> تواصل مع الإدارة للطلب والاستفسار</button></div>
-<footer class="developer-credit"><span class="credit-pair"><span class="developer-label"><span class="developer-icon" aria-hidden="true">✦</span> تصميم وبرمجة الاستراحة :</span></span><strong>م/ أبو عبيدة محمد النظاري</strong><a href="https://wa.me/967777824918" target="_blank" rel="noopener noreferrer" aria-label="تواصل عبر واتساب على الرقم 777824918"><span class="whatsapp-mark" aria-hidden="true">◉</span><bdi dir="ltr">777824918</bdi></a></footer>
+<footer class="developer-credit"><span class="credit-pair"><span class="developer-label"><span class="developer-icon" aria-hidden="true">✦</span> تصميم وبرمجة الاستراحة :</span></span><strong>م/ أبو عبيدة محمد النظاري</strong><a href="https://wa.me/967777824918" target="_blank" rel="noopener noreferrer" aria-label="تواصل عبر واتساب على الرقم 777824918"><span class="whatsapp-mark" aria-hidden="true">◉</span><bdi dir="ltr">777824918</bdi></a><button id="copyFooterPhone" class="copy-phone" type="button" aria-label="نسخ رقم التواصل">نسخ</button></footer>
 <script>
 const defaultCustomerSettings={showCatalog:true,showContinueWatching:true,showAudio:true,showBooks:true,showApps:true,showContact:true,showWelcome:true,showAnnouncement:true,showDownloads:true,showImageAds:true};
 let customerSettings={...defaultCustomerSettings};
@@ -1116,8 +1116,12 @@ async function loadBrandProfile(){
   document.querySelector('#brandNetwork').textContent=network+' — مكتبة المشاهدة';
   document.title=restHouse+' | مكتبة المشاهدة';
   const logo=document.querySelector('#brandLogo');
-  if(profile.logoPath){logo.src=profile.logoPath;logo.hidden=false;document.documentElement.style.setProperty('--brand-watermark','url('+JSON.stringify(profile.logoPath)+')');logo.onerror=()=>{logo.hidden=true;document.documentElement.style.removeProperty('--brand-watermark');};}
-  else{logo.hidden=true;logo.removeAttribute('src');document.documentElement.style.removeProperty('--brand-watermark');}
+  const logoPath=profile.logoPath||'/assets/alostora.ico';
+  logo.src=logoPath;
+  logo.hidden=false;
+  if(profile.logoPath)document.documentElement.style.setProperty('--brand-watermark','url('+JSON.stringify(profile.logoPath)+')');
+  else document.documentElement.style.removeProperty('--brand-watermark');
+  logo.onerror=()=>{if(logo.src!==new URL('/assets/alostora.ico',location.href).href){logo.src='/assets/alostora.ico';}else{logo.hidden=true;document.documentElement.style.removeProperty('--brand-watermark');}};
  }catch{}
 }
 document.querySelector('#catalogBack').addEventListener('click',goCatalogBack);
@@ -1149,6 +1153,22 @@ function goCatalogHome(){
 function openCustomerContact(){goCatalogHome();document.querySelector('#sharedAudioPlayer')?.pause();showCustomerView('contact');}
 document.querySelector('#contactNav').addEventListener('click',openCustomerContact);
 document.querySelector('#contactCta').addEventListener('click',openCustomerContact);
+async function copyFooterPhoneNumber(){
+ const phone='777824918';
+ try{
+  if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(phone);
+  else throw new Error('clipboard unavailable');
+ }catch{
+  const field=document.createElement('textarea');
+  field.value=phone;field.setAttribute('readonly','');
+  field.style.position='fixed';field.style.opacity='0';field.style.left='-9999px';
+  document.body.append(field);field.select();
+  const copied=document.execCommand('copy');field.remove();
+  if(!copied)throw new Error('copy failed');
+ }
+ showAppToast('تم نسخ رقم التواصل: '+phone);
+}
+document.querySelector('#copyFooterPhone')?.addEventListener('click',()=>copyFooterPhoneNumber().catch(()=>showAppToast('تعذر نسخ الرقم. يمكنك تحديده ونسخه يدوياً.','error')));
 
 document.querySelector('#homeNav').addEventListener('click',()=>{showCustomerView('home');goCatalogHome();});
 document.querySelector('#continueNav').addEventListener('click',()=>{activeMediaKind='all';document.querySelectorAll('.media-tab').forEach(x=>x.classList.remove('active'));document.querySelector('#mediaLibrary').hidden=true;showCustomerView('home');document.querySelector('#catalogView').hidden=false;navigateCatalog({type:'continue',title:'متابعة المشاهدة'});});

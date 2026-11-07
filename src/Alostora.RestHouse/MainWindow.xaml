@@ -66,7 +66,7 @@
  </Style>
 </Window.Resources>
 <Grid Margin="20"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-<Border Background="#142D4A" CornerRadius="12" Padding="18"><DockPanel LastChildFill="True"><Button DockPanel.Dock="Left" Content="التحديثات" Click="Updates_Click" Padding="14,9" Margin="0,0,10,0" Background="#D6AD58" Foreground="#142D4A" FontWeight="Bold" BorderThickness="0" VerticalAlignment="Center"/><Button DockPanel.Dock="Left" Content="السماح بالوصول من الشبكة" Click="EnableFirewall_Click" Padding="14,9" Margin="0,0,10,0" Background="#DCEBFA" Foreground="#142D4A" FontWeight="Bold" BorderThickness="0" VerticalAlignment="Center"/><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><Image Source="Assets/alostora.ico" Width="48" Height="48" Stretch="Uniform" Margin="0,0,12,0" VerticalAlignment="Center"/><StackPanel VerticalAlignment="Center"><TextBlock Text="ALOSTORA REST HOUSE" Foreground="White" FontSize="25" FontWeight="Bold"/><TextBlock Text="استراحة الأسطورة نت | إدارة خدمات الاستراحة" Foreground="#D7E5F3" FontSize="15" Margin="0,6,0,0"/></StackPanel></StackPanel></DockPanel></Border>
+<Border Background="#142D4A" CornerRadius="12" Padding="18"><DockPanel LastChildFill="True"><Button DockPanel.Dock="Left" Content="التحديثات" Click="Updates_Click" Padding="14,9" Margin="0,0,10,0" Background="#D6AD58" Foreground="#142D4A" FontWeight="Bold" BorderThickness="0" VerticalAlignment="Center"/><Button DockPanel.Dock="Left" Content="السماح بالوصول من الشبكة" Click="EnableFirewall_Click" Padding="14,9" Margin="0,0,10,0" Background="#DCEBFA" Foreground="#142D4A" FontWeight="Bold" BorderThickness="0" VerticalAlignment="Center"/><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><Image Source="Assets/alostora.ico" Width="72" Height="72" Stretch="Uniform" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality" Margin="0,0,14,0" VerticalAlignment="Center"/><StackPanel VerticalAlignment="Center"><TextBlock Text="ALOSTORA REST HOUSE" Foreground="White" FontSize="25" FontWeight="Bold"/><TextBlock Text="استراحة الأسطورة نت | إدارة خدمات الاستراحة" Foreground="#D7E5F3" FontSize="15" Margin="0,6,0,0"/></StackPanel></StackPanel></DockPanel></Border>
 
 <TabControl x:Name="MainNavigationTabs" Grid.Row="1" Margin="0,14" Background="#F3F6FA" TabStripPlacement="Left" BorderThickness="0">
 <TabControl.ItemContainerStyle>
@@ -483,15 +483,18 @@
  </Border>
  <TextBlock x:Name="LibraryBox" Visibility="Collapsed"/>
  <TextBlock x:Name="CountText" Visibility="Collapsed"/>
- <Border Background="#F3F6FA" BorderBrush="#142D4A" BorderThickness="1.5" CornerRadius="9" Padding="12,7" Margin="0,0,0,2">
+ <Border Background="#F3F6FA" BorderBrush="#142D4A" BorderThickness="1.5" CornerRadius="9" Padding="12,8" Margin="0,0,0,2">
   <DockPanel LastChildFill="True">
-   <Button DockPanel.Dock="Left" Click="OpenWhatsApp_Click" Padding="8,2" Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="فتح محادثة واتساب">
-    <StackPanel Orientation="Horizontal" FlowDirection="LeftToRight">
-     <Border Background="#25D366" BorderThickness="0" Width="21" Height="21" CornerRadius="11" Margin="0,0,6,0"><TextBlock Text="◉" Foreground="White" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-     <TextBlock Text="777824918" Foreground="#142D4A" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
-    </StackPanel>
-   </Button>
-   <TextBlock Text="تصميم وبرمجة الاستراحة: م/ أبو عبيدة محمد النظاري" Foreground="#142D4A" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"/>
+   <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" FlowDirection="LeftToRight" VerticalAlignment="Center">
+    <Button Click="OpenWhatsApp_Click" Padding="8,4" Background="#E8F7EF" Foreground="#12643A" BorderBrush="#A8D9BD" Cursor="Hand" ToolTip="فتح محادثة واتساب">
+     <StackPanel Orientation="Horizontal" FlowDirection="LeftToRight">
+      <Border Background="#25D366" BorderThickness="0" Width="22" Height="22" CornerRadius="11" Margin="0,0,7,0"><TextBlock Text="◉" Foreground="White" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+      <TextBlock Text="777824918" Foreground="#12643A" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+     </StackPanel>
+    </Button>
+    <Button Content="نسخ" Click="CopyWhatsAppNumber_Click" Padding="12,5" Margin="7,0,0,0" Background="#142D4A" Foreground="White" BorderBrush="#142D4A" ToolTip="نسخ رقم التواصل"/>
+   </StackPanel>
+   <TextBlock Text="تصميم وبرمجة الاستراحة: م/ أبو عبيدة محمد النظاري" Foreground="#142D4A" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
   </DockPanel>
  </Border>
 </StackPanel>
