@@ -535,8 +535,12 @@ function renderCustomerAd(index=customerAdIndex){
 async function loadCustomerAds(){
  try{
   const response=await fetch('/api/customer-ads',{cache:'no-store'});if(!response.ok)return;
-  const rows=await response.json();customerAdItems=Array.isArray(rows)?rows:[];
-  renderCustomerAd(Math.min(customerAdIndex,Math.max(0,customerAdItems.length-1)));
+  const rows=await response.json();
+  const nextItems=Array.isArray(rows)?rows:[];
+  if(JSON.stringify(nextItems)!==JSON.stringify(customerAdItems)){
+   customerAdItems=nextItems;
+   renderCustomerAd(Math.min(customerAdIndex,Math.max(0,customerAdItems.length-1)));
+  }
  }catch{customerAdItems=[];renderCustomerAd(0);}
 }
 async function loadAnnouncement(){
