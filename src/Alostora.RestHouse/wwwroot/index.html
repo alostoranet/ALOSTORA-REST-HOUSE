@@ -335,6 +335,53 @@ button.secondary:hover,.watched-card button:hover,.download-remove:hover,.custom
 .catalog-section-title{color:#f0d58b}
 #playerSection{border-color:#42617e;box-shadow:0 10px 26px #0003}
 @media(max-width:600px){.nav-button{padding:10px 13px;font-size:13px}}
+
+/* Customer catalog: cards flow vertically in a responsive grid.
+   Only announcement/ad creatives retain horizontal motion. */
+.catalog-grid,.catalog-rail,.new-arrivals-grid{
+ display:grid!important;
+ grid-template-columns:repeat(auto-fill,minmax(154px,1fr));
+ grid-auto-flow:row;
+ align-items:stretch;
+ gap:15px;
+ overflow:visible!important;
+ overflow-x:visible!important;
+ overflow-y:visible!important;
+ padding:4px 2px 14px;
+ scroll-snap-type:none;
+}
+.catalog-grid>.catalog-card,.catalog-rail>.catalog-card,.new-arrivals-grid>.catalog-card{
+ width:auto!important;
+ min-width:0;
+ max-width:none;
+ flex:initial!important;
+ scroll-snap-align:none;
+}
+.catalog-grid>.catalog-empty,.catalog-rail>.catalog-empty,.new-arrivals-grid>.catalog-empty{
+ grid-column:1/-1;
+ width:100%;
+}
+.catalog-grid::-webkit-scrollbar,.catalog-rail::-webkit-scrollbar,.new-arrivals-grid::-webkit-scrollbar{display:none}
+@media(max-width:760px){
+ .catalog-grid,.catalog-rail,.new-arrivals-grid{
+  grid-template-columns:repeat(auto-fill,minmax(126px,1fr));
+  gap:11px;
+  padding:3px 1px 12px;
+ }
+ .catalog-grid>.catalog-card,.catalog-rail>.catalog-card,.new-arrivals-grid>.catalog-card{
+  width:auto!important;
+  flex:initial!important;
+ }
+}
+@media(max-width:380px){
+ .catalog-grid,.catalog-rail,.new-arrivals-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+ }
+}
+/* Advertising remains the only horizontal showcase on the customer page. */
+.customer-ad-stage{overflow:hidden}
+
 </style></head><body>
 <header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="homeNav" class="nav-button compact-top-nav" type="button" hidden>⌂ الرئيسية</button><button id="headerBackNav" class="nav-button compact-top-nav" type="button" hidden>رجوع</button><a id="liveBroadcastNav" class="nav-button compact-top-nav" href="#" target="_blank" rel="noopener noreferrer" hidden>▶ البث المباشر</a><button id="contactNav" class="nav-button compact-top-nav" type="button">✉ تواصل مع الإدارة</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
 <div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p><span class="announcement-track"><span id="announcementMessage"></span><span class="announcement-copy" aria-hidden="true"></span></span></p></div>
