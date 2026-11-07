@@ -51,16 +51,18 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 .search-box input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#fff;font:inherit;font-size:13px;padding:7px 0;box-shadow:none}
 .search-box input::placeholder{color:#91a5b8}
 .header-search[hidden]{display:none!important}
-.announcement-banner{position:relative;display:flex;align-items:center;gap:10px;max-width:1280px;min-height:43px;margin:13px auto 0;padding:5px 12px;overflow:hidden;border:1px solid #ef555b;border-right:4px solid #fff;border-radius:5px;background:linear-gradient(100deg,#9f1420,#d3232d 52%,#a91420);box-shadow:0 5px 16px #0003;color:#fff}
+.announcement-banner{position:relative;display:flex;direction:rtl;align-items:center;gap:10px;max-width:1280px;min-height:43px;margin:13px auto 0;padding:5px 12px;overflow:hidden;border:1px solid #ef555b;border-right:4px solid #fff;border-radius:5px;background:linear-gradient(100deg,#9f1420,#d3232d 52%,#a91420);box-shadow:0 5px 16px #0003;color:#fff}
 .announcement-banner[hidden]{display:none!important}
 .announcement-banner strong{z-index:1;flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;padding:3px 9px;border-radius:3px;background:#fff;color:#b51622;font-size:12px;font-weight:900;white-space:nowrap;letter-spacing:.15px}
 .announcement-banner strong:before{content:"";width:7px;height:7px;border-radius:50%;background:#d3232d;box-shadow:0 0 0 3px #d3232d20,0 0 8px #d3232d80}
-.announcement-banner p{display:flex;align-items:center;justify-content:center;flex:1 1 auto;min-width:0;max-width:100%;height:auto;min-height:32px;margin:0;overflow:hidden;white-space:nowrap;direction:rtl;padding:2px 0;box-sizing:border-box}
-.announcement-banner #announcementMessage{display:inline-block;width:max-content;max-width:none;white-space:nowrap;color:#fff;font-size:14px;font-weight:800;line-height:1.55;padding:4px 0;vertical-align:middle;text-align:center;text-shadow:0 1px 3px #650a10;will-change:transform;animation:announcement-message-marquee 18s linear .3s infinite}
+.announcement-banner p{display:flex;align-items:center;justify-content:flex-start;flex:1 1 auto;min-width:0;max-width:100%;height:auto;min-height:32px;margin:0;overflow:hidden;white-space:nowrap;direction:rtl;padding:2px 0;box-sizing:border-box}
+.announcement-banner .announcement-track{display:flex;flex:0 0 auto;align-items:center;width:max-content;white-space:nowrap;will-change:transform;animation:announcement-message-marquee 18s linear infinite}
+.announcement-banner #announcementMessage,.announcement-banner .announcement-copy{display:inline-block;flex:0 0 auto;width:max-content;max-width:none;white-space:nowrap;color:#fff;font-size:14px;font-weight:800;line-height:1.55;padding:4px 0;vertical-align:middle;text-align:right;text-shadow:0 1px 3px #650a10}
+.announcement-banner .announcement-copy{padding-inline-start:64px}
 /* Keep the urgent announcement moving continuously, including while the pointer is over it. */
 @keyframes announcement-message-reveal{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
-@keyframes announcement-message-marquee{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.announcement-banner #announcementMessage{animation:none;white-space:normal;transform:none;text-align:center}.announcement-banner p{white-space:normal}.announcement-banner.is-entering #announcementMessage{animation:none!important}}
+@keyframes announcement-message-marquee{from{transform:translateX(50%)}to{transform:translateX(0)}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.announcement-banner .announcement-track{animation:none;white-space:normal;transform:none}.announcement-banner .announcement-copy{display:none}.announcement-banner #announcementMessage{white-space:normal;text-align:center}.announcement-banner p{white-space:normal}.announcement-banner.is-entering #announcementMessage{animation:none!important}}
 .customer-ads{max-width:1280px;margin:13px auto 0;padding:0 14px}
 .customer-ads[hidden]{display:none!important}
 .customer-ad-stage{position:relative;aspect-ratio:16/5;min-height:110px;max-height:250px;overflow:hidden;border:1px solid #344e65;border-radius:15px;background:#142b40;box-shadow:0 9px 24px #0003}
@@ -313,7 +315,7 @@ button.secondary:hover,.watched-card button:hover,.download-remove:hover,.custom
 @media(max-width:600px){.nav-button{padding:10px 13px;font-size:13px}}
 </style></head><body>
 <header><div class="brand-bar"><img id="brandLogo" class="brand-logo" alt="شعار الاستراحة" hidden><div><h1 id="brandRestHouse">استراحة الأسطورة</h1><p id="brandNetwork">شبكة الأسطورة نت — مكتبة المشاهدة</p></div></div><nav class="customer-nav" aria-label="التنقل الرئيسي"><button id="homeNav" class="nav-button compact-top-nav" type="button" hidden>⌂ الرئيسية</button><a id="liveBroadcastNav" class="nav-button compact-top-nav" href="#" target="_blank" rel="noopener noreferrer" hidden>▶ البث المباشر</a><button id="contactNav" class="nav-button compact-top-nav" type="button">✉ تواصل مع الإدارة</button><button id="continueNav" class="nav-button continue-nav" type="button" aria-label="فتح سجل مشاهداتك ومتابعة الفيديوهات"><span aria-hidden="true">▶</span> مشاهداتي</button></nav><div class="header-search"><label class="search-box" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="البحث في المكتبة" placeholder="ابحث عن فيلم أو مسلسل..."></label></div></header>
-<div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p><span id="announcementMessage"></span></p></div>
+<div id="announcementBanner" class="announcement-banner" role="status" aria-live="polite" hidden><strong id="announcementTitle"></strong><p><span class="announcement-track"><span id="announcementMessage"></span><span class="announcement-copy" aria-hidden="true"></span></span></p></div>
 <section id="customerAds" class="customer-ads" aria-label="إعلانات الاستراحة" hidden>
  <div id="customerAdStage" class="customer-ad-stage"></div>
  <div class="customer-ad-controls"><button id="customerAdPrev" type="button" aria-label="الإعلان السابق">السابق</button><div id="customerAdDots" class="customer-ad-dots"></div><button id="customerAdNext" type="button" aria-label="الإعلان التالي">التالي</button></div>
@@ -464,11 +466,14 @@ async function loadAnnouncement(){
   if(!item.isActive||!item.message){banner.dataset.active='false';banner.hidden=true;return;}
   const title=item.title|| (item.kind==='ad'?'إعلان':'تنبيه من الإدارة');
   const message=document.querySelector('#announcementMessage');
+  const track=document.querySelector('.announcement-track');
+  const copy=document.querySelector('.announcement-copy');
   const contentKey=title+'\\n'+item.message;
   const changed=banner.dataset.contentKey!==contentKey;
   document.querySelector('#announcementTitle').textContent=title;
   message.textContent=item.message;
-  message.style.animationDuration=Math.max(5,Math.min(60,Number(item.speedSeconds)||18))+'s';
+  copy.textContent=item.message;
+  track.style.animationDuration=Math.max(5,Math.min(60,Number(item.speedSeconds)||18))+'s';
   if(changed){
    banner.dataset.contentKey=contentKey;
    banner.classList.remove('is-entering');
