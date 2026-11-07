@@ -92,6 +92,7 @@ public partial class MainWindow : Window
     private ICollectionView? _videosView;
     private string? _selectedVideoFolderPath;
     private readonly ObservableCollection<EpisodeCandidate> _episodeCandidates = new();
+    private readonly ObservableCollection<EpisodeCandidate> _seriesEpisodeCandidates = new();
     private CategoryAdmin[] _categories = Array.Empty<CategoryAdmin>();
     private bool _suppressCustomerMessagePopup;
     private readonly HashSet<long> _knownCustomerMessageIds = new();
@@ -179,6 +180,7 @@ public partial class MainWindow : Window
         DashboardPopularGrid.ItemsSource = _popularPlaybackRows;
         DashboardRecentGrid.ItemsSource = _recentPlaybackRows;
         EpisodeCandidatesGrid.ItemsSource = _episodeCandidates;
+        SeriesEpisodeCandidatesGrid.ItemsSource = _seriesEpisodeCandidates;
         Loaded += async (_, _) => await InitializeManagementWindowSafelyAsync();
         _messageRefreshTimer.Tick += async (_, _) => await RefreshCustomerMessagesSafelyAsync();
         _messageRefreshTimer.Start();
@@ -1723,16 +1725,25 @@ public partial class MainWindow : Window
     private void UpdateSeriesStructureLabels()
     {
         if (SeriesStructureBox is null || SeasonSectionTitle is null) return;
-
-        // Series are managed as one flat list of episodes. A hidden technical
-        // episode group is retained for compatibility with the existing API,
-        // but no season/part concept is exposed to the administrator.
-        SeasonManagementPanel.Visibility = Visibility.Visible;
-        SeasonSectionTitle.Visibility = Visibility.Collapsed;
-        EpisodesSectionTitle.Text = "حلقات المسلسل المحدد";
-        PreviewSeasonFolderButton.Content = "اكتشاف حلقات المسلسل";
-        AddEpisodeSectionTitle.Text = "إضافة حلقة إلى المسلسل المحدد";
-        VideoPlacementStatusText.Text = "اختر المسلسل ثم مجلده، واكتشف الحلقات وحدد ما تريد إضافته مع أرقامها وصورها.";
+        var type = (SeriesStructureBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Seasons";
+        var isParts = type == "Parts";
+        var isNone = type == "None";
+        SeasonManagementPanel.Visibility = isNone ? Visibility.Collapsed : Visibility.Visible;
+        SeasonSectionTitle.Text = isParts ? "الأجزاء" : "المواسم";
+        AddSeasonButton.Content = isParts ? "إضافة الجزء" : "إضافة الموسم";
+        if (SeasonNumberBox is not null) SeasonNumberBox.ToolTip = isParts ? "رقم الجزء" : "رقم الموسم";
+        if (SeasonTitleBox is not null) SeasonTitleBox.ToolTip = isParts ? "اسم الجزء (اختياري)" : "اسم الموسم (اختياري)";
+        if (SeasonsGrid.Columns.Count >= 2) { SeasonsGrid.Columns[0].Header = isParts ? "رقم الجزء" : "رقم الموسم"; SeasonsGrid.Columns[1].Header = isParts ? "اسم الجزء" : "اسم الموسم"; }
+        if (MissingEpisodesGrid.Columns.Count >= 2) MissingEpisodesGrid.Columns[1].Header = isParts ? "الجزء" : "الموسم";
+        SeasonFolderButton.Content = isParts ? "مجلد الجزء" : "مجلد الموسم";
+        SaveSeasonFolderButton.Content = isParts ? "حفظ مسار الجزء وفحص ملفاته" : "حفظ مسار الموسم المحدد وفحص ملفاته";
+        DeleteSeasonButton.Content = isParts ? "حذف الجزء المحدد" : "حذف الموسم المحدد";
+        EpisodesSectionTitle.Text = isParts ? "حلقات الجزء المحدد" : "حلقات الموسم المحدد";
+        PreviewSeasonFolderButton.Content = isParts ? "اكتشاف حلقات الجزء" : "اكتشاف حلقات الموسم";
+        AddEpisodeSectionTitle.Text = isParts ? "إضافة حلقة إلى الجزء المحدد" : "إضافة حلقة إلى الموسم المحدد";
+        VideoPlacementStatusText.Text = isNone
+            ? "هذا البرنامج لا يستخدم مواسم أو أجزاء؛ اربط الفيديوهات به مباشرة من بيانات الفيديو."
+            : isParts ? "يمكنك إضافة أجزاء متعددة، ثم ربط كل فيديو بالجزء ورقم الحلقة المناسب." : "يمكنك إضافة مواسم متعددة، ثم ربط كل فيديو بالموسم ورقم الحلقة المناسب.";
     }
 
     private void NewSeries_Click(object sender, RoutedEventArgs e)
@@ -1755,6 +1766,9 @@ public partial class MainWindow : Window
         SeriesPosterPathBox.Clear();
         UpdateSeriesPosterPreview(null);
         SeriesFolderPathBox.Clear();
+        _seriesEpisodeCandidates.Clear();
+        SeriesEpisodeCandidatesGrid.Items.Refresh();
+        SeriesEpisodeSelectionSummaryText.Text = "احفظ المسلسل واختر مجلده ثم اضغط اكتشاف الحلقات.";
         SeasonsGrid.ItemsSource = null;
         EpisodesGrid.ItemsSource = null;
         SeasonTitleBox.Clear();
@@ -1835,14 +1849,149 @@ public partial class MainWindow : Window
 
             // Loading an existing series must never create, rename, or reuse a season.
             await LoadSeasonsAsync(s.SeriesId);
+            if (!string.IsNullOrWhiteSpace(s.FolderPath) && Directory.Exists(s.FolderPath))
+                await LoadSeriesEpisodeCandidatesAsync(s.SeriesId);
+            else
+            {
+                _seriesEpisodeCandidates.Clear();
+                SeriesEpisodeCandidatesGrid.Items.Refresh();
+                SeriesEpisodeSelectionSummaryText.Text = "اختر مجلد المسلسل واحفظه ثم اضغط اكتشاف الحلقات.";
+            }
 
             SeriesEditorExpander.IsExpanded = true;
-            SeriesStatusText.Text = $"تم فتح «{s.Title}». أضف الحلقات من القائمة المستقلة داخل بيانات المسلسل.";
+            SeriesStatusText.Text = $"تم فتح «{s.Title}». يمكنك إدارة المواسم والأجزاء من تبويبها، أو اختيار حلقات مباشرة من مجلد المسلسل.";
         }
         catch (Exception ex)
         {
             App.LogDiagnostic("MainWindow.SeriesPicker_SelectionChanged", ex);
             SeriesStatusText.Text = "تعذر فتح بيانات المسلسل أو قائمة حلقاته. بقيت نافذة الإدارة مفتوحة؛ راجع سجل الأخطاء.";
+        }
+    }
+
+    private async System.Threading.Tasks.Task LoadSeriesEpisodeCandidatesAsync(string seriesId)
+    {
+        var rows = await _http.GetFromJsonAsync<EpisodeCandidate[]>(
+            "/api/admin/series/" + Uri.EscapeDataString(seriesId) + "/preview") ?? Array.Empty<EpisodeCandidate>();
+        _seriesEpisodeCandidates.Clear();
+        foreach (var row in rows)
+        {
+            row.Status = row.IsAlreadyLinked ? "مضاف مسبقاً"
+                : row.EpisodeNumber is null or <= 0 ? "راجع رقم الحلقة"
+                : row.IsNumberUsed ? "رقم مكرر"
+                : "جاهز للإضافة";
+            row.Selected = false;
+            _seriesEpisodeCandidates.Add(row);
+        }
+        SeriesEpisodeCandidatesGrid.Items.Refresh();
+        SeriesEpisodeSelectionSummaryText.Text = $"تم اكتشاف {rows.Length} ملفاً من مجلد المسلسل. حدد الحلقات المطلوبة فقط.";
+    }
+
+    private async void PreviewSeriesEpisodeFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (SeriesPicker.SelectedItem is not SeriesAdmin series)
+        {
+            SeriesStatusText.Text = "احفظ المسلسل أولاً ثم اختره من سجل المسلسلات.";
+            return;
+        }
+        var folder = SeriesFolderPathBox.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+        {
+            SeriesStatusText.Text = "اختر مجلد المسلسل الصحيح أولاً.";
+            return;
+        }
+        if (!string.Equals(Path.GetFullPath(folder), Path.GetFullPath(series.FolderPath ?? ""), StringComparison.OrdinalIgnoreCase))
+        {
+            SeriesStatusText.Text = "مسار المجلد تغيّر. احفظ بيانات المسلسل أولاً ثم أعد اكتشاف الحلقات.";
+            return;
+        }
+        try
+        {
+            SeriesStatusText.Text = "جارٍ فحص الملفات الموجودة مباشرة داخل مجلد المسلسل...";
+            await LoadSeriesEpisodeCandidatesAsync(series.SeriesId);
+            SeriesStatusText.Text = "تم اكتشاف الملفات. راجع أرقام الحلقات وحدد المطلوب قبل الاعتماد.";
+        }
+        catch (Exception ex)
+        {
+            App.LogDiagnostic("MainWindow.PreviewSeriesEpisodeFolder_Click", ex);
+            SeriesStatusText.Text = "تعذر اكتشاف حلقات المسلسل: " + ex.Message;
+        }
+    }
+
+    private void SelectAllSeriesEpisodeCandidates_Click(object sender, RoutedEventArgs e)
+    {
+        SeriesEpisodeCandidatesGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+        SeriesEpisodeCandidatesGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        foreach (var row in _seriesEpisodeCandidates) row.Selected = !row.IsAlreadyLinked;
+        SeriesEpisodeCandidatesGrid.Items.Refresh();
+        SeriesEpisodeSelectionSummaryText.Text = $"تم تحديد {_seriesEpisodeCandidates.Count(x => x.Selected)} ملفاً غير مضاف.";
+    }
+
+    private void ClearSeriesEpisodeCandidatesSelection_Click(object sender, RoutedEventArgs e)
+    {
+        SeriesEpisodeCandidatesGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+        SeriesEpisodeCandidatesGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        foreach (var row in _seriesEpisodeCandidates) row.Selected = false;
+        SeriesEpisodeCandidatesGrid.Items.Refresh();
+        SeriesEpisodeSelectionSummaryText.Text = "تم إلغاء تحديد جميع الملفات.";
+    }
+
+    private async void LinkSeriesEpisodeCandidates_Click(object sender, RoutedEventArgs e)
+    {
+        if (SeriesPicker.SelectedItem is not SeriesAdmin series)
+        {
+            SeriesStatusText.Text = "احفظ المسلسل واختره أولاً.";
+            return;
+        }
+        SeriesEpisodeCandidatesGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+        SeriesEpisodeCandidatesGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        var selected = _seriesEpisodeCandidates.Where(x => x.Selected).ToArray();
+        if (selected.Length == 0)
+        {
+            SeriesStatusText.Text = "حدد حلقة واحدة على الأقل لإضافتها.";
+            return;
+        }
+        if (selected.Any(x => x.EpisodeNumber is null or < 1 or > 10000))
+        {
+            SeriesStatusText.Text = "صحح أرقام الحلقات المحددة أولاً.";
+            return;
+        }
+        if (selected.GroupBy(x => x.EpisodeNumber).Any(g => g.Count() > 1))
+        {
+            SeriesStatusText.Text = "هناك أرقام حلقات مكررة ضمن التحديد. صححها قبل الاعتماد.";
+            return;
+        }
+        if (MessageBox.Show($"سيتم إضافة {selected.Length} حلقة إلى «{series.Title}». هل تريد المتابعة؟",
+            "تأكيد إضافة الحلقات", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            return;
+        try
+        {
+            var payload = new
+            {
+                episodes = selected.Select(x => new
+                {
+                    videoId = x.VideoId,
+                    filePath = x.FilePath,
+                    episodeNumber = x.EpisodeNumber,
+                    title = x.Title,
+                    selected = true
+                }).ToArray()
+            };
+            var response = await _http.PostAsJsonAsync(
+                "/api/admin/series/" + Uri.EscapeDataString(series.SeriesId) + "/link-detected", payload);
+            if (!response.IsSuccessStatusCode)
+            {
+                SeriesStatusText.Text = "تعذر إضافة الحلقات المحددة: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            var result = await response.Content.ReadFromJsonAsync<LinkDetectedResult>();
+            await LoadSeriesEpisodeCandidatesAsync(series.SeriesId);
+            await LoadVideosAsync();
+            SeriesStatusText.Text = $"تمت إضافة {result?.LinkedCount ?? 0} حلقة إلى «{series.Title}»، وتخطي {result?.Skipped ?? 0} ملف.";
+        }
+        catch (Exception ex)
+        {
+            App.LogDiagnostic("MainWindow.LinkSeriesEpisodeCandidates_Click", ex);
+            SeriesStatusText.Text = "تعذر اعتماد الحلقات: " + ex.Message;
         }
     }
 
