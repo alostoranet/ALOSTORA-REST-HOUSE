@@ -56,10 +56,10 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 .announcement-banner strong{z-index:1;flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;padding:3px 9px;border-radius:3px;background:#fff;color:#b51622;font-size:12px;font-weight:900;white-space:nowrap;letter-spacing:.15px}
 .announcement-banner strong:before{content:"";width:7px;height:7px;border-radius:50%;background:#d3232d;box-shadow:0 0 0 3px #d3232d20,0 0 8px #d3232d80}
 .announcement-banner p{display:flex;align-items:center;justify-content:flex-start;flex:1 1 auto;min-width:0;max-width:100%;height:auto;min-height:32px;margin:0;overflow:hidden;white-space:nowrap;direction:rtl;padding:2px 0;box-sizing:border-box}
-.announcement-banner .announcement-track{display:flex;flex:0 0 auto;align-items:center;width:max-content;white-space:nowrap;will-change:transform;animation:announcement-message-marquee 18s linear infinite}
-.announcement-banner #announcementMessage,.announcement-banner .announcement-copy{display:inline-block;flex:0 0 auto;width:max-content;max-width:none;white-space:nowrap;color:#fff;font-size:14px;font-weight:800;line-height:1.55;padding:4px 0;vertical-align:middle;text-align:right;text-shadow:0 1px 3px #650a10}
-.announcement-banner .announcement-copy{padding-inline-start:64px}
-/* Keep the urgent announcement moving continuously, including while the pointer is over it. */
+.announcement-banner .announcement-track{display:flex;flex:0 0 auto;flex-direction:row;direction:rtl;align-items:center;width:max-content;white-space:nowrap;will-change:transform;animation:announcement-message-marquee 18s linear infinite}
+.announcement-banner #announcementMessage,.announcement-banner .announcement-copy{display:inline-block;flex:0 0 auto;width:max-content;max-width:none;white-space:nowrap;direction:rtl;unicode-bidi:plaintext;color:#fff;font-size:14px;font-weight:800;line-height:1.55;padding:4px 32px;vertical-align:middle;text-align:right;text-shadow:0 1px 3px #650a10}
+/* Both copies have identical width, so the loop returns exactly to the next full copy. */
+/* Keep the announcement moving continuously, including while the pointer is over it. */
 @keyframes announcement-message-reveal{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
 @keyframes announcement-message-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.announcement-banner .announcement-track{animation:none;white-space:normal;transform:none}.announcement-banner .announcement-copy{display:none}.announcement-banner #announcementMessage{white-space:normal;text-align:center}.announcement-banner p{white-space:normal}.announcement-banner.is-entering #announcementMessage{animation:none!important}}
@@ -413,12 +413,23 @@ function applyCustomerSettings(refreshMedia=false){
  document.querySelector('#customerAds').hidden=customerSettings.showImageAds===false||customerAdItems.length===0||!document.querySelector('#contactView').hidden;
  if(refreshMedia)renderMediaLibraries();
 }
+function isCustomerHomeLanding(){
+ return !!catalogPage&&catalogPage.type==='home'&&activeMediaKind==='all'&&document.querySelector('#contactView')?.hidden!==false&&document.querySelector('#homeView')?.hidden!==true&&document.querySelector('#mediaLibrary')?.hidden!==false;
+}
+function syncCustomerAdVisibility(){
+ const section=document.querySelector('#customerAds');
+ if(!section)return;
+ const visible=isCustomerHomeLanding()&&customerSettings.showImageAds!==false&&customerAdItems.length>0;
+ section.hidden=!visible;
+ if(!visible&&customerAdTimer){clearTimeout(customerAdTimer);customerAdTimer=null;}
+ if(visible)scheduleCustomerAd();
+}
 function scheduleCustomerAd(){
  if(customerAdTimer){clearTimeout(customerAdTimer);customerAdTimer=null;}
- if(customerAdItems.length<2||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ if(!isCustomerHomeLanding()||customerSettings.showImageAds===false||customerAdItems.length<2||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
  const current=customerAdItems[customerAdIndex];
  const delay=Math.max(5,Math.min(120,Number(current.durationSeconds)||10))*1000;
- customerAdTimer=setTimeout(()=>renderCustomerAd(customerAdIndex+1),delay);
+ customerAdTimer=setTimeout(()=>{if(isCustomerHomeLanding())renderCustomerAd(customerAdIndex+1);},delay);
 }
 function renderCustomerAd(index=customerAdIndex){
  const section=document.querySelector('#customerAds'),stage=document.querySelector('#customerAdStage'),dots=document.querySelector('#customerAdDots');
@@ -442,8 +453,7 @@ function renderCustomerAd(index=customerAdIndex){
   dot.setAttribute('aria-label','عرض الإعلان '+(i+1));dot.setAttribute('aria-pressed',String(i===customerAdIndex));
   dot.addEventListener('click',()=>renderCustomerAd(i));dots.append(dot);
  });
- section.hidden=customerSettings.showImageAds===false||!document.querySelector('#contactView').hidden;
- scheduleCustomerAd();
+ syncCustomerAdVisibility();
 }
 async function loadCustomerAds(){
  try{
@@ -474,6 +484,8 @@ async function loadAnnouncement(){
   message.textContent=item.message;
   copy.textContent=item.message;
   track.style.animationDuration=Math.max(5,Math.min(60,Number(item.speedSeconds)||18))+'s';
+  track.style.animationDirection='normal';
+  track.style.animationTimingFunction='linear';
   if(changed){
    banner.dataset.contentKey=contentKey;
    banner.classList.remove('is-entering');
@@ -716,7 +728,7 @@ function renderCatalogPage(){
  const customerNav=document.querySelector('.customer-nav');if(customerNav)customerNav.hidden=false;
  const homeNav=document.querySelector('#homeNav');if(homeNav)homeNav.hidden=pageType==='home'&&document.querySelector('#contactView').hidden;
  const announcement=document.querySelector('#announcementBanner');if(announcement)announcement.hidden=pageType!=='home'||customerSettings.showAnnouncement===false||announcement.dataset.active!=='true';
- const customerAds=document.querySelector('#customerAds');if(customerAds)customerAds.hidden=pageType!=='home'||customerSettings.showImageAds===false||customerAdItems.length===0;
+ syncCustomerAdVisibility();
  const quickNav=document.querySelector('#mediaQuickNav');if(quickNav&&pageType!=='home')quickNav.hidden=true;
  const arrivals=document.querySelector('#newArrivals');if(arrivals&&pageType!=='home')arrivals.hidden=true;
  pageHead.hidden=pageType==='home';
@@ -1130,7 +1142,7 @@ function showCustomerView(view){
  homeView.hidden=!home;contactView.hidden=home;
  const contactNav=document.querySelector('#contactNav');if(contactNav){contactNav.classList.toggle('active',!home);contactNav.setAttribute('aria-pressed',String(!home));}
  const homeNav=document.querySelector('#homeNav');if(homeNav)homeNav.hidden=home&&catalogPage.type==='home';
- document.querySelector('#customerAds').hidden=!home||customerSettings.showImageAds===false||customerAdItems.length===0;
+ syncCustomerAdVisibility();
  const announcement=document.querySelector('#announcementBanner');if(announcement)announcement.hidden=!home||customerSettings.showAnnouncement===false||announcement.dataset.active!=='true';
  document.querySelector('.header-search').hidden=!home||customerSettings.showCatalog===false||activeMediaKind!=='all';
  window.scrollTo({top:0,behavior:'smooth'});
