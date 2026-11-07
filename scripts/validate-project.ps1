@@ -46,12 +46,27 @@ $requiredRoutes = @(
     '/api/admin/seasons/{seasonId:long}/episodes',
     '/api/admin/episodes/{episodeId:long}',
     '/api/admin/missing-episodes',
-    '/api/library'
+    '/api/library',
+    '/api/announcement',
+    '/api/admin/announcement'
 )
 foreach ($route in $requiredRoutes) {
     if (-not $app.Contains($route)) { throw ("Missing API route: " + $route) }
 }
 Write-Host ("PASS: all {0} required management API routes are present." -f $requiredRoutes.Count)
+# The customer announcement is editable in the Windows admin panel and has a reduced-motion fallback.
+if ($xaml -notmatch 'Header="📢 الإعلانات"' -or
+    $xaml -notmatch 'AnnouncementMessageBox' -or
+    $code -notmatch 'SaveAnnouncement_Click' -or
+    $app -notmatch 'MapPost\("/api/admin/announcement"' -or
+    $html -notmatch 'id="announcementBanner"' -or
+    $html -notmatch 'announcement-marquee' -or
+    $html -notmatch 'prefers-reduced-motion:reduce' -or
+    $html -notmatch 'announcement-copy\{display:none!important\}') {
+    throw "Customer announcement editor, API, ticker, or reduced-motion fallback is incomplete."
+}
+Write-Host "PASS: announcement editor/API/ticker and reduced-motion fallback are wired."
+
 
 # Parse each inline viewer script with Node.js to catch syntax errors before packaging.
 $scripts = [regex]::Matches($html, '(?is)<script\b[^>]*>(.*?)</script>')
