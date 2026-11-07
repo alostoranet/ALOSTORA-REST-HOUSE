@@ -1003,7 +1003,9 @@ function renderCatalogPage(){
    content.append(catalogSectionTitle('حلقات أو فيديوهات مباشرة'));
    const directGrid=document.createElement('div');directGrid.className='catalog-grid';
    for(const video of direct){
-    const title=video.title||'فيديو';
+    const baseTitle=video.title||'فيديو';
+    const number=Number(video.episodeNumber);
+    const title=Number.isInteger(number)&&number>0?('الحلقة '+number+(baseTitle?' — '+baseTitle:'')):baseTitle;
     directGrid.append(catalogCard(title,video.isMissing?'الملف غير موجود':'تشغيل الفيديو',video.posterPath||show.posterPath,()=>{if(!video.isMissing&&video.url)play({id:video.videoId,url:video.url,title});}));
    }
    content.append(directGrid);
