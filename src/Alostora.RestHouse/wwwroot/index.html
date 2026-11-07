@@ -502,7 +502,7 @@ async function loadAnnouncement(){
   message.textContent=item.message;
   copy.textContent=item.message;
   track.style.animationDuration=Math.max(5,Math.min(60,Number(item.speedSeconds)||18))+'s';
-  track.style.animationDirection='normal';
+  track.style.animationDirection='reverse';
   track.style.animationTimingFunction='linear';
   if(changed){
    banner.dataset.contentKey=contentKey;
