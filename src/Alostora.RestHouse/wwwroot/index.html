@@ -71,13 +71,14 @@ header.is-inner-page #headerBackNav{background:linear-gradient(135deg,#203d55,#1
 @keyframes announcement-message-reveal{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
 @keyframes announcement-message-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 /* Two identical text copies make a seamless full-message loop. */
-.announcement-banner .announcement-track{animation-direction:normal}
+.announcement-banner .announcement-track{animation-direction:reverse}
 @media(max-width:600px){
  header.is-inner-page{padding:7px 12px}
  .announcement-banner{margin:8px 10px 0;min-height:39px;padding:4px 8px;gap:7px}
- .announcement-banner strong{font-size:11px;padding:3px 7px}
- .announcement-banner p{min-height:29px}
- .announcement-banner #announcementMessage,.announcement-banner .announcement-copy{font-size:12px}
+ .announcement-banner strong{font-size:10px;padding:3px 6px;gap:5px}
+ .announcement-banner p{min-height:29px;flex:1 1 0;width:0}
+ .announcement-banner .announcement-track{animation-timing-function:linear}
+ .announcement-banner #announcementMessage,.announcement-banner .announcement-copy{font-size:12px;padding:4px 14px;line-height:1.5}
 }
 
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.announcement-banner .announcement-track{animation:none;white-space:normal;transform:none}.announcement-banner .announcement-copy{display:none}.announcement-banner #announcementMessage{white-space:normal;text-align:center}.announcement-banner p{white-space:normal}.announcement-banner.is-entering #announcementMessage{animation:none!important}}
@@ -505,7 +506,7 @@ async function loadAnnouncement(){
   message.textContent=item.message;
   copy.textContent=item.message;
   track.style.animationDuration=Math.max(5,Math.min(60,Number(item.speedSeconds)||18))+'s';
-  track.style.animationDirection='normal';
+  track.style.animationDirection='reverse';
   track.style.animationTimingFunction='linear';
   if(changed){
    banner.dataset.contentKey=contentKey;
