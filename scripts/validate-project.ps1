@@ -708,6 +708,18 @@ if ($html -notmatch 'announcement-banner p\{display:flex;align-items:center' -or
     throw "Announcement ticker vertical clipping or original continuous half-track motion regression detected."
 }
 Write-Host "PASS: announcement ticker has readable vertical padding and the original continuous full-area loop."
+# The first dashboard tab must show real playback counts; library inventory belongs to its own tab.
+if ($xaml -notmatch 'TabItem Header="👁 المشاهدات"' -or
+    $xaml -notmatch 'TabItem Header="📚 ملخص المكتبة"' -or
+    $xaml -notmatch 'x:Name="DashboardTotalViewsCount"' -or
+    $code -notmatch 'DashboardTotalViewsCount\.Text = total\.ToString\("N0"\)' -or
+    $code -notmatch 'DashboardTotalViewsCount\.Text = "—"' -or
+    $app -notmatch 'db\.GetTotalPlaybackCount\(\)' -or
+    $app -notmatch 'db\.GetViewCounts\(\)') {
+    throw "The admin Views tab must display the actual total playback count and separate library inventory."
+}
+Write-Host "PASS: admin Views tab shows the real total playback count; library metrics are separated."
+
 # The Windows management app exposes a safe placeholder for future official updates.
 if ($xaml -notmatch 'Content="التحديثات" Click="Updates_Click"' -or
     $code -notmatch 'void Updates_Click\(' -or
