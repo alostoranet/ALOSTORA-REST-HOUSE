@@ -69,9 +69,9 @@ header.is-inner-page #headerBackNav{background:linear-gradient(135deg,#203d55,#1
 /* Both copies have identical width, so the loop returns exactly to the next full copy. */
 /* Keep the announcement moving continuously, including while the pointer is over it. */
 @keyframes announcement-message-reveal{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
-@keyframes announcement-message-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-/* Two identical text copies make a seamless full-message loop. */
-.announcement-banner .announcement-track{animation-direction:reverse}
+@keyframes announcement-message-marquee{from{transform:translateX(0)}to{transform:translateX(calc(-1 * var(--announcement-shift, 50%)))}}
+/* Repeated equal-width copies and a one-copy translation create a seamless right-to-left loop. */
+.announcement-banner .announcement-track{animation-direction:normal;gap:0}
 @media(max-width:600px){
  header.is-inner-page{padding:7px 12px}
  .announcement-banner{margin:8px 10px 0;min-height:39px;padding:4px 8px;gap:7px}
@@ -506,8 +506,9 @@ async function loadAnnouncement(){
   message.textContent=item.message;
   copy.textContent=item.message;
   track.style.animationDuration=Math.max(5,Math.min(60,Number(item.speedSeconds)||18))+'s';
-  track.style.animationDirection='reverse';
+  track.style.animationDirection='normal';
   track.style.animationTimingFunction='linear';
+  banner.dataset.marqueeKey='';
   if(changed){
    banner.dataset.contentKey=contentKey;
    banner.classList.remove('is-entering');
@@ -525,6 +526,36 @@ function syncAnnouncementVisibility(isHome){
  const active=customerSettings.showAnnouncement!==false&&banner.dataset.active==='true';
  // The announcement ticker belongs to the home landing page only; never reveal it later on subpages.
  banner.hidden=!(active&&isHome);
+ if(!banner.hidden)setupAnnouncementMarquee();
+}
+function setupAnnouncementMarquee(){
+ const banner=document.querySelector('#announcementBanner');
+ const track=banner?.querySelector('.announcement-track');
+ const message=document.querySelector('#announcementMessage');
+ const viewport=track?.parentElement;
+ if(!banner||!track||!message||!viewport)return;
+ requestAnimationFrame(()=>{
+  if(banner.hidden)return;
+  const messageWidth=Math.ceil(message.getBoundingClientRect().width);
+  const viewportWidth=Math.ceil(viewport.getBoundingClientRect().width);
+  if(messageWidth<=0||viewportWidth<=0)return;
+  const layoutKey=(banner.dataset.contentKey||'')+'|'+viewportWidth+'|'+messageWidth;
+  if(banner.dataset.marqueeKey===layoutKey)return;
+  track.querySelectorAll('.announcement-copy').forEach(node=>node.remove());
+  const copies=Math.max(2,Math.ceil(viewportWidth/messageWidth)+2);
+  for(let i=1;i<copies;i++){
+   const clone=message.cloneNode(true);
+   clone.removeAttribute('id');
+   clone.className='announcement-copy';
+   clone.setAttribute('aria-hidden','true');
+   track.appendChild(clone);
+  }
+  track.style.setProperty('--announcement-shift',messageWidth+'px');
+  banner.dataset.marqueeKey=layoutKey;
+  track.style.animation='none';
+  void track.offsetWidth;
+  track.style.animation='';
+ });
 }
 function createViewerId(){try{if(window.crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();if(window.crypto&&crypto.getRandomValues){const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}}catch{}return 'viewer-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);}
 let viewerId='';try{viewerId=localStorage.getItem('alostora-viewer')||'';if(!viewerId){viewerId=createViewerId();localStorage.setItem('alostora-viewer',viewerId);}}catch{viewerId=createViewerId();}
