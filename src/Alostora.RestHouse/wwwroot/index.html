@@ -61,7 +61,7 @@ header{position:relative;padding:22px max(5%,calc((100% - 1280px)/2)) 15px;backg
 .announcement-banner .announcement-copy{padding-inline-start:64px}
 /* Keep the urgent announcement moving continuously, including while the pointer is over it. */
 @keyframes announcement-message-reveal{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
-@keyframes announcement-message-marquee{from{transform:translateX(50%)}to{transform:translateX(0)}}
+@keyframes announcement-message-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.announcement-banner .announcement-track{animation:none;white-space:normal;transform:none}.announcement-banner .announcement-copy{display:none}.announcement-banner #announcementMessage{white-space:normal;text-align:center}.announcement-banner p{white-space:normal}.announcement-banner.is-entering #announcementMessage{animation:none!important}}
 .customer-ads{max-width:1280px;margin:13px auto 0;padding:0 14px}
 .customer-ads[hidden]{display:none!important}
