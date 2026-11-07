@@ -156,6 +156,8 @@ public partial class MainWindow : Window
     public MainWindow(string root, string library, string posters, string? ffmpegPath, int port)
     {
         InitializeComponent();
+        var logoDecoder = new System.Windows.Media.Imaging.IconBitmapDecoder(new Uri("pack://application:,,,/Assets/alostora.ico"), BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+        HeaderBrandLogo.Source = logoDecoder.Frames.OrderByDescending(frame => frame.PixelWidth * frame.PixelHeight).FirstOrDefault();
         _root = root;
         _port = port;
         _http.BaseAddress = new Uri($"http://127.0.0.1:{_port}");
