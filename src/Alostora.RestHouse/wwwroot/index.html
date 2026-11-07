@@ -81,7 +81,7 @@ header.is-inner-page #headerBackNav{background:linear-gradient(135deg,#203d55,#1
  .announcement-banner #announcementMessage,.announcement-banner .announcement-copy{font-size:12px;padding:4px 14px;line-height:1.5}
 }
 
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.announcement-banner .announcement-track{animation:none;white-space:normal;transform:none}.announcement-banner .announcement-copy{display:none}.announcement-banner #announcementMessage{white-space:normal;text-align:center}.announcement-banner p{white-space:normal}.announcement-banner.is-entering #announcementMessage{animation:none!important}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 .customer-ads{max-width:1280px;margin:13px auto 0;padding:0 14px}
 .customer-ads[hidden]{display:none!important}
 .customer-ad-stage{position:relative;aspect-ratio:16/5;min-height:110px;max-height:250px;overflow:hidden;border:1px solid #344e65;border-radius:15px;background:#142b40;box-shadow:0 9px 24px #0003}
@@ -505,7 +505,10 @@ async function loadAnnouncement(){
   document.querySelector('#announcementTitle').textContent=title;
   message.textContent=item.message;
   copy.textContent=item.message;
-  track.style.animationDuration=Math.max(5,Math.min(60,Number(item.speedSeconds)||18))+'s';
+  const duration=Math.max(5,Math.min(60,Number(item.speedSeconds)||18));
+  track.style.animation='none';
+  track.style.transform='translateX(0)';
+  track.style.animationDuration=duration+'s';
   track.style.animationDirection='normal';
   track.style.animationTimingFunction='linear';
   if(changed){
@@ -514,6 +517,8 @@ async function loadAnnouncement(){
    void banner.offsetWidth;
    banner.classList.add('is-entering');
   }
+  void track.offsetWidth;
+  track.style.animation=`announcement-message-marquee ${duration}s linear infinite`;
   banner.dataset.active='true';
   syncAnnouncementVisibility(catalogPage?.type==='home'&&document.querySelector('#contactView')?.hidden!==false);
  }catch{}
@@ -524,7 +529,19 @@ function syncAnnouncementVisibility(isHome){
  if(innerAnnouncementTimer){clearTimeout(innerAnnouncementTimer);innerAnnouncementTimer=null;}
  const active=customerSettings.showAnnouncement!==false&&banner.dataset.active==='true';
  // The announcement ticker belongs to the home landing page only; never reveal it later on subpages.
- banner.hidden=!(active&&isHome);
+ const shouldShow=active&&isHome;
+ const wasHidden=banner.hidden;
+ banner.hidden=!shouldShow;
+ if(shouldShow&&wasHidden){
+  const track=banner.querySelector('.announcement-track');
+  if(track){
+   const duration=Math.max(5,Math.min(60,Number(track.style.animationDuration.replace('s',''))||18));
+   track.style.animation='none';
+   track.style.transform='translateX(0)';
+   void track.offsetWidth;
+   track.style.animation=`announcement-message-marquee ${duration}s linear infinite`;
+  }
+ }
 }
 function createViewerId(){try{if(window.crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();if(window.crypto&&crypto.getRandomValues){const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}}catch{}return 'viewer-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);}
 let viewerId='';try{viewerId=localStorage.getItem('alostora-viewer')||'';if(!viewerId){viewerId=createViewerId();localStorage.setItem('alostora-viewer',viewerId);}}catch{viewerId=createViewerId();}
