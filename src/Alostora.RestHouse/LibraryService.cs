@@ -660,6 +660,25 @@ public sealed class LibraryService : IDisposable
             AddWatcher(full);
     }
 
+    public void RetainRootAsScanFolder(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            throw new DirectoryNotFoundException("مجلد المكتبة السابق غير موجود أو لا يمكن الوصول إليه.");
+        var full = Path.GetFullPath(folderPath);
+        using (var connection = new SqliteConnection(_connectionString))
+        {
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "INSERT OR IGNORE INTO LibraryScanRoots(FolderPath,AddedUtc) VALUES($path,$utc)";
+            command.Parameters.AddWithValue("$path", full);
+            command.Parameters.AddWithValue("$utc", DateTime.UtcNow.ToString("O"));
+            command.ExecuteNonQuery();
+        }
+        if (!string.Equals(full, _root, StringComparison.OrdinalIgnoreCase))
+            AddWatcher(full);
+        Invalidate();
+    }
+
     public int RegisterFolder(string folderPath)
     {
         if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
