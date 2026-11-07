@@ -96,6 +96,8 @@ main{width:min(100%,1280px);margin:0 auto;padding:22px 24px 32px}
 #welcomePanel,#customerOverview{display:none!important}
 #message{margin:8px 0;color:#f0c4c4;font-size:13px}
 #catalogPageHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 13px;padding:0 0 12px;border-bottom:1px solid #263e54}
+/* Inner-page back navigation is placed in the compact header; suppress the old duplicate control. */
+#catalogPageHead #catalogBack{display:none!important}
 #catalogPageHead[hidden]{display:none!important}
 #catalogBreadcrumb{min-width:0;flex:1;color:#e8edf2;font-size:16px;font-weight:800}
 .catalog-back,.catalog-home{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:7px 13px;border:1px solid #435d73;border-radius:10px;background:#1a344c;color:#fff;font-size:13px;font-weight:750;white-space:nowrap}
