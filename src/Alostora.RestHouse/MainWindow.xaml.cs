@@ -1506,31 +1506,40 @@ public partial class MainWindow : Window
     private async void VideosGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (VideosGrid.SelectedItem is not AdminVideo v) return;
-        _pendingVideoPosterPath = null;
-        IdBox.Text = v.Id;
-        TitleBox.Text = v.Title ?? "";
-        DescriptionBox.Text = v.Description ?? "";
-        YearBox.Text = v.Year?.ToString() ?? "";
-        GenreBox.Text = v.Genre ?? "";
-        DirectorBox.Text = v.Director ?? "";
-        CastBox.Text = v.Cast ?? "";
-        RatingBox.Text = v.Rating?.ToString() ?? "";
-        RuntimeBox.Text = v.RuntimeMinutes?.ToString() ?? "";
-        ReleaseDateBox.Text = v.ReleaseDate ?? "";
-        TagsBox.Text = v.Tags ?? "";
-        SectionBox.Text = v.Section ?? "عام";
-        KindBox.SelectedIndex = string.Equals(v.Kind, "Series", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-        var selectedVideoCategory = _categories.FirstOrDefault(x => x.CategoryId == v.CategoryId);
-        VideoMainCategoryPicker.SelectedValue = selectedVideoCategory?.ParentId;
-        RefreshVideoCategoryPicker(v.CategoryId);
-        _suppressVideoSeriesPickerEvent = true;
-        VideoSeriesPicker.SelectedValue = v.LinkedSeriesId;
-        _suppressVideoSeriesPickerEvent = false;
-        await LoadVideoSeasonsForLinkAsync(v.LinkedSeriesId, v.LinkedSeasonId);
-        VideoEpisodeNumberBox.Text = v.LinkedEpisodeNumber?.ToString() ?? "";
-        VideoEpisodeTitleBox.Text = v.LinkedEpisodeTitle ?? "";
-        PublishBox.IsChecked = v.IsPublished || !v.MetadataSaved;
-        PosterStatusText.Text = string.IsNullOrWhiteSpace(v.PosterPath) ? "لا يوجد غلاف لهذا العمل حالياً." : "يوجد غلاف محفوظ لهذا العمل.";
+        try
+        {
+            _pendingVideoPosterPath = null;
+            IdBox.Text = v.Id;
+            TitleBox.Text = v.Title ?? "";
+            DescriptionBox.Text = v.Description ?? "";
+            YearBox.Text = v.Year?.ToString() ?? "";
+            GenreBox.Text = v.Genre ?? "";
+            DirectorBox.Text = v.Director ?? "";
+            CastBox.Text = v.Cast ?? "";
+            RatingBox.Text = v.Rating?.ToString() ?? "";
+            RuntimeBox.Text = v.RuntimeMinutes?.ToString() ?? "";
+            ReleaseDateBox.Text = v.ReleaseDate ?? "";
+            TagsBox.Text = v.Tags ?? "";
+            SectionBox.Text = v.Section ?? "عام";
+            KindBox.SelectedIndex = string.Equals(v.Kind, "Series", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+            var selectedVideoCategory = _categories.FirstOrDefault(x => x.CategoryId == v.CategoryId);
+            VideoMainCategoryPicker.SelectedValue = selectedVideoCategory?.ParentId;
+            RefreshVideoCategoryPicker(v.CategoryId);
+            _suppressVideoSeriesPickerEvent = true;
+            try { VideoSeriesPicker.SelectedValue = v.LinkedSeriesId; }
+            finally { _suppressVideoSeriesPickerEvent = false; }
+            await LoadVideoSeasonsForLinkAsync(v.LinkedSeriesId, v.LinkedSeasonId);
+            VideoEpisodeNumberBox.Text = v.LinkedEpisodeNumber?.ToString() ?? "";
+            VideoEpisodeTitleBox.Text = v.LinkedEpisodeTitle ?? "";
+            PublishBox.IsChecked = v.IsPublished || !v.MetadataSaved;
+            PosterStatusText.Text = string.IsNullOrWhiteSpace(v.PosterPath) ? "لا يوجد غلاف لهذا العمل حالياً." : "يوجد غلاف محفوظ لهذا العمل.";
+        }
+        catch (Exception ex)
+        {
+            App.LogDiagnostic("MainWindow.VideosGrid_SelectionChanged", ex);
+            try { StatusText.Text = "تعذر تحميل بيانات الملف المحدد، لكن نافذة الإدارة ستبقى مفتوحة. راجع سجل الأخطاء."; }
+            catch { }
+        }
     }
 
     private async void VideoSeriesPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
