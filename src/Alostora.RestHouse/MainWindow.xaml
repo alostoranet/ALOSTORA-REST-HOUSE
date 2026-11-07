@@ -241,30 +241,7 @@
 <TextBlock Text="الخطوة 1: اختر القسم الرئيسي الذي سيظهر المسلسل بداخله" FontWeight="Bold" Foreground="#142D4A"/><ComboBox x:Name="SeriesMainCategoryPicker" DisplayMemberPath="Title" SelectedValuePath="CategoryId" SelectionChanged="SeriesMainCategoryPicker_SelectionChanged" Padding="8" Margin="0,4,0,3"/><TextBlock Text="الخطوة 2: اختر قسم المسلسلات الفرعي التابع للقسم الرئيسي" FontWeight="Bold" Foreground="#142D4A"/><ComboBox x:Name="SeriesCategoryPicker" DisplayMemberPath="DisplayTitle" SelectedValuePath="CategoryId" Padding="8" Margin="0,4,0,3"/><TextBlock x:Name="SeriesCategoryStatusText" Text="يتم تحميل الأقسام الفرعية للمسلسلات..." Foreground="#64748B" FontSize="11" Margin="0,0,0,8"/>
 <CheckBox x:Name="SeriesPublishBox" Content="نشر المسلسل في واجهة العميل (بعد اختيار القسم)" IsChecked="True" Margin="0,0,0,10" FontWeight="Bold" Foreground="#16834A"/>
 <TextBlock Text="مجلد ملفات المسلسل (اختياري)" FontWeight="Bold" Foreground="#142D4A"/><TextBlock Text="هذا هو مجلد المسلسل الذي يحتوي الحلقات مباشرة. يكتشف البرنامج الملفات الموجودة داخله لتختار الحلقات المطلوبة فقط؛ ولا ينقل الملفات ولا يحذفها." Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"/><DockPanel Margin="0,4,0,8"><Button DockPanel.Dock="Left" Content="اختيار مجلد" Click="ChooseSeriesFolder_Click" Padding="10,6" Margin="6,0,0,0"/><TextBox x:Name="SeriesFolderPathBox" IsReadOnly="True" Padding="8" FlowDirection="LeftToRight" ToolTip="المجلد الذي اخترته لاكتشاف ملفات المسلسل."/></DockPanel>
-<Border Background="#F8FAFC" BorderBrush="#DCE4ED" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,4,0,10">
- <StackPanel>
-  <TextBlock Text="حلقات المسلسل — اختر ما تريد إضافته" FontWeight="Bold" FontSize="15" Foreground="#142D4A"/>
-  <TextBlock Text="بعد اختيار مجلد المسلسل، اكتشف الملفات ثم حدد الحلقات المطلوبة وعدّل أرقامها. لن تُضاف أي حلقة دون تحديدها واعتمادها." Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,8"/>
-  <WrapPanel Margin="0,0,0,7">
-   <Button Content="اكتشاف الحلقات من المجلد" Click="PreviewSeriesEpisodeFolder_Click" Padding="10,7" Margin="0,0,6,0"/>
-   <Button Content="اعتماد الحلقات المحددة" Click="LinkSeriesEpisodeCandidates_Click" Padding="10,7" Background="#245B87" Foreground="White"/>
-  </WrapPanel>
-  <WrapPanel Margin="0,0,0,7">
-   <Button Content="تحديد الكل" Click="SelectAllSeriesEpisodeCandidates_Click" Padding="10,6" Margin="0,0,6,0" Background="#E6F1FA" Foreground="#142D4A"/>
-   <Button Content="إلغاء تحديد الكل" Click="ClearSeriesEpisodeCandidatesSelection_Click" Padding="10,6" Margin="0,0,6,0"/>
-   <TextBlock x:Name="SeriesEpisodeSelectionSummaryText" Text="اختر مجلد المسلسل ثم اضغط اكتشاف الحلقات." Foreground="#64748B" VerticalAlignment="Center" Margin="6,0,0,0"/>
-  </WrapPanel>
-  <DataGrid x:Name="SeriesEpisodeCandidatesGrid" AutoGenerateColumns="False" IsReadOnly="False" CanUserAddRows="False" SelectionMode="Single" SelectionUnit="FullRow" Height="190" Margin="0,0,0,4">
-   <DataGrid.Columns>
-    <DataGridTemplateColumn Header="تحديد" Width="58"><DataGridTemplateColumn.CellTemplate><DataTemplate><CheckBox IsChecked="{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsThreeState="False" HorizontalAlignment="Center" VerticalAlignment="Center" Focusable="True"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-    <DataGridTextColumn Header="رقم الحلقة" Binding="{Binding EpisodeNumber, UpdateSourceTrigger=PropertyChanged}" Width="85"/>
-    <DataGridTextColumn Header="اسم الملف" Binding="{Binding FileName}" IsReadOnly="True" Width="*"/>
-    <DataGridTextColumn Header="المسار الكامل" Binding="{Binding FilePath}" IsReadOnly="True" Width="2*"/>
-    <DataGridTextColumn Header="الحالة" Binding="{Binding Status}" IsReadOnly="True" Width="105"/>
-   </DataGrid.Columns>
-  </DataGrid>
- </StackPanel>
-</Border>
+
 <Border Background="#F8FAFC" BorderBrush="#DCE4ED" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,4,0,10">
   <DockPanel LastChildFill="True">
     <Image x:Name="SeriesPosterPreview" DockPanel.Dock="Right" Width="104" Height="142" Stretch="UniformToFill" Margin="0,0,12,0"/>
