@@ -55,14 +55,15 @@ public partial class App : Application
   Current.DispatcherUnhandledException += (_, e) =>
   {
    LogDiagnostic("WPF Dispatcher",e.Exception);
+   // Keep the management application alive after a recoverable UI/event failure.
+   // The full exception is written to the diagnostic log for later root-cause repair.
    e.Handled=true;
    try
    {
-    MessageBox.Show("حدث خطأ غير متوقع، وتم حفظ تفاصيله في سجل الأخطاء. سيُغلق التطبيق لحماية البيانات.",
-     "استراحة الأسطورة",MessageBoxButton.OK,MessageBoxImage.Error);
+    MessageBox.Show("حدث خطأ أثناء تنفيذ هذا الإجراء، لكن البرنامج سيبقى مفتوحاً.\n\nتم حفظ تفاصيل الخطأ لتشخيصه في:\n%ProgramData%\\AlostoraRestHouse\\logs\\application-errors.log\n\nالتفاصيل: "+e.Exception.GetBaseException().Message,
+     "استراحة الأسطورة - تعذر تنفيذ الإجراء",MessageBoxButton.OK,MessageBoxImage.Warning);
    }
    catch { }
-   Current.Shutdown(1);
   };
   AppDomain.CurrentDomain.UnhandledException += (_, e) =>
    LogDiagnostic("AppDomain"+(e.IsTerminating?" (terminating)":""),e.ExceptionObject as Exception ?? new Exception(e.ExceptionObject?.ToString() ?? "Unknown exception"));
