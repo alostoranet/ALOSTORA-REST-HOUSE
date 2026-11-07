@@ -438,6 +438,27 @@ public sealed class LibraryService : IDisposable
             return _resolved!.TryGetValue(id, out var video) ? video : null;
     }
 
+    public IReadOnlyList<VideoFileCandidate> PreviewTopLevelFolder(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            throw new DirectoryNotFoundException("مجلد الفيديو غير موجود أو لا يمكن الوصول إليه.");
+        var root = Path.GetFullPath(folderPath);
+        var files = new List<VideoFileCandidate>();
+        foreach (var path in Directory.EnumerateFiles(root, "*", SearchOption.TopDirectoryOnly))
+        {
+            if (!ContentTypes.ContainsKey(Path.GetExtension(path))) continue;
+            try
+            {
+                var info = new FileInfo(path);
+                if (info.Exists && (info.Attributes & FileAttributes.ReparsePoint) == 0)
+                    files.Add(new VideoFileCandidate(Path.GetFullPath(path), info.Name, info.Length));
+            }
+            catch (UnauthorizedAccessException) { }
+            catch (IOException) { }
+        }
+        return files.OrderBy(x => x.FileName, StringComparer.CurrentCultureIgnoreCase).ToArray();
+    }
+
     public IReadOnlyList<VideoFileCandidate> PreviewFolder(string folderPath)
     {
         if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
