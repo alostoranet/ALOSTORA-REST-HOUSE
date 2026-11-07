@@ -237,7 +237,7 @@ if (-not $html.Contains('<video id="player" controls playsinline preload="metada
 if (-not $html.Contains('id="catalogBack"') -or
     -not $html.Contains("pageHead.hidden=pageType==='home'") -or
     -not $html.Contains("customerNav.hidden=false") -or
-    -not $html.Contains("homeNav.hidden=pageType==='home'&&document.querySelector('#contactView').hidden") -or
+    $html -notmatch 'homeNav\.hidden=isHomeLanding' -or
     -not $html.Contains("toolbar.hidden=pageType!=='category'") -or
     -not $html.Contains("crumb.textContent=catalogPage.title") -or
     ($html -notmatch 'catalog-player-page video|#playerSection video')) {
