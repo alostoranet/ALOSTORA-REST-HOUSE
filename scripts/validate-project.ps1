@@ -640,17 +640,17 @@ if ($code -notmatch 'PublishBox\.IsChecked\s*==\s*true\s*&&\s*selectedCategory\s
 }
 Write-Host "PASS: published videos cannot be saved without a customer-facing subcategory."
 
-# Announcement ticker is a centered, red breaking-news strip with continuous readable motion.
-if ($html -notmatch 'announcement-message-marquee 18s linear .3s infinite' -or
-    $html -notmatch 'background:linear-gradient\(100deg,#9f1420,#d3232d 52%,#a91420\)' -or
-    $html -notmatch 'text-align:center' -or
+# Announcement ticker starts beside its label and scrolls across the full message area in a seamless loop.
+if ($html -notmatch 'background:linear-gradient\(100deg,#9f1420,#d3232d 52%,#a91420\)' -or
     $html -notmatch 'const changed=banner.dataset.contentKey!==contentKey' -or
     $html -notmatch 'prefers-reduced-motion:reduce' -or
-    $html -match 'announcement-banner:hover #announcementMessage\\{animation-play-state:paused\\}' -or
+    $html -notmatch 'announcement-track' -or
+    $html -notmatch 'announcement-copy' -or
+    $html -notmatch 'announcement-message-marquee\{from\{transform:translateX\(0\)\}to\{transform:translateX\(-50%\)\}\}' -or
     $html -notmatch '<span id="announcementMessage"></span>') {
-    throw "Customer red breaking-news ticker, refresh behavior, or reduced-motion support is incomplete."
+    throw "Customer announcement ticker start position, seamless full-width loop, refresh behavior, or reduced-motion support is incomplete."
 }
-Write-Host "PASS: announcement ticker uses a red breaking-news strip with centered scrolling text and reduced-motion support."
+Write-Host "PASS: announcement ticker starts beside its label and scrolls seamlessly across the full message area."
 
 
 # Customer search stays below navigation and new arrivals appear only when recently updated content exists.
@@ -697,13 +697,13 @@ if ($html -notmatch '<nav class="customer-nav"[^>]*>\s*<button id="homeNav"' -or
     throw "Customer contact buttons or enlarged developer credit layout regressed."
 }
 Write-Host "PASS: contact actions are available in the header and above the developer credit on every customer page."
-# Announcement ticker text must have vertical room and must not replace its continuous marquee animation with an entry animation.
+# Announcement ticker text must have vertical room and use a continuous full-area track animation.
 if ($html -notmatch 'announcement-banner p\{display:flex;align-items:center' -or
-    $html -notmatch 'announcement-message-marquee 18s linear .3s infinite' -or
+    $html -notmatch 'announcement-message-marquee\{from\{transform:translateX\(0\)\}to\{transform:translateX\(-50%\)\}\}' -or
     $html -match 'announcement-banner\.is-entering #announcementMessage\{animation:announcement-message-reveal') {
-    throw "Announcement ticker vertical clipping or continuous motion regression detected."
+    throw "Announcement ticker vertical clipping or continuous full-area motion regression detected."
 }
-Write-Host "PASS: announcement ticker text has vertical padding and retains its continuous marquee."
+Write-Host "PASS: announcement ticker text has vertical padding and retains its continuous full-area marquee."
 # The Windows management app exposes a safe placeholder for future official updates.
 if ($xaml -notmatch 'Content="التحديثات" Click="Updates_Click"' -or
     $code -notmatch 'void Updates_Click\(' -or
