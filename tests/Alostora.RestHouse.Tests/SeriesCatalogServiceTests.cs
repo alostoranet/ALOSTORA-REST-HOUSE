@@ -68,6 +68,39 @@ public sealed class SeriesCatalogServiceTests : IDisposable
     }
 
     [Fact]
+    public void DirectSeriesEpisodesUseNoSeasonAndExposeEpisodeNumbersInCatalog()
+    {
+        var libraryRoot = Path.Combine(_root, "direct-library");
+        Directory.CreateDirectory(libraryRoot);
+        File.WriteAllBytes(Path.Combine(libraryRoot, "episode-01.mp4"), new byte[] { 1, 2, 3 });
+        using var library = new LibraryService(libraryRoot, _databasePath);
+        var video = Assert.Single(library.List());
+
+        _series.SetDirectEpisode("series-test", video.Id, 1, "الحلقة الأولى");
+
+        Assert.Empty(_series.ListSeasons("series-test"));
+        Assert.Equal(new[] { 1 }, _series.ListDirectEpisodeNumbers("series-test"));
+        var placement = _series.GetVideoPlacement(video.Id);
+        Assert.NotNull(placement);
+        Assert.Null(placement.SeasonId);
+        Assert.Equal(1, placement.EpisodeNumber);
+
+        var catalog = _series.GetCatalog(library, new VideoMetadataService(_databasePath));
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(catalog));
+        var direct = Assert.Single(document.RootElement[0].GetProperty("directVideos").EnumerateArray());
+        Assert.Equal(1, direct.GetProperty("episodeNumber").GetInt32());
+        Assert.Equal("الحلقة الأولى", direct.GetProperty("title").GetString());
+    }
+
+    [Fact]
+    public void DirectSeriesEpisodeNumbersCannotBeDuplicated()
+    {
+        _series.SetDirectEpisode("series-test", "aaaaaaaaaaaaaaaaaaaaaaaa", 1, "الأولى");
+        Assert.Throws<SqliteException>(() =>
+            _series.SetDirectEpisode("series-test", "bbbbbbbbbbbbbbbbbbbbbbbb", 1, "رقم مكرر"));
+    }
+
+    [Fact]
     public void VideoCanMoveBetweenDirectSeriesPlacementAndPartWithoutDeletingTheFile()
     {
         var seasonId = _series.AddSeason(new SaveSeasonRequest("series-test", 1, "الجزء الأول"));
