@@ -1767,6 +1767,10 @@ public partial class MainWindow : Window
         EpisodeTitleBox.Clear();
         EpisodeNumberBox.Text = "1";
         _episodeCandidates.Clear();
+        _seriesEpisodeGroupId = null;
+        _seriesEpisodeCandidates.Clear();
+        SeriesEpisodeCandidatesGrid.Items.Refresh();
+        SeriesEpisodeSelectionSummaryText.Text = "اختر مجلد المسلسل ثم اضغط اكتشاف الحلقات.";
         MissingEpisodesGrid.SelectedIndex = -1;
         SeriesStatusText.Text = "نموذج مسلسل جديد. أدخل بياناته واحفظه أولاً.";
         OpenDedicatedEditor(SeriesEditorExpander, "إضافة مسلسل جديد");
@@ -1835,6 +1839,9 @@ public partial class MainWindow : Window
                 .FirstOrDefault(x => x.Tag?.ToString() == "Seasons");
             UpdateSeriesStructureLabels();
 
+            // Keep the existing seasons/episodes workspace data available as-is;
+            // the new flat episode picker below is an independent editor in this tab.
+            await LoadSeasonsAsync(s.SeriesId);
             _seriesEpisodeGroupId = await EnsureSeriesEpisodeGroupAsync(s.SeriesId, s.FolderPath);
             if (_seriesEpisodeGroupId is long groupId && !string.IsNullOrWhiteSpace(s.FolderPath) && Directory.Exists(s.FolderPath))
                 await LoadSeriesEpisodeCandidatesAsync(groupId);
@@ -2237,6 +2244,7 @@ public partial class MainWindow : Window
         {
             var response = await _http.PostAsJsonAsync("/api/admin/series", request);
             if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "لم يتم حفظ المسلسل: " + await response.Content.ReadAsStringAsync(); return; }
+            _seriesEpisodeGroupId = await EnsureSeriesEpisodeGroupAsync(id, folderPath);
             var wasNewSeries = !((SeriesPicker.ItemsSource as SeriesAdmin[]) ?? Array.Empty<SeriesAdmin>()).Any(x => x.SeriesId == id);
             SeriesIdBox.Text = id;
             string? posterUploadError = null;
