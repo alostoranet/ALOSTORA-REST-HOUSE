@@ -49,6 +49,9 @@ $requiredRoutes = @(
     '/api/customer-settings',
     '/api/admin/customer-settings',
     '/api/admin/series',
+    '/api/admin/series/{seriesId}/preview',
+    '/api/admin/series/{seriesId}/link-detected',
+    '/api/admin/library/retain-root',
     '/api/admin/seasons',
     '/api/admin/register-selected-files',
     '/api/admin/scan-folder',
@@ -68,6 +71,23 @@ foreach ($route in $requiredRoutes) {
     if (-not $app.Contains($route)) { throw ("Missing API route: " + $route) }
 }
 Write-Host ("PASS: all {0} required management API routes are present." -f $requiredRoutes.Count)
+
+# Flat episode discovery must use the series folder directly, without creating or borrowing a hidden season.
+if ($xaml -notmatch 'SeriesEpisodeCandidatesGrid' -or
+    $code -notmatch 'LoadSeriesEpisodeCandidatesAsync' -or
+    $code -notmatch 'PreviewSeriesEpisodeFolder_Click' -or
+    $code -notmatch 'LinkSeriesEpisodeCandidates_Click' -or
+    $code -match 'EnsureSeriesEpisodeGroupAsync' -or
+    $series -notmatch 'SetDirectEpisode\(' -or
+    $series -notmatch 'EpisodeNumber.*SeriesDirectVideos') {
+    throw "Direct series episode discovery and storage without hidden seasons is incomplete."
+}
+if ($code -notmatch 'SeasonSectionTitle\.Text\s*=\s*isParts\s*\?\s*"الأجزاء"\s*:\s*"المواسم"' -or
+    $xaml -notmatch 'x:Name="SeasonsGrid"') {
+    throw "Existing season and part management controls were not preserved."
+}
+Write-Host "PASS: direct series episode selection is independent of season/part management."
+
 
 # Parse each inline viewer script with Node.js to catch syntax errors before packaging.
 $scripts = [regex]::Matches($html, '(?is)<script\b[^>]*>(.*?)</script>')
