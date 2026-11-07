@@ -83,17 +83,17 @@ foreach ($match in $scripts) {
 }
 Write-Host ("PASS: {0} inline viewer script block(s) passed Node.js syntax validation." -f $scripts.Count)
 
-# The Home control is hidden only on the home page; internal pages retain Home and a compact contact entry in the persistent header.
+# The customer header is intentionally reduced on internal pages to the Home control only.
 if ($html -notmatch 'id="homeView"' -or
     $html -notmatch 'id="contactView"[^>]*hidden' -or
     $html -notmatch 'id="homeNav"[^>]*hidden' -or
-    $html -notmatch 'id="contactNav"' -or
-    $html -notmatch 'id="continueNav"' -or
+    $html -notmatch 'header\.is-inner-page' -or
+    $html -notmatch 'customer-nav>:not\(#homeNav\)' -or
     $html -notmatch 'function goCatalogHome\(' -or
     $html -notmatch "showCustomerView\('contact'\)") {
-    throw "Customer navigation must hide Home only on the landing page and retain Home/contact controls on inner pages."
+    throw "Customer navigation must retain a working Home control and hide the full header on inner pages."
 }
-Write-Host "PASS: Home is hidden only on the landing page; internal pages retain Home and contact navigation."
+Write-Host "PASS: Inner customer pages use the compact Home-only header and retain the contact footer."
 # The customer home must summarize published library content and surface genuinely popular titles.
 if ($html -notmatch 'id="customerOverview"' -or
     $html -notmatch 'id="overviewCategoryCount"' -or
