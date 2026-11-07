@@ -369,3 +369,9 @@ if ($registrationTests -notmatch 'RegisterFilesAddsMultipleExternalFilesAndKeeps
     throw "Local video registration regression tests are incomplete."
 }
 Write-Host "PASS: local video registration regression tests are present."
+
+# Preserve the existing local live-stream page and settings API.
+if ($html -notmatch 'id="liveView"' -or $html -notmatch 'id="liveNav"' -or $app -notmatch 'MapGet\("/api/live-stream"') {
+    throw "The local live-stream customer view or settings API is missing."
+}
+Write-Host "PASS: local live-stream page and settings API remain available."
