@@ -1834,6 +1834,22 @@ public partial class MainWindow : Window
             await LoadSeasonsAsync(s.SeriesId);
             var seasons = (SeasonsGrid.ItemsSource as SeasonAdmin[]) ?? Array.Empty<SeasonAdmin>();
 
+            // Keep the hidden technical episode group synchronized with the series folder.
+            // Administrators manage one flat episode list; no season selection is exposed.
+            if (seasons.Length > 0 && !string.IsNullOrWhiteSpace(s.FolderPath) &&
+                !string.Equals(Path.GetFullPath(seasons[0].FolderPath ?? ""),
+                    Path.GetFullPath(s.FolderPath), StringComparison.OrdinalIgnoreCase))
+            {
+                var folderUpdate = await _http.PostAsJsonAsync(
+                    "/api/admin/seasons/" + seasons[0].SeasonId + "/folder",
+                    new { folderPath = Path.GetFullPath(s.FolderPath) });
+                if (folderUpdate.IsSuccessStatusCode)
+                {
+                    await LoadSeasonsAsync(s.SeriesId);
+                    seasons = (SeasonsGrid.ItemsSource as SeasonAdmin[]) ?? Array.Empty<SeasonAdmin>();
+                }
+            }
+
             // A series-level folder is treated as the folder of its first episode group.
             // Create a default season only when the series has none; never overwrite existing season structure.
             if (seasons.Length == 0 && !string.IsNullOrWhiteSpace(s.FolderPath) && Directory.Exists(s.FolderPath))
