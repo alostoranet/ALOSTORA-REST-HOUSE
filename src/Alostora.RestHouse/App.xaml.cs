@@ -85,6 +85,7 @@ public partial class App : Application
    builder.Services.AddSingleton(new CatalogCategoryService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new CustomerMessageService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddSingleton(new RestHouseProfileService(root));
+   builder.Services.AddSingleton(new AnnouncementService(root));
    builder.Services.AddSingleton(new LiveStreamSettingsService(root));
    builder.Services.AddSingleton(new PublicCatalogAccessService(Path.Combine(root,"resthouse.db")));
    builder.Services.AddHostedService(provider => new ScheduledBackupService(root,posters,provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ScheduledBackupService>>()));
@@ -237,6 +238,21 @@ public partial class App : Application
     return messages.Delete(id)?Results.Ok(new{deleted=true}):Results.NotFound(new{error="الرسالة غير موجودة"});
    });
 
+   _server.MapGet("/api/announcement",(AnnouncementService announcements)=>
+   {
+    var item=announcements.Load();
+    return Results.Ok(new{item.Title,item.Message,item.IsActive,item.Kind,item.UpdatedUtc,item.SpeedSeconds});
+   });
+   _server.MapGet("/api/admin/announcement",(HttpContext c,AnnouncementService announcements)=>
+    IsAdmin(c)?Results.Ok(announcements.Load()):Results.NotFound());
+   _server.MapPost("/api/admin/announcement",(HttpContext c,RestHouseAnnouncement request,AnnouncementService announcements)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(request is null)return Results.BadRequest(new{error="بيانات الإعلان غير صالحة."});
+    try{return Results.Ok(new{saved=true,announcement=announcements.Save(request)});}
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+    catch(IOException){return Results.Problem("تعذر حفظ الإعلان محلياً.",statusCode:500);}
+   });
    _server.MapGet("/api/admin/profile",(HttpContext c,RestHouseProfileService profile)=>
     IsAdmin(c)?Results.Ok(profile.Load()):Results.NotFound());
    _server.MapPost("/api/admin/profile",(HttpContext c,RestHouseProfile request,RestHouseProfileService profile)=>
