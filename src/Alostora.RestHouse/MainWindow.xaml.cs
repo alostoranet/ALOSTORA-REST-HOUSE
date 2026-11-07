@@ -1733,8 +1733,8 @@ public partial class MainWindow : Window
         if (SeasonTitleBox is not null) SeasonTitleBox.ToolTip = isParts ? "اسم الجزء (اختياري)" : "اسم الموسم (اختياري)";
         if (SeasonsGrid.Columns.Count >= 2) { SeasonsGrid.Columns[0].Header = isParts ? "رقم الجزء" : "رقم الموسم"; SeasonsGrid.Columns[1].Header = isParts ? "اسم الجزء" : "اسم الموسم"; }
         if (MissingEpisodesGrid.Columns.Count >= 2) MissingEpisodesGrid.Columns[1].Header = isParts ? "الجزء" : "الموسم";
-        SeasonFolderButton.Content = isParts ? "مجلد الجزء" : "مجلد الموسم";
-        SaveSeasonFolderButton.Content = isParts ? "حفظ مسار الجزء وفحص ملفاته" : "حفظ مسار الموسم المحدد وفحص ملفاته";
+        SeasonFolderButton.Content = isParts ? "مجلد الجزء" : "مجلد المسلسل";
+        SaveSeasonFolderButton.Content = isParts ? "حفظ مسار الجزء وفحص ملفاته" : "حفظ مسار المسلسل المحدد وفحص ملفاته";
         DeleteSeasonButton.Content = isParts ? "حذف الجزء المحدد" : "حذف الموسم المحدد";
         EpisodesSectionTitle.Text = isParts ? "حلقات الجزء المحدد" : "حلقات الموسم المحدد";
         PreviewSeasonFolderButton.Content = isParts ? "اكتشاف حلقات الجزء" : "اكتشاف حلقات الموسم";
@@ -1941,7 +1941,7 @@ public partial class MainWindow : Window
             {
                 EpisodesGrid.ItemsSource = null;
             }
-            SeriesStatusText.Text = $"تم تحميل {rows.Length} موسم/مواسم.";
+            SeriesStatusText.Text = $"تم تحميل الحلقات.";
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر تحميل المواسم: " + ex.Message; }
     }
@@ -2142,7 +2142,7 @@ public partial class MainWindow : Window
             return;
         }
         var confirm = MessageBox.Show(
-            $"سيتم حذف بيانات «{series.Title}» وجميع مواسمه وروابط حلقاته فقط. لن تُحذف ملفات الفيديو الأصلية من القرص.\n\nهل تريد المتابعة؟",
+            $"سيتم حذف بيانات «{series.Title}» وروابط حلقاته فقط. لن تُحذف ملفات الفيديو الأصلية من القرص.\n\nهل تريد المتابعة؟",
             "حذف بيانات المسلسل", MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (confirm != MessageBoxResult.Yes) return;
         try
@@ -2248,7 +2248,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             EpisodesGrid.ItemsSource = null;
-            SeriesStatusText.Text = "تعذر تحميل حلقات الموسم: " + ex.Message;
+            SeriesStatusText.Text = "تعذر تحميل حلقات المسلسل: " + ex.Message;
         }
     }
 
@@ -2269,7 +2269,7 @@ public partial class MainWindow : Window
     {
         if (EpisodesGrid.SelectedItem is not EpisodeAdmin episode)
         {
-            EpisodePosterStatusText.Text = "حدد الحلقة من جدول حلقات الموسم أولاً، ثم اختر صورتها.";
+            EpisodePosterStatusText.Text = "حدد الحلقة من جدول حلقات المسلسل أولاً، ثم اختر صورتها.";
             return;
         }
 
@@ -2321,7 +2321,7 @@ public partial class MainWindow : Window
     {
         if (EpisodesGrid.SelectedItem is not EpisodeAdmin episode)
         {
-            SeriesStatusText.Text = "حدد الحلقة المراد تعديلها من جدول حلقات الموسم.";
+            SeriesStatusText.Text = "حدد الحلقة المراد تعديلها من جدول حلقات المسلسل.";
             return;
         }
         if (!int.TryParse(EpisodeNumberBox.Text, out var number) || number < 1 || number > 10000)
@@ -2380,7 +2380,7 @@ public partial class MainWindow : Window
     {
         if (SeasonsGrid.SelectedItem is not SeasonAdmin season)
         {
-            SeriesStatusText.Text = "اختر الموسم الذي تريد تحديث مساره أولاً.";
+            SeriesStatusText.Text = "اختر المسلسل أولاً لتحديث مجلد حلقاته.";
             return;
         }
 
@@ -2408,7 +2408,7 @@ public partial class MainWindow : Window
             await LoadSeasonsAsync(season.SeriesId);
             SeriesStatusText.Text = folder is null
                 ? "تم مسح مسار الموسم. لم يتم حذف أي ملفات من القرص أو المكتبة."
-                : "تم حفظ مجلد الموسم. لم تُضف ملفاته إلى المكتبة تلقائياً؛ اضغط «اكتشاف حلقات الموسم» لمراجعة الملفات ثم اختر الحلقات التي تريد ربطها.";
+                : "تم حفظ مجلد المسلسل. لم تُضف ملفاته تلقائياً؛ اضغط «اكتشاف حلقات المسلسل» لمراجعة الملفات ثم اختر الحلقات التي تريد إضافتها.";
         }
         catch (Exception ex)
         {
@@ -2420,12 +2420,12 @@ public partial class MainWindow : Window
     {
         if (SeasonsGrid.SelectedItem is not SeasonAdmin season)
         {
-            SeriesStatusText.Text = "اختر الموسم أولاً.";
+            SeriesStatusText.Text = "اختر المسلسل أولاً وافتح حلقاته.";
             return;
         }
         try
         {
-            SeriesStatusText.Text = "جارٍ فحص أسماء ملفات الموسم...";
+            SeriesStatusText.Text = "جارٍ فحص أسماء ملفات المسلسل...";
             var rows = await _http.GetFromJsonAsync<EpisodeCandidate[]>(
                 "/api/admin/seasons/" + season.SeasonId + "/preview") ?? Array.Empty<EpisodeCandidate>();
             _episodeCandidates.Clear();
@@ -2438,7 +2438,7 @@ public partial class MainWindow : Window
                 row.Selected = false;
                 _episodeCandidates.Add(row);
             }
-            SeriesStatusText.Text = $"تم العثور على {rows.Length} ملفاً. راجع أرقام الحلقات قبل اعتماد الربط.";
+            SeriesStatusText.Text = $"تم العثور على {rows.Length} ملفاً. راجع أرقام الحلقات قبل اعتماد إضافتها للمسلسل.";
         }
         catch (Exception ex) { SeriesStatusText.Text = "تعذر فحص الموسم: " + ex.Message; }
     }
@@ -2491,7 +2491,7 @@ public partial class MainWindow : Window
             SeriesStatusText.Text = "صحح أرقام الحلقات المحددة أولاً.";
             return;
         }
-        if (MessageBox.Show($"سيتم ربط {selected.Length} ملفاً بالموسم رقم {season.SeasonNumber}. هل راجعت الأرقام؟",
+        if (MessageBox.Show($"سيتم ربط {selected.Length} ملفاً بالمسلسل «{(SeriesPicker.SelectedItem as SeriesAdmin)?.Title ?? "المحدد"}». هل راجعت الأرقام؟",
             "تأكيد ربط الحلقات", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
         try
