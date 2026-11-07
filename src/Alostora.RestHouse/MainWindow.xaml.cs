@@ -156,7 +156,8 @@ public partial class MainWindow : Window
     public MainWindow(string root, string library, string posters, string? ffmpegPath, int port)
     {
         InitializeComponent();
-        var appLogo = BitmapFrame.Create(new Uri("pack://application:,,,/Assets/alostora-logo.png"), BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+        var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "alostora-logo.png");
+        var appLogo = BitmapFrame.Create(new Uri(logoPath, UriKind.Absolute), BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
         Icon = appLogo;
         HeaderBrandLogo.Source = appLogo;
         _root = root;
