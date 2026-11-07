@@ -2678,6 +2678,7 @@ public partial class MainWindow : Window
             AnnouncementTitleBox.Text = item.Title ?? "";
             AnnouncementMessageBox.Text = item.Message ?? "";
             AnnouncementActiveBox.IsChecked = item.IsActive;
+            AnnouncementSpeedSecondsBox.Text = Math.Clamp(item.SpeedSeconds, 5, 60).ToString();
             AnnouncementAdRadio.IsChecked = item.Kind == "ad";
             AnnouncementNoticeRadio.IsChecked = item.Kind != "ad";
             AnnouncementStatusText.Text = item.IsActive ? "الإعلان منشور للعملاء." : "الإعلان محفوظ لكنه غير ظاهر للعملاء.";
@@ -2687,12 +2688,18 @@ public partial class MainWindow : Window
 
     private async void SaveAnnouncement_Click(object sender, RoutedEventArgs e)
     {
+        if (!int.TryParse(AnnouncementSpeedSecondsBox.Text.Trim(), out var speedSeconds) || speedSeconds < 5 || speedSeconds > 60)
+        {
+            AnnouncementStatusText.Text = "أدخل سرعة صحيحة من 5 إلى 60 ثانية. الرقم الأقل يعني سرعة أعلى.";
+            return;
+        }
         var request = new
         {
             title = AnnouncementTitleBox.Text.Trim(),
             message = AnnouncementMessageBox.Text.Trim(),
             isActive = AnnouncementActiveBox.IsChecked == true,
             kind = AnnouncementAdRadio.IsChecked == true ? "ad" : "notice",
+            speedSeconds,
             updatedUtc = DateTime.UtcNow
         };
         if (request.isActive && string.IsNullOrWhiteSpace(request.message))
@@ -3454,6 +3461,7 @@ public partial class MainWindow : Window
         public string Message { get; set; } = "";
         public bool IsActive { get; set; }
         public string Kind { get; set; } = "notice";
+        public int SpeedSeconds { get; set; } = 18;
     }
 
     private sealed class MetadataLookupAdmin
