@@ -143,7 +143,8 @@ main{max-width:1320px;padding:26px 28px 18px}
 function createViewerId(){try{if(window.crypto&&typeof crypto.randomUUID==='function')return crypto.randomUUID();if(window.crypto&&crypto.getRandomValues){const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}}catch{}return 'viewer-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);}
 let viewerId='';try{viewerId=localStorage.getItem('alostora-viewer')||'';if(!viewerId){viewerId=createViewerId();localStorage.setItem('alostora-viewer',viewerId);}}catch{viewerId=createViewerId();}
 let favorites=new Set();try{favorites=new Set(JSON.parse(localStorage.getItem('alostora-favorites')||'[]'));}catch{}
-let customerAdItems=[],customerAdIndex=0,customerAdTimer=null;\nlet activeVideo=null,loadedVideoId=null,items=[],seriesItems=[],categories=[],mediaItems=[],activeMediaKind="all",progressRows=[],saveTimer=null,playbackGeneration=0,catalogStack=[],catalogPage={type:'home'};const player=document.querySelector('#player');
+let customerAdItems=[],customerAdIndex=0,customerAdTimer=null;
+let activeVideo=null,loadedVideoId=null,items=[],seriesItems=[],categories=[],mediaItems=[],activeMediaKind="all",progressRows=[],saveTimer=null,playbackGeneration=0,catalogStack=[],catalogPage={type:'home'};const player=document.querySelector('#player');
  
 function renderMediaLibraries(){
  const section=document.querySelector('#mediaLibrary'),grid=document.querySelector('#mediaGrid'),hint=document.querySelector('#mediaPlayerHint');
