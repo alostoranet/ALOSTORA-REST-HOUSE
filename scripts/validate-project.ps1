@@ -79,7 +79,7 @@ if ($xaml -notmatch 'SeriesEpisodeCandidatesGrid' -or
     $code -notmatch 'LinkSeriesEpisodeCandidates_Click' -or
     $code -match 'EnsureSeriesEpisodeGroupAsync' -or
     $series -notmatch 'SetDirectEpisode\(' -or
-    $series -notmatch 'EpisodeNumber.*SeriesDirectVideos') {
+    $series -notmatch 'SeriesDirectVideos\(VideoId,SeriesId,EpisodeNumber') {
     throw "Direct series episode discovery and storage without hidden seasons is incomplete."
 }
 if ($code -notmatch 'SeasonSectionTitle\.Text\s*=\s*isParts\s*\?\s*"الأجزاء"\s*:\s*"المواسم"' -or
