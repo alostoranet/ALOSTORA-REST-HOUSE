@@ -65,7 +65,8 @@ if ($xaml -notmatch 'Header="📢 الإعلانات"' -or
     $html -notmatch 'announcement-copy\{display:none!important\}' -or
     -not $html.Contains('.announcement-banner p{position:relative;') -or
     -not $html.Contains('.announcement-track{position:absolute;top:0;right:0;') -or
-    -not $html.Contains('flex-direction:row;direction:rtl;width:max-content;animation:announcement-marquee') -or
+    -not $html.Contains('flex-direction:row;direction:rtl;width:max-content;min-width:200%;animation:announcement-marquee') -or
+    -not $html.Contains('flex:0 0 50%;width:auto;max-width:none;') -or
     -not $html.Contains('position:static;top:auto;right:auto;bottom:auto;display:block!important;') -or
     -not $html.Contains('const wasHidden=banner.hidden;') -or
     -not $html.Contains("track.style.animationPlayState='paused';") -or
