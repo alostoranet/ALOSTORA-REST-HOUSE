@@ -640,21 +640,20 @@ if ($code -notmatch 'PublishBox\.IsChecked\s*==\s*true\s*&&\s*selectedCategory\s
 }
 Write-Host "PASS: published videos cannot be saved without a customer-facing subcategory."
 
-# Announcement ticker repeats enough identical copies and moves by one measured message width for a seamless RTL loop.
+# Announcement ticker uses the original two identical text copies and one exact half-track loop.
 if ($html -notmatch 'background:linear-gradient\(100deg,#9f1420,#d3232d 52%,#a91420\)' -or
     $html -notmatch 'const changed=banner.dataset.contentKey!==contentKey' -or
     $html -notmatch 'prefers-reduced-motion:reduce' -or
     $html -notmatch 'announcement-track' -or
     $html -notmatch 'announcement-copy' -or
-    $html -notmatch 'announcement-message-marquee\{from\{transform:translateX\(0\)\}to\{transform:translateX\(calc\(-1 \* var\(--announcement-shift, 50%\)\)\)\}\}' -or
-    $html -notmatch 'function setupAnnouncementMarquee\(' -or
-    $html -notmatch 'Math\.ceil\(viewportWidth/messageWidth\)\+2' -or
-    $html -notmatch 'track\.style\.setProperty\(''--announcement-shift'',messageWidth\+''px''\)' -or
-    $html -notmatch 'banner\.dataset\.marqueeKey===layoutKey' -or
+    $html -notmatch 'announcement-message-marquee\{from\{transform:translateX\(0\)\}to\{transform:translateX\(-50%\)\}\}' -or
+    $html -notmatch 'track\.style\.animationDirection=''normal''' -or
+    $html -notmatch 'copy\.textContent=item\.message' -or
+    $html -match 'setupAnnouncementMarquee|announcement-shift|marqueeKey' -or
     $html -notmatch '<span id="announcementMessage"></span>') {
-    throw "Customer announcement ticker measured-width seamless loop, refresh behavior, or reduced-motion support is incomplete."
+    throw "Customer announcement ticker must retain two identical copies and the original continuous half-track loop."
 }
-Write-Host "PASS: announcement ticker repeats enough copies and loops seamlessly using the measured message width."
+Write-Host "PASS: announcement ticker uses two identical copies and loops continuously without dynamic width recalculation."
 
 
 # Customer search stays below navigation and new arrivals appear only when recently updated content exists.
@@ -701,15 +700,14 @@ if ($html -notmatch '<nav class="customer-nav"[^>]*>\s*<button id="homeNav"' -or
     throw "Customer contact buttons or enlarged developer credit layout regressed."
 }
 Write-Host "PASS: contact actions are available in the header and above the developer credit on every customer page."
-# Announcement ticker text has vertical room and uses the measured-width continuous full-area track animation.
+# Announcement ticker retains readable vertical padding and the original seamless half-track loop.
 if ($html -notmatch 'announcement-banner p\{display:flex;align-items:center' -or
-    $html -notmatch 'announcement-message-marquee\{from\{transform:translateX\(0\)\}to\{transform:translateX\(calc\(-1 \* var\(--announcement-shift, 50%\)\)\)\}\}' -or
-    $html -notmatch 'function setupAnnouncementMarquee\(' -or
-    $html -notmatch 'track\.style\.setProperty\(''--announcement-shift'',messageWidth\+''px''\)' -or
+    $html -notmatch 'announcement-message-marquee\{from\{transform:translateX\(0\)\}to\{transform:translateX\(-50%\)\}\}' -or
+    $html -match 'setupAnnouncementMarquee|announcement-shift|marqueeKey' -or
     $html -match 'announcement-banner\.is-entering #announcementMessage\{animation:announcement-message-reveal') {
-    throw "Announcement ticker vertical clipping or measured-width continuous full-area motion regression detected."
+    throw "Announcement ticker vertical clipping or original continuous half-track motion regression detected."
 }
-Write-Host "PASS: announcement ticker text has vertical padding and retains its measured-width continuous full-area marquee."
+Write-Host "PASS: announcement ticker has readable vertical padding and the original continuous full-area loop."
 # The Windows management app exposes a safe placeholder for future official updates.
 if ($xaml -notmatch 'Content="التحديثات" Click="Updates_Click"' -or
     $code -notmatch 'void Updates_Click\(' -or
