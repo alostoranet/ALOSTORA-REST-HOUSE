@@ -701,13 +701,15 @@ if ($html -notmatch '<nav class="customer-nav"[^>]*>\s*<button id="homeNav"' -or
     throw "Customer contact buttons or enlarged developer credit layout regressed."
 }
 Write-Host "PASS: contact actions are available in the header and above the developer credit on every customer page."
-# Announcement ticker text must have vertical room and use a continuous full-area track animation.
+# Announcement ticker text has vertical room and uses the measured-width continuous full-area track animation.
 if ($html -notmatch 'announcement-banner p\{display:flex;align-items:center' -or
-    $html -notmatch 'announcement-message-marquee\{from\{transform:translateX\(0\)\}to\{transform:translateX\(-50%\)\}\}' -or
+    $html -notmatch 'announcement-message-marquee\{from\{transform:translateX\(0\)\}to\{transform:translateX\(calc\(-1 \* var\(--announcement-shift, 50%\)\)\)\}\}' -or
+    $html -notmatch 'function setupAnnouncementMarquee\(' -or
+    $html -notmatch 'track\.style\.setProperty\(''--announcement-shift'',messageWidth\+''px''\)' -or
     $html -match 'announcement-banner\.is-entering #announcementMessage\{animation:announcement-message-reveal') {
-    throw "Announcement ticker vertical clipping or continuous full-area motion regression detected."
+    throw "Announcement ticker vertical clipping or measured-width continuous full-area motion regression detected."
 }
-Write-Host "PASS: announcement ticker text has vertical padding and retains its continuous full-area marquee."
+Write-Host "PASS: announcement ticker text has vertical padding and retains its measured-width continuous full-area marquee."
 # The Windows management app exposes a safe placeholder for future official updates.
 if ($xaml -notmatch 'Content="التحديثات" Click="Updates_Click"' -or
     $code -notmatch 'void Updates_Click\(' -or
