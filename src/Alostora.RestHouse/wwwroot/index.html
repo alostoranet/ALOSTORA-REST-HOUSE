@@ -1180,6 +1180,7 @@ function showCustomerView(view){
  homeView.hidden=!home;contactView.hidden=home;
  const contactNav=document.querySelector('#contactNav');if(contactNav){contactNav.classList.toggle('active',!home);contactNav.setAttribute('aria-pressed',String(!home));}
  const homeNav=document.querySelector('#homeNav');if(homeNav)homeNav.hidden=home&&catalogPage.type==='home';
+ const headerBack=document.querySelector('#headerBackNav');if(headerBack)headerBack.hidden=home&&catalogPage.type==='home';
  const appHeader=document.querySelector('header');
  if(appHeader)appHeader.classList.toggle('is-inner-page',!home||catalogPage.type!=='home');
  syncAnnouncementVisibility(home&&catalogPage.type==='home');
