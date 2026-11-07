@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace Alostora.RestHouse;
 
-public sealed record RestHouseAnnouncement(string Title, string Message, bool IsActive, string Kind, DateTime UpdatedUtc);
+public sealed record RestHouseAnnouncement(string Title, string Message, bool IsActive, string Kind, DateTime UpdatedUtc, int SpeedSeconds = 18);
 
 public sealed class AnnouncementService
 {
@@ -52,5 +52,6 @@ public sealed class AnnouncementService
 
     private static RestHouseAnnouncement Clean(RestHouseAnnouncement value) =>
         new((value.Title ?? "").Trim(), (value.Message ?? "").Trim(), value.IsActive,
-            value.Kind is "ad" or "notice" ? value.Kind : "notice", value.UpdatedUtc);
+            value.Kind is "ad" or "notice" ? value.Kind : "notice", value.UpdatedUtc,
+            Math.Clamp(value.SpeedSeconds, 5, 60));
 }
