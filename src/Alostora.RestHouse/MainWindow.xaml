@@ -481,7 +481,7 @@
  <TextBlock x:Name="LibraryBox" Visibility="Collapsed"/>
  <TextBlock x:Name="CountText" Visibility="Collapsed"/>
  <Border Background="#F3F6FA" BorderBrush="#142D4A" BorderThickness="1.5" CornerRadius="9" Padding="12,8" Margin="0,0,0,2">
-  <DockPanel LastChildFill="True">
+  <DockPanel LastChildFill="True" FlowDirection="LeftToRight">
    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" FlowDirection="RightToLeft" VerticalAlignment="Center">
     <Button Click="OpenWhatsApp_Click" Padding="8,4" Background="#E8F7EF" Foreground="#12643A" BorderBrush="#A8D9BD" Cursor="Hand" ToolTip="فتح محادثة واتساب">
      <StackPanel Orientation="Horizontal" FlowDirection="LeftToRight">
@@ -491,7 +491,7 @@
     </Button>
     <Button Content="نسخ" Click="CopyWhatsAppNumber_Click" Padding="12,5" Margin="7,0,0,0" Background="#142D4A" Foreground="White" BorderBrush="#142D4A" ToolTip="نسخ رقم التواصل"/>
    </StackPanel>
-   <TextBlock Text="تصميم وبرمجة الاستراحة: م/ أبو عبيدة محمد النظاري" Foreground="#142D4A" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
+   <TextBlock Text="تصميم وبرمجة الاستراحة: م/ أبو عبيدة محمد النظاري" FlowDirection="RightToLeft" Foreground="#142D4A" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
   </DockPanel>
  </Border>
 </StackPanel>
