@@ -438,6 +438,8 @@
 <TextBlock Text="نص الإعلان الذي سيمر في الشريط"/><TextBox x:Name="AnnouncementMessageBox" Padding="8" Margin="0,4,0,8" Height="70" AcceptsReturn="True" TextWrapping="Wrap" MaxLength="1000"/>
 <WrapPanel Margin="0,0,0,8"><RadioButton x:Name="AnnouncementNoticeRadio" Content="تنبيه" GroupName="AnnouncementKind" IsChecked="True" Margin="0,0,18,0"/><RadioButton x:Name="AnnouncementAdRadio" Content="إعلان" GroupName="AnnouncementKind"/></WrapPanel>
 <CheckBox x:Name="AnnouncementActiveBox" Content="تشغيل الشريط الإعلاني وإظهاره للعملاء" Margin="0,0,0,8"/>
+<TextBlock Text="سرعة الشريط المتحرك — مدة المرور بالثواني (5 أسرع، 60 أبطأ)" FontWeight="Bold" Foreground="#80551A" Margin="0,4,0,4"/>
+<DockPanel Margin="0,0,0,10"><TextBox x:Name="AnnouncementSpeedSecondsBox" Text="18" Width="85" Padding="8" FlowDirection="LeftToRight"/><TextBlock Text="ثانية — الرقم الأقل يجعل الشريط أسرع" Foreground="#80551A" VerticalAlignment="Center" Margin="8,0,0,0"/></DockPanel>
 <WrapPanel><Button Content="حفظ ونشر" Click="SaveAnnouncement_Click" Padding="12,7" Background="#C93640" Foreground="White" Margin="0,0,6,0"/><Button Content="تحميل الحالة الحالية" Click="LoadAnnouncement_Click" Padding="12,7"/></WrapPanel>
 <TextBlock x:Name="AnnouncementStatusText" Text="لا يوجد إعلان منشور حالياً." Foreground="#80551A" Margin="0,8,0,0" TextWrapping="Wrap"/>
 </StackPanel></Border>
