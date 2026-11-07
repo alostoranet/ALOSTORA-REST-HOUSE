@@ -844,11 +844,11 @@ public partial class MainWindow : Window
     {
         if (SeasonsGrid.SelectedItem is not SeasonAdmin)
         {
-            SeriesStatusText.Text = "اختر الموسم أولاً قبل إضافة حلقة.";
+            SeriesStatusText.Text = "اختر المسلسل أولاً وافتح حلقاته قبل إضافة حلقة.";
             return;
         }
         UpdateEpisodeInEditorButton.Visibility = Visibility.Collapsed;
-        OpenDedicatedEditor(EpisodeEditorExpander, "إضافة حلقة للموسم المحدد");
+        OpenDedicatedEditor(EpisodeEditorExpander, "إضافة حلقة للمسلسل المحدد");
     }
 
     private async void EnableFirewall_Click(object sender, RoutedEventArgs e)
@@ -1723,25 +1723,16 @@ public partial class MainWindow : Window
     private void UpdateSeriesStructureLabels()
     {
         if (SeriesStructureBox is null || SeasonSectionTitle is null) return;
-        var type = (SeriesStructureBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Seasons";
-        var isParts = type == "Parts";
-        var isNone = type == "None";
-        SeasonManagementPanel.Visibility = isNone ? Visibility.Collapsed : Visibility.Visible;
-        SeasonSectionTitle.Text = isParts ? "الأجزاء" : "المواسم";
-        AddSeasonButton.Content = isParts ? "إضافة الجزء" : "إضافة الموسم";
-        if (SeasonNumberBox is not null) SeasonNumberBox.ToolTip = isParts ? "رقم الجزء" : "رقم الموسم";
-        if (SeasonTitleBox is not null) SeasonTitleBox.ToolTip = isParts ? "اسم الجزء (اختياري)" : "اسم الموسم (اختياري)";
-        if (SeasonsGrid.Columns.Count >= 2) { SeasonsGrid.Columns[0].Header = isParts ? "رقم الجزء" : "رقم الموسم"; SeasonsGrid.Columns[1].Header = isParts ? "اسم الجزء" : "اسم الموسم"; }
-        if (MissingEpisodesGrid.Columns.Count >= 2) MissingEpisodesGrid.Columns[1].Header = isParts ? "الجزء" : "الموسم";
-        SeasonFolderButton.Content = isParts ? "مجلد الجزء" : "مجلد المسلسل";
-        SaveSeasonFolderButton.Content = isParts ? "حفظ مسار الجزء وفحص ملفاته" : "حفظ مسار المسلسل المحدد وفحص ملفاته";
-        DeleteSeasonButton.Content = isParts ? "حذف الجزء المحدد" : "حذف الموسم المحدد";
-        EpisodesSectionTitle.Text = isParts ? "حلقات الجزء المحدد" : "حلقات الموسم المحدد";
-        PreviewSeasonFolderButton.Content = isParts ? "اكتشاف حلقات الجزء" : "اكتشاف حلقات الموسم";
-        AddEpisodeSectionTitle.Text = isParts ? "إضافة حلقة إلى الجزء المحدد" : "إضافة حلقة إلى الموسم المحدد";
-        VideoPlacementStatusText.Text = isNone
-            ? "هذا البرنامج لا يستخدم مواسم أو أجزاء؛ اربط الفيديوهات به مباشرة من بيانات الفيديو."
-            : isParts ? "يمكنك إضافة أجزاء متعددة، ثم ربط كل فيديو بالجزء ورقم الحلقة المناسب." : "يمكنك إضافة مواسم متعددة، ثم ربط كل فيديو بالموسم ورقم الحلقة المناسب.";
+
+        // Series are managed as one flat list of episodes. A hidden technical
+        // episode group is retained for compatibility with the existing API,
+        // but no season/part concept is exposed to the administrator.
+        SeasonManagementPanel.Visibility = Visibility.Visible;
+        SeasonSectionTitle.Visibility = Visibility.Collapsed;
+        EpisodesSectionTitle.Text = "حلقات المسلسل المحدد";
+        PreviewSeasonFolderButton.Content = "اكتشاف حلقات المسلسل";
+        AddEpisodeSectionTitle.Text = "إضافة حلقة إلى المسلسل المحدد";
+        VideoPlacementStatusText.Text = "اختر المسلسل ثم مجلده، واكتشف الحلقات وحدد ما تريد إضافته مع أرقامها وصورها.";
     }
 
     private void NewSeries_Click(object sender, RoutedEventArgs e)
@@ -1837,7 +1828,7 @@ public partial class MainWindow : Window
             SeriesPosterPathBox.Text = s.PosterPath ?? "";
             UpdateSeriesPosterPreview(s.PosterPath);
             SeriesFolderPathBox.Text = s.FolderPath ?? "";
-            SeriesStructureBox.SelectedItem = SeriesStructureBox.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == s.OrganizationType);
+            SeriesStructureBox.SelectedItem = SeriesStructureBox.Items.OfType<ComboBoxItem>().FirstOrDefault(x => x.Tag?.ToString() == "Seasons");
             UpdateSeriesStructureLabels();
 
             await LoadSeasonsAsync(s.SeriesId);
@@ -2108,7 +2099,7 @@ public partial class MainWindow : Window
         var id = string.IsNullOrWhiteSpace(SeriesIdBox.Text) ? "series-" + Guid.NewGuid().ToString("N") : SeriesIdBox.Text.Trim();
         var folderPath = string.IsNullOrWhiteSpace(SeriesFolderPathBox.Text) ? null : Path.GetFullPath(SeriesFolderPathBox.Text.Trim());
         if (folderPath is not null && !Directory.Exists(folderPath)) { SeriesStatusText.Text = "مجلد المسلسل المحدد غير موجود."; return; }
-        var request = new { seriesId = id, title = SeriesTitleBox.Text.Trim(), description = SeriesDescriptionBox.Text, year, genre = SeriesGenreBox.Text, posterPath = _pendingSeriesPosterPath is not null ? null : (string.IsNullOrWhiteSpace(SeriesPosterPathBox.Text) ? null : SeriesPosterPathBox.Text.Trim()), folderPath, section = string.IsNullOrWhiteSpace(SeriesSectionBox.Text) ? "عام" : SeriesSectionBox.Text.Trim(), categoryId, isPublished = SeriesPublishBox.IsChecked == true, organizationType = (SeriesStructureBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Seasons" };
+        var request = new { seriesId = id, title = SeriesTitleBox.Text.Trim(), description = SeriesDescriptionBox.Text, year, genre = SeriesGenreBox.Text, posterPath = _pendingSeriesPosterPath is not null ? null : (string.IsNullOrWhiteSpace(SeriesPosterPathBox.Text) ? null : SeriesPosterPathBox.Text.Trim()), folderPath, section = string.IsNullOrWhiteSpace(SeriesSectionBox.Text) ? "عام" : SeriesSectionBox.Text.Trim(), categoryId, isPublished = SeriesPublishBox.IsChecked == true, organizationType = "Seasons" };
         try
         {
             var response = await _http.PostAsJsonAsync("/api/admin/series", request);
@@ -2229,7 +2220,7 @@ public partial class MainWindow : Window
             SeasonFolderPathBox.Text = season.FolderPath ?? "";
             EpisodesGrid.ItemsSource = null;
             await LoadEpisodesAsync(season.SeasonId);
-            SeriesStatusText.Text = $"الموسم المحدد: {season.SeasonNumber} — يمكنك إضافة الحلقات أو تعديلها أو فك ربطها.";
+            SeriesStatusText.Text = "حلقات المسلسل المحدد — يمكنك إضافة الحلقات أو تعديلها أو فك ربطها.";
         }
         else
         {
@@ -2475,7 +2466,7 @@ public partial class MainWindow : Window
     {
         if (SeasonsGrid.SelectedItem is not SeasonAdmin season)
         {
-            SeriesStatusText.Text = "اختر الموسم أولاً.";
+            SeriesStatusText.Text = "اختر المسلسل أولاً وافتح حلقاته.";
             return;
         }
         EpisodeCandidatesGrid.CommitEdit(DataGridEditingUnit.Cell, true);
@@ -2536,7 +2527,7 @@ public partial class MainWindow : Window
 
     private async void AddEpisode_Click(object sender, RoutedEventArgs e)
     {
-        if (SeasonsGrid.SelectedItem is not SeasonAdmin season) { SeriesStatusText.Text = "اختر الموسم أولاً."; return; }
+        if (SeasonsGrid.SelectedItem is not SeasonAdmin season) { SeriesStatusText.Text = "اختر المسلسل أولاً وافتح حلقاته."; return; }
         if (EpisodeVideoPicker.SelectedItem is not AdminVideo video) { SeriesStatusText.Text = "اختر ملف الفيديو من المكتبة."; return; }
         if (!int.TryParse(EpisodeNumberBox.Text, out var number) || number < 1 || number > 10000)
         { SeriesStatusText.Text = "رقم الحلقة غير صحيح."; return; }
