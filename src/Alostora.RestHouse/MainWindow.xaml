@@ -407,7 +407,7 @@
 </TabItem>
 <TabItem Header="⚙️ إعدادات متقدمة"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
 <TextBlock Text="إعدادات متقدمة — لا تحتاج لتغييرها في الاستخدام اليومي" FontSize="18" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,10"/>
-<Border Background="#EAF2FA" CornerRadius="8" Padding="12" Margin="0,0,0,12"><StackPanel><TextBlock Text="رابط المشاهدة والمنفذ" FontWeight="Bold" Foreground="#142D4A"/><TextBlock Text="غيّر رقم المنفذ إذا كان مستخدماً. بعد الحفظ أعد تشغيل البرنامج ليبدأ السيرفر على المنفذ الجديد." Foreground="#64748B" TextWrapping="Wrap" Margin="0,4,0,8"/><DockPanel><Button DockPanel.Dock="Left" Content="حفظ المنفذ" Click="SavePort_Click" Padding="12,7" Margin="6,0,0,0" Background="#C93640" Foreground="White"/><TextBox x:Name="PortBox" Width="110" Padding="8" Text="8097" FlowDirection="LeftToRight" TextChanged="PortBox_TextChanged"/></DockPanel><DockPanel Margin="0,8,0,0"><Button DockPanel.Dock="Left" Content="نسخ الرابط" Click="CopyAddress_Click" Padding="12,7" Margin="6,0,0,0"/><TextBlock x:Name="ViewingUrlText" Text="http://127.0.0.1:8097" Foreground="#245B87" VerticalAlignment="Center" FlowDirection="LeftToRight"/></DockPanel></StackPanel></Border>
+<Border Background="#EAF2FA" CornerRadius="8" Padding="12" Margin="0,0,0,12"><StackPanel><TextBlock Text="رابط المشاهدة والمنفذ" FontWeight="Bold" Foreground="#142D4A"/><TextBlock Text="غيّر رقم المنفذ إذا كان مستخدماً. بعد الحفظ أعد تشغيل البرنامج ليبدأ السيرفر على المنفذ الجديد." Foreground="#64748B" TextWrapping="Wrap" Margin="0,4,0,8"/><DockPanel><Button DockPanel.Dock="Left" Content="حفظ المنفذ" Click="SavePort_Click" Padding="12,7" Margin="6,0,0,0" Background="#C93640" Foreground="White"/><TextBox x:Name="PortBox" Width="110" Padding="8" Text="8097" FlowDirection="LeftToRight" TextChanged="PortBox_TextChanged"/></DockPanel><StackPanel Orientation="Horizontal" FlowDirection="RightToLeft" HorizontalAlignment="Right" Margin="0,8,0,0"><TextBlock x:Name="ViewingUrlText" Text="http://127.0.0.1:8097" Foreground="#245B87" VerticalAlignment="Center" FlowDirection="LeftToRight" Margin="0,0,8,0"/><Button Content="نسخ الرابط" Click="CopyAddress_Click" Padding="12,7"/></StackPanel></StackPanel></Border>
 
 <Border Background="#F1F5F9" CornerRadius="8" Padding="12" Margin="0,0,0,12"><StackPanel>
 <TextBlock Text="مكان حفظ ملفات الفيديو" FontWeight="Bold" Foreground="#142D4A"/><DockPanel Margin="0,5,0,0"><Button DockPanel.Dock="Left" Content="تغيير مجلد التخزين" Click="ChooseMediaFolder_Click" Padding="10,6" Margin="0,0,6,0"/><TextBlock x:Name="MediaFolderBox" Foreground="#64748B" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"/></DockPanel>
@@ -476,16 +476,13 @@
 </TabControl>
 <StackPanel Grid.Row="2" Margin="0,4,0,0">
  <Border Background="#FFFFFF" BorderBrush="#142D4A" BorderThickness="1.5" CornerRadius="9" Padding="10,7" Margin="0,0,0,7">
-  <DockPanel LastChildFill="True">
-   <Button DockPanel.Dock="Left" Content="نسخ" Click="CopyAddress_Click" Padding="16,7" Margin="8,0,0,0" Background="#142D4A" Foreground="White" BorderBrush="#142D4A"/>
-   <TextBlock x:Name="AddressBox" FontSize="15" FontWeight="Bold" HorizontalAlignment="Stretch" VerticalAlignment="Center" Foreground="#142D4A" TextAlignment="Center" FlowDirection="LeftToRight"/>
-  </DockPanel>
+  <StackPanel Orientation="Horizontal" FlowDirection="RightToLeft" HorizontalAlignment="Center"><TextBlock x:Name="AddressBox" FontSize="15" FontWeight="Bold" VerticalAlignment="Center" Foreground="#142D4A" TextAlignment="Center" FlowDirection="LeftToRight" Margin="0,0,8,0"/><Button Content="نسخ" Click="CopyAddress_Click" Padding="16,7" Background="#142D4A" Foreground="White" BorderBrush="#142D4A"/></StackPanel>
  </Border>
  <TextBlock x:Name="LibraryBox" Visibility="Collapsed"/>
  <TextBlock x:Name="CountText" Visibility="Collapsed"/>
  <Border Background="#F3F6FA" BorderBrush="#142D4A" BorderThickness="1.5" CornerRadius="9" Padding="12,8" Margin="0,0,0,2">
   <DockPanel LastChildFill="True">
-   <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" FlowDirection="LeftToRight" VerticalAlignment="Center">
+   <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" FlowDirection="RightToLeft" VerticalAlignment="Center">
     <Button Click="OpenWhatsApp_Click" Padding="8,4" Background="#E8F7EF" Foreground="#12643A" BorderBrush="#A8D9BD" Cursor="Hand" ToolTip="فتح محادثة واتساب">
      <StackPanel Orientation="Horizontal" FlowDirection="LeftToRight">
       <Border Background="#25D366" BorderThickness="0" Width="22" Height="22" CornerRadius="11" Margin="0,0,7,0"><TextBlock Text="◉" Foreground="White" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
