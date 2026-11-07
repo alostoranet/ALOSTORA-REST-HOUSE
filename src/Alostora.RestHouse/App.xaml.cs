@@ -718,7 +718,7 @@ public partial class App : Application
        .Where(x=>x.resolved is not null)
        .GroupBy(x=>Path.GetFullPath(x.resolved!.FullPath),StringComparer.OrdinalIgnoreCase)
        .ToDictionary(group=>group.Key,group=>group.First().video,StringComparer.OrdinalIgnoreCase);
-      var candidates=files.PreviewFolder(root).Select(file=>{
+      var candidates=files.PreviewTopLevelFolder(root).Select(file=>{
        var path=Path.GetFullPath(file.FullPath);
        knownFiles.TryGetValue(path,out var known);
        var number=ParseEpisodeNumber(file.FileName);
