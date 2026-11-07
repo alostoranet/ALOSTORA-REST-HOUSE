@@ -2969,12 +2969,14 @@ public partial class MainWindow : Window
             }
 
             var total = summary.Total;
+            DashboardTotalViewsCount.Text = total.ToString("N0");
             DashboardWatchHistoryStatus.Text = total == 0
-                ? "لا توجد مشاهدات مسجلة بعد. ستظهر البيانات عند تشغيل العملاء للفيديوهات."
+                ? "لا توجد مشاهدات مسجلة بعد. سيظهر العدد هنا عند تشغيل العملاء للفيديوهات."
                 : $"إجمالي مرات التشغيل منذ بدء التسجيل: {total:N0}. ترتيب الأكثر مشاهدة محسوب من كامل السجل، وآخر المشاهدات من أحدث 200 عملية.";
         }
         catch (Exception ex)
         {
+            DashboardTotalViewsCount.Text = "—";
             DashboardWatchHistoryStatus.Text = "تعذر تحميل سجل المشاهدة: " + ex.Message;
             _popularPlaybackRows.Clear();
             _recentPlaybackRows.Clear();
