@@ -323,3 +323,55 @@ foreach ($testName in @("SeriesCanUsePartsAndStoreVideosDirectlyUnderTheSeries",
     if (-not $seriesTests.Contains($testName)) { throw ("Missing series placement regression test: " + $testName) }
 }
 Write-Host "PASS: standalone series, seasons, parts, direct video links, and category inheritance are wired and regression-tested."
+
+
+# Local safety: permanent video deletion is disabled in both the Windows UI and embedded API.
+if ($xaml -notmatch 'Content="الحذف النهائي معطّل حفاظاً على الملفات"[^>]*IsEnabled="False"' -or
+    $xaml -match 'Click="DeleteVideo_Click"' -or
+    $code -match 'DeleteVideo_Click' -or
+    $app -match 'MapPost\("/api/admin/library/bulk-delete"' -or
+    $app -match 'MapDelete\("/api/admin/library/\{id\}"') {
+    throw "Permanent video deletion must remain unavailable; use non-destructive removal from the library."
+}
+Write-Host "PASS: permanent video deletion is disabled in the UI and no destructive library endpoint is exposed."
+
+# The local catalog only supports a top-level Group and one level of content subcategories.
+$categoryServicePath = Join-Path $root "src/Alostora.RestHouse/CatalogCategoryService.cs"
+$categoryTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/CatalogCategoryServiceTests.cs"
+$registrationTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/LibraryServiceRegistrationTests.cs"
+$categoryService = Get-Content $categoryServicePath -Raw
+$categoryTests = Get-Content $categoryTestsPath -Raw
+$registrationTests = Get-Content $registrationTestsPath -Raw
+if ($categoryService -notmatch 'parentIsTopLevelGroup' -or
+    $categoryTests -notmatch 'RejectsSubcategoryWhoseParentIsAnotherSubcategory' -or
+    $categoryTests -notmatch 'RejectsConvertingMainCategoryWithChildrenIntoSubcategory' -or
+    $categoryTests -notmatch 'RejectsSelfParentingCategory') {
+    throw "The catalog hierarchy must reject nested, self-parenting, and invalid category conversions."
+}
+Write-Host "PASS: category hierarchy validation and regression tests are present."
+
+# Series cover previews must use one hidden path field and update before/after upload and on selection.
+if ($xaml -notmatch 'x:Name="SeriesPosterPreview"' -or
+    ([regex]::Matches($xaml, 'x:Name="SeriesPosterPathBox"')).Count -ne 1 -or
+    $code -notmatch 'UpdateSeriesPosterPreview\(s\.PosterPath\)' -or
+    $code -notmatch 'UpdateSeriesPosterPreview\(path,\s*isLocalFile:\s*true\)' -or
+    $code -notmatch 'UpdateSeriesPosterPreview\(result\?\.PosterPath\)' -or
+    $code -notmatch 'PublishBox\.IsChecked\s*==\s*true\s*&&\s*selectedCategory\s+is\s+null') {
+    throw "Series cover preview or customer-facing category publication validation is incomplete."
+}
+Write-Host "PASS: series poster preview and publication category validation are wired."
+
+# Video registration tests protect original files, reject invalid selections, and preserve stable IDs.
+if ($registrationTests -notmatch 'RegisterFilesAddsMultipleExternalFilesAndKeepsStableIds' -or
+    $registrationTests -notmatch 'RegisterFilesRejectsWholeSelectionBeforePersistingUnsupportedFile' -or
+    $registrationTests -notmatch 'RegisterFilesRejectsMissingFileBeforePersistingValidSelection' -or
+    $registrationTests -notmatch 'RegisterFilesRejectsEmptySelection') {
+    throw "Local video registration regression tests are incomplete."
+}
+Write-Host "PASS: local video registration regression tests are present."
+
+# Preserve the existing local live-stream page and settings API.
+if ($html -notmatch 'id="liveView"' -or $html -notmatch 'id="liveNav"' -or $app -notmatch 'MapGet\("/api/live-stream"') {
+    throw "The local live-stream customer view or settings API is missing."
+}
+Write-Host "PASS: local live-stream page and settings API remain available."
