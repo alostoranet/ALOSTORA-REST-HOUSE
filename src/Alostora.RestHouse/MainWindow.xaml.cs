@@ -829,7 +829,9 @@ public partial class MainWindow : Window
             _activeEditorExpander = null;
             _activeEditorContent = null;
         };
-        window.ShowDialog();
+        // Keep the management page responsive while the dedicated editor is open.
+        window.Show();
+        window.Activate();
     }
 
     private void CloseDedicatedEditor() => _activeEditorWindow?.Close();
