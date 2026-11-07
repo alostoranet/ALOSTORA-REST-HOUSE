@@ -21,7 +21,7 @@ public sealed class CustomerAdServiceTests : IDisposable
         var first = service.Add(Png(), "ad.png", "عرض الاستراحة", "https://example.com", 10);
         var second = service.Add(Png(), "second.png", "إعلان ثانٍ", "", 15);
         Assert.Equal(2, service.List().Count);
-        Assert.True(service.SetVisibility(first.Id, false));
+        service.Update(first.Id, new CustomerAdUpdateRequest("عرض الاستراحة", "https://example.com", 10, false));
         Assert.Single(service.List(activeOnly: true));
         Assert.False(service.TryGetImage(first.Id, out _, out _));
         Assert.True(service.TryGetImage(second.Id, out var path, out var contentType));
