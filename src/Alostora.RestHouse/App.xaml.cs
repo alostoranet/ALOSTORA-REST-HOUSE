@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using System.IO;
 using System.Net;
@@ -266,6 +267,7 @@ public partial class App : Application
    {
     if(!IsAdmin(c))return Results.NotFound();
     if(c.Request.ContentLength is > 6*1024*1024)return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+    if(c.Features.Get<IHttpMaxRequestBodySizeFeature>() is { IsReadOnly:false } bodyLimit)bodyLimit.MaxRequestBodySize=6*1024*1024;
     if(!c.Request.HasFormContentType)return Results.BadRequest(new{error="أرسل صورة الإعلان بصيغة نموذج ملفات."});
     try
     {
