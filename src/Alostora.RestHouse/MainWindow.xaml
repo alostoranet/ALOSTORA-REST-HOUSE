@@ -282,6 +282,15 @@
 
 </StackPanel></ScrollViewer></TabItem>
 <TabItem Header="المواسم والحلقات"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
+<StackPanel x:Name="DirectVideoManagementPanel" Visibility="Collapsed">
+<TextBlock Text="فيديوهات المسلسل المباشرة — بدون مواسم أو أجزاء" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,12,0,8"/>
+<TextBlock Text="اختر فيديو من المكتبة لإضافته مباشرة إلى هذا المسلسل. لن يتم إنشاء موسم أو جزء، ولن يتم حذف ملف الفيديو الأصلي عند فك الربط." Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"/>
+<ComboBox x:Name="DirectVideoPicker" DisplayMemberPath="Title" Padding="8" Margin="0,0,0,8"/>
+<WrapPanel Margin="0,0,0,8"><Button Content="إضافة الفيديو المحدد مباشرة إلى المسلسل" Click="AddDirectVideo_Click" Padding="12,8" Margin="0,0,6,0" Background="#C93640" Foreground="White"/><Button Content="تحديث القائمة" Click="RefreshDirectVideos_Click" Padding="10,8"/></WrapPanel>
+<DataGrid x:Name="DirectVideosGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single" Height="190" Margin="0,0,0,10">
+<DataGrid.Columns><DataGridTextColumn Header="اسم الفيديو" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="معرّف الفيديو" Binding="{Binding VideoId}" Width="220"/></DataGrid.Columns></DataGrid>
+<Button Content="فك ربط الفيديو المحدد من المسلسل" Click="UnlinkDirectVideo_Click" Padding="10,7" Background="#FCE8E8" Foreground="#9F2630" HorizontalAlignment="Right"/>
+</StackPanel>
 <StackPanel x:Name="SeasonManagementPanel"><TextBlock x:Name="SeasonSectionTitle" Text="المواسم" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,12,0,8"/>
 <Button Content="إضافة موسم أو جزء" Click="OpenSeasonEditor_Click" Padding="12,8" Margin="0,0,0,8"/><Expander x:Name="SeasonEditorExpander" Visibility="Collapsed" Header="إضافة موسم أو جزء" IsExpanded="False" Background="#F7FAFD" Padding="10" Margin="0,0,0,10"><StackPanel><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="90"/></Grid.ColumnDefinitions>
 <StackPanel Grid.Column="0" Margin="0,0,6,8"><TextBox x:Name="SeasonTitleBox" Padding="8" Margin="0,0,0,5" ToolTip="اسم الموسم (اختياري)"/><DockPanel><Button x:Name="SeasonFolderButton" DockPanel.Dock="Left" Content="مجلد الموسم" Click="ChooseSeasonFolder_Click" Padding="8,5" Margin="0,0,5,0"/><TextBox x:Name="SeasonFolderPathBox" Padding="7" FlowDirection="LeftToRight" ToolTip="مسار مجلد ملفات هذا الموسم"/></DockPanel></StackPanel>
