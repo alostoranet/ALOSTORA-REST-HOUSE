@@ -776,8 +776,15 @@ public partial class MainWindow : Window
         // a temporarily detached Expander.Content as a second open operation.
         if (_activeEditorWindow is { IsVisible: true } activeWindow)
         {
-            activeWindow.Activate();
-            return;
+            if (ReferenceEquals(editor, _activeEditorExpander))
+            {
+                activeWindow.Activate();
+                return;
+            }
+
+            // Switching to a different editor closes and restores the previous form
+            // before opening the requested one; it must not silently show the old form.
+            activeWindow.Close();
         }
 
         // Recover the editor body if a previous window was closed while its content
@@ -2028,7 +2035,7 @@ public partial class MainWindow : Window
         {
             var response = await _http.DeleteAsync("/api/admin/movies/" + Uri.EscapeDataString(movie.Id));
             if (!response.IsSuccessStatusCode) { MoviesListStatusText.Text = "تعذر حذف الفيلم: " + await response.Content.ReadAsStringAsync(); return; }
-            CloseDedicatedEditor();
+            if (ReferenceEquals(_activeEditorExpander, MovieEditorExpander)) CloseDedicatedEditor();
             await LoadVideosAsync();
             RefreshMoviesPicker();
             MoviesListStatusText.Text = "تم حذف سجل الفيلم من واجهة الأفلام، وبقي ملف الفيديو الأصلي محفوظاً في القرص.";
