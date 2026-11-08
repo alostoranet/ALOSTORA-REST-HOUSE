@@ -815,6 +815,7 @@ function customerRoutePath(pages){
   else if(type==='season')parts.push('season',encodeURIComponent(page.seasonId||''));
   else if(type==='player'&&page.videoId)parts.push('watch',encodeURIComponent(page.videoId));
   else if(type==='continue')parts.push('continue');
+  else if(type==='media')parts.push('media',encodeURIComponent(String(page.kind||'').toLowerCase()));
  }
  return '/'+parts.join('/');
 }
@@ -851,7 +852,11 @@ function routePagesFromPath(path){
    const item=items.find(x=>String(x.id)===id);if(!item)return null;
    pages.push({type:'player',videoId:item.id,title:item.title});
   }else if(key==='continue')pages.push({type:'continue',title:'متابعة المشاهدة'});
-  else return null;
+  else if(key==='media'){
+   const kind=decodeURIComponent(parts[i++]||'').toLowerCase();
+   const mediaKind={audio:'Audio',books:'Books',apps:'Apps'}[kind];if(!mediaKind)return null;
+   pages.push({type:'media',kind:mediaKind,title:mediaKind==='Audio'?'الصوتيات':mediaKind==='Books'?'الكتب':'تطبيقات أندرويد'});
+  }else return null;
  }
  return pages;
 }
@@ -867,6 +872,13 @@ function applyCustomerRoute(pages){
  showCustomerView('home');
  renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});
  const last=catalogPage;
+ if(last.type==='media'){
+  activeMediaKind=last.kind;
+  document.querySelectorAll('.media-tab').forEach(x=>x.classList.toggle('active',x.dataset.kind===activeMediaKind));
+  document.querySelector('#catalogView').hidden=true;
+  document.querySelector('#mediaLibrary').hidden=false;
+  renderMediaLibraries();
+ }
  if(last.type==='player'&&last.videoId){
   const item=items.find(x=>String(x.id)===String(last.videoId));
   if(item)play(item,false);
@@ -1382,7 +1394,7 @@ document.querySelectorAll('.media-tab').forEach(button=>button.addEventListener(
  document.querySelector('#catalogToolbar').hidden=mediaOnly;
  document.querySelector('#welcomePanel').hidden=mediaOnly;
  document.querySelector('#message').hidden=mediaOnly;
- applyCustomerSettings();if(mediaOnly){document.querySelector('#mediaLibrary').hidden=false;renderMediaLibraries();}
+ applyCustomerSettings();if(mediaOnly){document.querySelector('#mediaLibrary').hidden=false;renderMediaLibraries();catalogStack=[{type:'home',title:'الرئيسية'}];catalogPage={type:'media',kind:activeMediaKind};syncCustomerRoute(true);}
  else{document.querySelector('#catalogView').hidden=false;document.querySelector('#catalogToolbar').hidden=false;document.querySelector('#welcomePanel').hidden=false;renderMediaLibraries();}
 }));
 document.querySelector('#customerAdPrev').addEventListener('click',()=>renderCustomerAd(customerAdIndex-1));
