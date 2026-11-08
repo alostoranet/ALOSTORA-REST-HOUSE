@@ -91,7 +91,8 @@ internal static class Program
                             ("SeriesEditorExpander", "Series editor"),
                             ("CategoryEditorExpander", "Category editor"),
                             ("SeasonEditorExpander", "Season editor"),
-                            ("EpisodeEditorExpander", "Episode editor")
+                            ("EpisodeEditorExpander", "Episode editor"),
+                            ("MovieEditorExpander", "Movie editor")
                         };
                         foreach (var (name, title) in editors)
                         {
@@ -131,7 +132,7 @@ internal static class Program
 
             if (!saveVerified)
                 throw new InvalidOperationException("The visible management window failed to save the external live URL.");
-            Console.WriteLine("PASS: the visible management window loaded, saved settings, and the series, category, season, and episode editors each opened/closed/reopened three times without losing their forms.");
+            Console.WriteLine("PASS: the visible management window loaded, saved settings, and the series, category, season, episode, and movie editors each opened/closed/reopened three times without losing their forms.");
             return 0;
         }
         catch (Exception ex)
