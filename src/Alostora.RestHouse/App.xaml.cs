@@ -1051,6 +1051,16 @@ _server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalog
     catch(Microsoft.Data.Sqlite.SqliteException){return Results.Conflict(new{error="تعذر ربط الفيديو: قد يكون رقم الحلقة مستخدماً بالفعل في هذا الموسم أو الجزء."});}
     catch(Exception ex) when(ex is ArgumentException or InvalidOperationException or KeyNotFoundException){return Results.BadRequest(new{error=ex.Message});}
    });
+   _server.MapDelete("/api/admin/movies/{id}",(HttpContext c,string id,LibraryService librarySvc,VideoMetadataService meta,SeriesCatalogService series)=>{
+    if(!IsAdmin(c)) return Results.NotFound();
+    if(string.IsNullOrWhiteSpace(id)||id.Length!=24||!id.All(Uri.IsHexDigit)) return Results.BadRequest(new{error="معرّف الفيلم غير صالح"});
+    if(librarySvc.Resolve(id) is null) return Results.NotFound(new{error="ملف الفيديو غير موجود"});
+    var existing=meta.Get(id);
+    if(existing is null||!string.Equals(existing.Kind,"Movie",StringComparison.OrdinalIgnoreCase)) return Results.NotFound(new{error="سجل الفيلم غير موجود"});
+    series.SetVideoPlacement(null,null,id,null,null);
+    meta.Delete(id);
+    return Results.Ok(new{deleted=true,filePreserved=true,message="تم حذف بيانات الفيلم فقط، ولم يُحذف ملف الفيديو الأصلي."});
+   });
    _server.MapPost("/api/admin/poster/{videoId}",async (HttpContext c,string videoId,LibraryService librarySvc,VideoMetadataService meta)=>{
     if(!IsAdmin(c)) return Results.NotFound();
     if(videoId.Length!=24||!videoId.All(Uri.IsHexDigit)) return Results.BadRequest(new{error="معرّف الفيديو غير صالح"});
