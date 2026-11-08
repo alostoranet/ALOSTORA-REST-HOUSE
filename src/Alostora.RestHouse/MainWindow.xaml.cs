@@ -1312,6 +1312,7 @@ public partial class MainWindow : Window
 
             RefreshSeriesCategoryPicker(SeriesCategoryPicker.SelectedValue as string);
             RefreshVideoCategoryPicker(VideoCategoryPicker.SelectedValue as string);
+            MovieCategoryPicker.ItemsSource = rows.Where(x => x.ParentId is not null && (x.ContentKind == "Movie" || x.ContentKind == "Other") && x.IsPublished && parents.Any(p => p.CategoryId == x.ParentId && p.IsPublished)).ToArray();
         }
         catch (Exception ex) { CategoryStatusText.Text = "تعذر تحميل الأقسام: " + ex.Message; }
     }
