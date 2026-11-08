@@ -772,7 +772,17 @@ public partial class MainWindow : Window
 
     private void OpenDedicatedEditor(Expander editor, string title)
     {
-        if (_activeEditorWindow is not null || editor.Content is null) return;
+        if (_activeEditorWindow is not null)
+        {
+            _activeEditorWindow.Activate();
+            SeriesStatusText.Text = "أغلق نافذة الإدارة المفتوحة أولاً، ثم افتح نافذة الإضافة أو التعديل المطلوبة.";
+            return;
+        }
+        if (editor.Content is null)
+        {
+            SeriesStatusText.Text = "نافذة الإدارة المطلوبة مفتوحة بالفعل أو يجري تجهيزها.";
+            return;
+        }
         _activeEditorExpander = editor;
         _activeEditorContent = editor.Content;
         editor.Content = null;
@@ -821,9 +831,7 @@ public partial class MainWindow : Window
             {
                 closedEditor.Content = _activeEditorContent;
                 closedEditor.IsExpanded = false;
-                if (closedEditor == CategoryEditorExpander) CategoriesGrid.SelectedIndex = -1;
-                else if (closedEditor == SeriesEditorExpander) SeriesPicker.SelectedIndex = -1;
-                else if (closedEditor == EpisodeEditorExpander) EpisodesGrid.SelectedIndex = -1;
+                // Preserve the selected series/episode after closing its editor.
             }
             _activeEditorWindow = null;
             _activeEditorExpander = null;
@@ -893,8 +901,15 @@ public partial class MainWindow : Window
             SeriesStatusText.Text = "اختر المسلسل أولاً وافتح حلقاته قبل إضافة حلقة.";
             return;
         }
+        EpisodeVideoPicker.ItemsSource = _videos
+            .Where(x => string.IsNullOrWhiteSpace(x.LinkedSeriesId))
+            .ToArray();
+        EpisodeVideoPicker.SelectedIndex = -1;
+        EpisodeTitleBox.Clear();
+        EpisodeNumberBox.Text = "1";
         UpdateEpisodeInEditorButton.Visibility = Visibility.Collapsed;
-        OpenDedicatedEditor(EpisodeEditorExpander, "إضافة حلقة للمسلسل المحدد");
+        EpisodePosterStatusText.Text = "اختر فيديو غير مربوط من المكتبة، ثم أدخل رقم الحلقة واحفظها داخل الموسم أو الجزء المحدد.";
+        OpenDedicatedEditor(EpisodeEditorExpander, "إضافة حلقة إلى الموسم أو الجزء المحدد");
     }
 
     private async void EnableFirewall_Click(object sender, RoutedEventArgs e)
@@ -1867,6 +1882,29 @@ public partial class MainWindow : Window
         catch (Exception ex) { SeriesStatusText.Text = "تعذر إنشاء المسلسل: " + ex.Message; }
     }
 
+    private void EditSelectedSeries_Click(object sender, RoutedEventArgs e)
+    {
+        if (SeriesPicker.SelectedItem is not SeriesAdmin series)
+        {
+            SeriesStatusText.Text = "حدد المسلسل من القائمة أولاً، ثم اضغط تعديل.";
+            return;
+        }
+        OpenDedicatedEditor(SeriesEditorExpander, "تعديل بيانات المسلسل — " + series.Title);
+    }
+
+    private void EditSelectedEpisode_Click(object sender, RoutedEventArgs e)
+    {
+        if (EpisodesGrid.SelectedItem is not EpisodeAdmin episode)
+        {
+            SeriesStatusText.Text = "حدد الحلقة من قائمة حلقات الموسم أو الجزء أولاً.";
+            return;
+        }
+        EpisodeNumberBox.Text = episode.EpisodeNumber.ToString();
+        EpisodeTitleBox.Text = episode.Title;
+        UpdateEpisodeInEditorButton.Visibility = Visibility.Visible;
+        OpenDedicatedEditor(EpisodeEditorExpander, "تعديل الحلقة — " + episode.Title);
+    }
+
     private async void SeriesPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (SeriesPicker.SelectedItem is not SeriesAdmin s) return;
@@ -1902,8 +1940,7 @@ public partial class MainWindow : Window
                 SeriesEpisodeSelectionSummaryText.Text = "اختر مجلد المسلسل واحفظه ثم اضغط اكتشاف الحلقات.";
             }
 
-            SeriesStatusText.Text = $"تم تحميل بيانات «{s.Title}». افتحنا الآن نافذة التعديل لإدارة بيانات المسلسل وحلقاته وحذفه عند الحاجة.";
-            OpenDedicatedEditor(SeriesEditorExpander, "تعديل المسلسل — " + s.Title);
+            SeriesStatusText.Text = $"تم تحديد «{s.Title}» وتحميل مواسمه وحلقاته. استخدم أزرار تعديل المسلسل أو إضافة موسم/حلقة من داخل إدارة المسلسل.";
         }
         catch (Exception ex)
         {
@@ -2403,9 +2440,8 @@ public partial class MainWindow : Window
         EpisodePosterStatusText.Text = string.IsNullOrWhiteSpace(episode.PosterPath)
             ? "لا توجد صورة خاصة؛ سيظهر غلاف المسلسل تلقائياً."
             : "للحلقة صورة خاصة محفوظة. يمكنك اختيار صورة أخرى لتحديثها.";
-        SeriesStatusText.Text = $"تم تحديد الحلقة رقم {episode.EpisodeNumber}. عدّل الرقم أو الاسم ثم اضغط حفظ التعديل.";
+        SeriesStatusText.Text = $"تم تحديد الحلقة رقم {episode.EpisodeNumber}. اضغط «تعديل الحلقة المحددة» لفتح نموذج التعديل.";
         UpdateEpisodeInEditorButton.Visibility = Visibility.Visible;
-        OpenDedicatedEditor(EpisodeEditorExpander, "تعديل بيانات الحلقة");
     }
 
     private async void UploadEpisodePoster_Click(object sender, RoutedEventArgs e)
