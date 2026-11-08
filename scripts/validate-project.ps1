@@ -810,6 +810,7 @@ if ($html -notmatch 'function customerRoutePath\(' -or
     $html -notmatch "window\.addEventListener\('popstate'" -or
     $html -notmatch "parts\.push\('series'" -or
     $html -notmatch "parts\.push\('watch'" -or
+    $html -notmatch "parts\.push\('media'" -or
     $html -notmatch 'function routePagesFromPath\(' -or
     $html -notmatch 'function applyCustomerRoute\(' -or
     $html -notmatch 'play\(item,false\)' -or
