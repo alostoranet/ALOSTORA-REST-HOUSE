@@ -1573,6 +1573,7 @@ public partial class MainWindow : Window
             }
             EpisodeVideoPicker.ItemsSource = _videos;
             MissingEpisodeVideoPicker.ItemsSource = _videos;
+            if (MoviesPicker is not null) RefreshMoviesPicker();
             await RefreshVideoFoldersTreeAsync();
             CountText.Text = $"عدد ملفات الفيديو: {_videos.Count}";
             UpdateDashboardStats();
@@ -1841,6 +1842,195 @@ public partial class MainWindow : Window
         VideoPlacementStatusText.Text = isNone
             ? "هذا البرنامج لا يستخدم مواسم أو أجزاء؛ اربط الفيديوهات به مباشرة من بيانات الفيديو."
             : isParts ? "يمكنك إضافة أجزاء متعددة، ثم ربط كل فيديو بالجزء ورقم الحلقة المناسب." : "يمكنك إضافة مواسم متعددة، ثم ربط كل فيديو بالموسم ورقم الحلقة المناسب.";
+    }
+
+    private string? _pendingMoviePosterPath;
+
+    private void RefreshMoviesPicker()
+    {
+        var selectedId = (MoviesPicker.SelectedItem as AdminVideo)?.Id;
+        var movies = _videos.Where(v => v.MetadataSaved && !string.Equals(v.Kind, "Series", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(v => v.Title, StringComparer.CurrentCultureIgnoreCase).ToArray();
+        MoviesPicker.ItemsSource = movies;
+        if (!string.IsNullOrWhiteSpace(selectedId))
+            MoviesPicker.SelectedItem = movies.FirstOrDefault(v => v.Id == selectedId);
+        MoviesListStatusText.Text = $"عدد الأفلام المسجلة: {movies.Length}.";
+    }
+
+    private void NewMovie_Click(object sender, RoutedEventArgs e)
+    {
+        MoviesPicker.SelectedIndex = -1;
+        _pendingMoviePosterPath = null;
+        MovieTitleBox.Clear(); MovieFilePathBox.Clear(); MovieDescriptionBox.Clear();
+        MovieYearBox.Clear(); MovieGenreBox.Clear();
+        MovieCategoryPicker.SelectedIndex = -1;
+        MoviePublishBox.IsChecked = false;
+        MoviePosterStatusText.Text = "يمكن ترك الغلاف فارغاً.";
+        MovieStatusText.Text = "أدخل اسم الفيلم واختر ملف الفيديو ثم احفظ.";
+        OpenDedicatedEditor(MovieEditorExpander, "إضافة فيلم جديد");
+    }
+
+    private void EditSelectedMovie_Click(object sender, RoutedEventArgs e)
+    {
+        if (MoviesPicker.SelectedItem is not AdminVideo movie)
+        {
+            MoviesListStatusText.Text = "حدد الفيلم الذي تريد تعديله أولاً.";
+            return;
+        }
+        _pendingMoviePosterPath = null;
+        MovieTitleBox.Text = movie.Title ?? "";
+        MovieFilePathBox.Text = Path.Combine(movie.FolderPath ?? "", movie.FileName ?? "");
+        MovieDescriptionBox.Text = movie.Description ?? "";
+        MovieYearBox.Text = movie.Year?.ToString() ?? "";
+        MovieGenreBox.Text = movie.Genre ?? "";
+        MovieCategoryPicker.SelectedValue = movie.CategoryId;
+        MoviePublishBox.IsChecked = movie.IsPublished;
+        MoviePosterStatusText.Text = string.IsNullOrWhiteSpace(movie.PosterPath) ? "لا يوجد غلاف محفوظ." : "يوجد غلاف محفوظ؛ يمكنك اختيار صورة بديلة.";
+        MovieStatusText.Text = "عدّل البيانات المطلوبة ثم احفظ.";
+        OpenDedicatedEditor(MovieEditorExpander, "تعديل بيانات الفيلم");
+    }
+
+    private void ChooseMovieFile_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختر ملف الفيديو الخاص بهذا الفيلم فقط",
+            Filter = "ملفات الفيديو|*.mp4;*.m4v;*.mkv;*.avi;*.mov;*.webm;*.ts;*.m2ts;*.mts;*.flv;*.wmv;*.mpg;*.mpeg;*.3gp",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        if (dialog.ShowDialog(this) == true) MovieFilePathBox.Text = Path.GetFullPath(dialog.FileName);
+    }
+
+    private void ChooseMoviePoster_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog { Title = "اختر غلاف الفيلم (اختياري)", Filter = "صور JPG أو PNG أو WEBP|*.jpg;*.jpeg;*.png;*.webp", CheckFileExists = true };
+        if (dialog.ShowDialog(this) != true) return;
+        var info = new FileInfo(dialog.FileName);
+        if (info.Length == 0 || info.Length > 5_242_880)
+        {
+            MoviePosterStatusText.Text = "حجم الصورة يجب ألا يتجاوز 5 ميجابايت.";
+            return;
+        }
+        _pendingMoviePosterPath = dialog.FileName;
+        MoviePosterStatusText.Text = "تم اختيار الغلاف: " + Path.GetFileName(dialog.FileName);
+    }
+
+    private void CancelMovieEditor_Click(object sender, RoutedEventArgs e)
+    {
+        CloseDedicatedEditor();
+        MovieStatusText.Text = "تم إلغاء التعديل.";
+    }
+
+    private async void SaveMovie_Click(object sender, RoutedEventArgs e)
+    {
+        var title = MovieTitleBox.Text.Trim();
+        var filePath = MovieFilePathBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(title)) { MovieStatusText.Text = "اكتب اسم الفيلم أولاً."; return; }
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) { MovieStatusText.Text = "اختر ملف فيديو موجوداً للفيلم."; return; }
+        int? year = null;
+        if (!string.IsNullOrWhiteSpace(MovieYearBox.Text))
+        {
+            if (!int.TryParse(MovieYearBox.Text.Trim(), out var parsed) || parsed < 1888 || parsed > DateTime.UtcNow.Year + 5)
+            { MovieStatusText.Text = "السنة غير صحيحة؛ اتركها فارغة أو أدخل سنة صحيحة."; return; }
+            year = parsed;
+        }
+        var categoryId = MovieCategoryPicker.SelectedValue as string;
+        if (MoviePublishBox.IsChecked == true && string.IsNullOrWhiteSpace(categoryId))
+        {
+            MovieStatusText.Text = "اختر قسم العرض أو ألغِ خيار النشر. بقية الحقول اختيارية.";
+            return;
+        }
+        try
+        {
+            MovieStatusText.Text = "جارٍ تجهيز ملف الفيلم...";
+            var fullPath = Path.GetFullPath(filePath);
+            var existing = _videos.FirstOrDefault(v =>
+                string.Equals(v.FileName, Path.GetFileName(fullPath), StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(v.FolderPath, Path.GetDirectoryName(fullPath), StringComparison.OrdinalIgnoreCase));
+            if (existing is null)
+            {
+                var register = await _http.PostAsJsonAsync("/api/admin/register-files", new { filePaths = new[] { fullPath } });
+                if (!register.IsSuccessStatusCode) { MovieStatusText.Text = "تعذرت إضافة ملف الفيلم: " + await register.Content.ReadAsStringAsync(); return; }
+                await LoadVideosAsync();
+                existing = _videos.FirstOrDefault(v =>
+                    string.Equals(v.FileName, Path.GetFileName(fullPath), StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(v.FolderPath, Path.GetDirectoryName(fullPath), StringComparison.OrdinalIgnoreCase));
+            }
+            if (existing is null)
+            {
+                MovieStatusText.Text = "تم فحص الملف لكن لم أتمكن من تحديد سجله داخل المكتبة. لم تُحفظ بيانات الفيلم؛ أعد اختيار الملف.";
+                return;
+            }
+            MovieStatusText.Text = "جارٍ حفظ بيانات الفيلم...";
+            var request = new
+            {
+                videoId = existing.Id,
+                title,
+                description = MovieDescriptionBox.Text ?? "",
+                year,
+                genre = MovieGenreBox.Text ?? "",
+                kind = "Movie",
+                posterPath = (string?)null,
+                director = (string?)null,
+                cast = (string?)null,
+                rating = (double?)null,
+                runtimeMinutes = (int?)null,
+                releaseDate = (string?)null,
+                tags = (string?)null,
+                section = "عام",
+                categoryId,
+                isPublished = MoviePublishBox.IsChecked == true,
+                seriesId = (string?)null,
+                seasonId = (long?)null,
+                episodeNumber = (int?)null,
+                episodeTitle = (string?)null
+            };
+            var save = await _http.PostAsJsonAsync("/api/admin/metadata", request);
+            if (!save.IsSuccessStatusCode) { MovieStatusText.Text = "لم تُحفظ بيانات الفيلم: " + await save.Content.ReadAsStringAsync(); return; }
+            if (!string.IsNullOrWhiteSpace(_pendingMoviePosterPath))
+            {
+                var ext = Path.GetExtension(_pendingMoviePosterPath).ToLowerInvariant();
+                var contentType = ext is ".jpg" or ".jpeg" ? "image/jpeg" : ext == ".png" ? "image/png" : ext == ".webp" ? "image/webp" : "";
+                using var bytes = new ByteArrayContent(await File.ReadAllBytesAsync(_pendingMoviePosterPath));
+                bytes.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+                var poster = await _http.PostAsync("/api/admin/poster/" + Uri.EscapeDataString(existing.Id), bytes);
+                if (!poster.IsSuccessStatusCode) MovieStatusText.Text = "تم حفظ الفيلم، لكن تعذر رفع الغلاف: " + await poster.Content.ReadAsStringAsync();
+            }
+            await LoadVideosAsync();
+            RefreshMoviesPicker();
+            MoviesPicker.SelectedItem = (MoviesPicker.ItemsSource as AdminVideo[])?.FirstOrDefault(v => v.Id == existing.Id);
+            _pendingMoviePosterPath = null;
+            if (string.IsNullOrWhiteSpace(MovieStatusText.Text) || MovieStatusText.Text.StartsWith("جارٍ"))
+                MovieStatusText.Text = $"تم حفظ الفيلم «{title}» بنجاح. الملف الأصلي محفوظ في مكانه.";
+            CloseDedicatedEditor();
+        }
+        catch (Exception ex)
+        {
+            App.LogDiagnostic("MainWindow.SaveMovie_Click", ex);
+            MovieStatusText.Text = "تعذر حفظ الفيلم: " + ex.Message;
+        }
+    }
+
+    private async void DeleteMovie_Click(object sender, RoutedEventArgs e)
+    {
+        if (MoviesPicker.SelectedItem is not AdminVideo movie)
+        {
+            MoviesListStatusText.Text = "حدد الفيلم الذي تريد حذفه أولاً.";
+            return;
+        }
+        if (MessageBox.Show($"سيتم حذف بيانات الفيلم «{movie.Title}» من قائمة الأفلام فقط. لن يُحذف ملف الفيديو الأصلي من القرص. هل تريد المتابعة؟",
+            "حذف بيانات الفيلم", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        try
+        {
+            var response = await _http.DeleteAsync("/api/admin/movies/" + Uri.EscapeDataString(movie.Id));
+            if (!response.IsSuccessStatusCode) { MoviesListStatusText.Text = "تعذر حذف الفيلم: " + await response.Content.ReadAsStringAsync(); return; }
+            CloseDedicatedEditor();
+            await LoadVideosAsync();
+            RefreshMoviesPicker();
+            MoviesListStatusText.Text = "تم حذف سجل الفيلم من واجهة الأفلام، وبقي ملف الفيديو الأصلي محفوظاً في القرص.";
+        }
+        catch (Exception ex) { MoviesListStatusText.Text = "تعذر حذف الفيلم: " + ex.Message; }
     }
 
     private void NewSeries_Click(object sender, RoutedEventArgs e)
