@@ -802,3 +802,19 @@ if ($html -match 'updatesCta|footer-updates-button|سيتم توفير خدمة 
     throw "The customer page must not expose application update controls or update placeholder messages."
 }
 Write-Host "PASS: app updates are available in Windows management only; the customer page has no update control or placeholder."
+
+# Customer catalog routes are shareable, nested, refresh-safe, and participate in browser back/forward history.
+if ($html -notmatch 'function customerRoutePath\(' -or
+    $html -notmatch 'history\.pushState\(' -or
+    $html -notmatch 'history\.replaceState\(' -or
+    $html -notmatch "window\.addEventListener\('popstate'" -or
+    $html -notmatch "parts\.push\('series'" -or
+    $html -notmatch "parts\.push\('watch'" -or
+    $html -notmatch 'function routePagesFromPath\(' -or
+    $html -notmatch 'function applyCustomerRoute\(' -or
+    $html -notmatch 'play\(item,false\)' -or
+    $app -notmatch 'MapFallbackToFile\("index\.html"\)') {
+    throw "Customer nested routes, direct-link restoration, browser history, or server fallback are incomplete."
+}
+Write-Host "PASS: customer pages have nested shareable URLs, direct-link restoration, browser back/forward support, and server fallback."
+
