@@ -120,6 +120,15 @@ public sealed class SeriesCatalogService
         cmd.CommandText="""INSERT INTO SeriesCatalog(SeriesId,Title,Description,Year,Genre,PosterPath,FolderPath,CategoryId,Section,IsPublished,OrganizationType,UpdatedUtc) VALUES($id,$title,$description,$year,$genre,$poster,$folder,$categoryId,$section,$published,$organizationType,$updated) ON CONFLICT(SeriesId) DO UPDATE SET Title=excluded.Title,Description=excluded.Description,Year=excluded.Year,Genre=excluded.Genre,PosterPath=COALESCE(excluded.PosterPath, SeriesCatalog.PosterPath),FolderPath=excluded.FolderPath,CategoryId=excluded.CategoryId,Section=excluded.Section,IsPublished=excluded.IsPublished,OrganizationType=excluded.OrganizationType,UpdatedUtc=excluded.UpdatedUtc""";
         cmd.Parameters.AddWithValue("$id",x.SeriesId); cmd.Parameters.AddWithValue("$title",x.Title.Trim()); cmd.Parameters.AddWithValue("$description",x.Description??""); cmd.Parameters.AddWithValue("$year",(object?)x.Year??DBNull.Value); cmd.Parameters.AddWithValue("$genre",x.Genre??""); cmd.Parameters.AddWithValue("$poster",(object?)x.PosterPath??DBNull.Value); cmd.Parameters.AddWithValue("$folder",(object?)x.FolderPath??DBNull.Value); cmd.Parameters.AddWithValue("$categoryId",(object?)x.CategoryId??DBNull.Value); cmd.Parameters.AddWithValue("$section",string.IsNullOrWhiteSpace(x.Section)?"عام":x.Section.Trim()); cmd.Parameters.AddWithValue("$published",x.IsPublished?1:0); cmd.Parameters.AddWithValue("$organizationType",x.OrganizationType is "None" or "Parts" ? x.OrganizationType : "Seasons"); cmd.Parameters.AddWithValue("$updated",DateTime.UtcNow.ToString("O")); cmd.ExecuteNonQuery();
     }
+    public void MarkSeriesAsNew(string seriesId)
+    {
+        using var c=Open(); using var cmd=c.CreateCommand();
+        cmd.CommandText="UPDATE SeriesCatalog SET UpdatedUtc=$updated WHERE SeriesId=$id";
+        cmd.Parameters.AddWithValue("$updated",DateTime.UtcNow.ToString("O"));
+        cmd.Parameters.AddWithValue("$id",seriesId);
+        if(cmd.ExecuteNonQuery()==0)throw new KeyNotFoundException("المسلسل غير موجود");
+    }
+
     public VideoPlacementRecord? GetVideoPlacement(string videoId)
     {
         using var c = Open();
