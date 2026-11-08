@@ -821,15 +821,15 @@ Write-Host "PASS: customer pages have nested shareable URLs, direct-link restora
 
 # New arrivals remain a horizontal five-card mobile carousel; the main phone catalogue remains three columns.
 $seriesCatalogTests = Get-Content (Join-Path $root "tests/Alostora.RestHouse.Tests/SeriesCatalogServiceTests.cs") -Raw
-if ($html -notmatch 'new-arrivals-grid\\{\\s*display:flex!important' -or
+if ($html -notmatch 'new-arrivals-grid\{\s*display:flex!important' -or
     $html -notmatch 'flex-wrap:nowrap!important' -or
     $html -notmatch 'overflow-x:auto!important' -or
-    $html -notmatch 'calc\\(\\(100% - 24px\\)/5\\)' -or
-    $html -notmatch 'grid-template-columns:repeat\\(3,minmax\\(0,1fr\\)\\)!important' -or
+    $html -notmatch 'calc\(\(100% - 24px\)/5\)' -or
+    $html -notmatch 'grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important' -or
     $xaml -notmatch 'Click="MarkSelectedSeriesNew_Click"' -or
-    $code -notmatch '"/api/admin/series/" \\+ Uri.EscapeDataString\\(selected.SeriesId\\) \\+ "/mark-new"' -or
-    $app -notmatch '/api/admin/series/\\{seriesId\\}/mark-new' -or
-    $series -notmatch 'void MarkSeriesAsNew\\(' -or
+    $code -notmatch '"/api/admin/series/" \+ Uri.EscapeDataString\(selected.SeriesId\) \+ "/mark-new"' -or
+    $app -notmatch '/api/admin/series/\{seriesId\}/mark-new' -or
+    $series -notmatch 'void MarkSeriesAsNew\(' -or
     $seriesCatalogTests -notmatch 'MarkSeriesAsNewRefreshesUpdatedUtc') {
     throw "New-arrivals carousel, mobile three-column catalogue, or admin mark-as-new workflow is incomplete."
 }
