@@ -44,6 +44,13 @@ public sealed class AnnouncementServiceTests : IDisposable
     }
 
     [Fact]
+    public void RejectsActiveAnnouncementWithoutMessage()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            _service.Save(new RestHouseAnnouncement("إعلان", "  ", true, "ad", DateTime.UtcNow)));
+    }
+
+    [Fact]
     public void RejectsOversizedAnnouncement()
     {
         Assert.Throws<ArgumentException>(() =>
