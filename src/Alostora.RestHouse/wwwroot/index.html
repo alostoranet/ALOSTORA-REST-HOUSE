@@ -868,6 +868,7 @@ function applyCustomerRoute(pages){
   player.pause();player.onerror=null;player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;
  }
  catalogStack=pages.slice(0,-1);catalogPage=pages[pages.length-1];
+ if(catalogPage.type!=='media'){activeMediaKind='all';document.querySelectorAll('.media-tab').forEach(x=>x.classList.remove('active'));}
  document.querySelector('#catalogView').hidden=false;
  showCustomerView('home');
  renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});
