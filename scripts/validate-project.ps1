@@ -58,6 +58,8 @@ $requiredRoutes = @(
     '/api/admin/register-selected-files',
     '/api/admin/scan-folder',
     '/api/admin/metadata',
+    '/api/admin/register-files',
+    '/api/admin/movies/',
     '/api/admin/poster/',
     '/api/admin/series-poster/',
     '/api/admin/episodes',
@@ -94,6 +96,24 @@ if ($wpfSmoke -notmatch 'Repeated editor open/close smoke test failed' -or
     throw "The repeated editor open/close regression smoke test is missing."
 }
 Write-Host "PASS: direct-video management and repeated editor reopen regression checks are present."
+
+# Dedicated movie management must save standalone Movie metadata and remove only its catalog record.
+if ($xaml -notmatch 'x:Name="MoviesPicker"' -or
+    $xaml -notmatch 'x:Name="MovieEditorExpander"' -or
+    $xaml -notmatch 'Click="NewMovie_Click"' -or
+    $xaml -notmatch 'Click="EditSelectedMovie_Click"' -or
+    $xaml -notmatch 'Click="DeleteMovie_Click"' -or
+    $code -notmatch 'private async void SaveMovie_Click' -or
+    $code -notmatch 'kind = "Movie"' -or
+    $code -notmatch 'seriesId = \(string\?\)null' -or
+    $code -notmatch 'seasonId = \(long\?\)null' -or
+    $app -notmatch 'MapDelete\("\/api\/admin\/movies\/\{id\}"' -or
+    $app -notmatch 'meta\.Delete\(id\)' -or
+    $app -notmatch 'filePreserved=true') {
+    throw "Standalone movie management must provide separate add/edit/delete actions without series or season links, and preserve the source file."
+}
+Write-Host "PASS: standalone movie add/edit/delete workflow is wired and source files are preserved."
+
 
 # Flat episode discovery must use the series folder directly, without creating or borrowing a hidden season.
 if ($xaml -notmatch 'SeriesEpisodeCandidatesGrid' -or
