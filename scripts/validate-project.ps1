@@ -771,6 +771,16 @@ if ($html -notmatch 'announcement-banner p\{display:flex;align-items:center' -or
     throw "Announcement ticker vertical clipping or original continuous half-track motion regression detected."
 }
 Write-Host "PASS: announcement ticker has readable vertical padding and the original continuous full-area loop."
+
+# Active announcement settings must never publish an empty customer-facing message.
+$announcementService = Get-Content (Join-Path $root "src/Alostora.RestHouse/AnnouncementService.cs") -Raw
+$announcementTests = Get-Content (Join-Path $root "tests/Alostora.RestHouse.Tests/AnnouncementServiceTests.cs") -Raw
+if ($announcementService -notmatch 'clean\.IsActive\s*&&\s*string\.IsNullOrWhiteSpace\(clean\.Message\)' -or
+    $announcementTests -notmatch 'RejectsActiveAnnouncementWithoutMessage') {
+    throw "An active customer announcement must contain visible text and have a regression test."
+}
+Write-Host "PASS: empty active announcements are rejected and regression-tested."
+
 # The first dashboard tab must show real playback counts; library inventory belongs to its own tab.
 if ($xaml -notmatch 'TabItem Header="👁 المشاهدات"' -or
     $xaml -notmatch 'TabItem Header="📚 ملخص المكتبة"' -or
