@@ -99,7 +99,7 @@ public sealed class SeriesCatalogServiceTests : IDisposable
 
         const string videoId = "cccccccccccccccccccccccc";
         _series.SetVideoPlacement("series-test", null, videoId, null, "فيديو");
-        Assert.Throws<SqliteException>(() =>
+        Assert.Throws<InvalidOperationException>(() =>
             _series.SetVideoPlacement("series-second", null, videoId, null, "الفيديو نفسه"));
         Assert.Equal("series-test", _series.GetVideoPlacement(videoId)?.SeriesId);
     }
