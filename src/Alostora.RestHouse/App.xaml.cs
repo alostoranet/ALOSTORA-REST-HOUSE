@@ -1196,6 +1196,7 @@ _server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalog
     return content is null?Results.NotFound():Results.Text(content,"text/vtt; charset=utf-8");
    });
    _server.MapGet("/media/{id}",(string id,LibraryService svc,PublicCatalogAccessService publicCatalog)=>{var item=svc.Resolve(id);return item is null||!publicCatalog.IsVideoPublished(id)?Results.NotFound():Results.File(item.FullPath,item.ContentType,enableRangeProcessing:true);});
+   _server.MapFallbackToFile("index.html");
    await _server.StartAsync(); new MainWindow(root,library,posters,settings.FfmpegPath,settings.Port).Show();
   } catch(Exception ex){
    var details=ex.ToString();
