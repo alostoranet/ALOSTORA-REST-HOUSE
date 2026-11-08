@@ -68,6 +68,43 @@ public sealed class SeriesCatalogServiceTests : IDisposable
     }
 
     [Fact]
+    public void DirectVideoCanBeListedAndUnlinkedWithoutDeletingItsOriginalFile()
+    {
+        var libraryRoot = Path.Combine(_root, "direct-video-library");
+        Directory.CreateDirectory(libraryRoot);
+        var videoPath = Path.Combine(libraryRoot, "feature.mp4");
+        File.WriteAllBytes(videoPath, new byte[] { 7, 6, 5, 4 });
+
+        using var library = new LibraryService(libraryRoot, _databasePath);
+        var video = Assert.Single(library.List());
+        _series.SetVideoPlacement("series-test", null, video.Id, null, "فيديو مباشر");
+
+        var listed = Assert.Single(_series.ListDirectVideos("series-test"));
+        Assert.Equal(video.Id, listed.VideoId);
+        Assert.Equal("فيديو مباشر", listed.Title);
+
+        _series.UnlinkDirectVideo("series-test", video.Id);
+
+        Assert.Empty(_series.ListDirectVideos("series-test"));
+        Assert.Null(_series.GetVideoPlacement(video.Id));
+        Assert.True(File.Exists(videoPath));
+        Assert.NotNull(library.Resolve(video.Id));
+    }
+
+    [Fact]
+    public void DirectVideoCannotBeLinkedToTwoSeriesAtTheSameTime()
+    {
+        _series.SaveSeries(new SaveSeriesRequest(
+            "series-second", "مسلسل ثانٍ", "", 2026, "", null, IsPublished: false));
+
+        const string videoId = "cccccccccccccccccccccccc";
+        _series.SetVideoPlacement("series-test", null, videoId, null, "فيديو");
+        Assert.Throws<SqliteException>(() =>
+            _series.SetVideoPlacement("series-second", null, videoId, null, "الفيديو نفسه"));
+        Assert.Equal("series-test", _series.GetVideoPlacement(videoId)?.SeriesId);
+    }
+
+    [Fact]
     public void DirectSeriesEpisodesUseNoSeasonAndExposeEpisodeNumbersInCatalog()
     {
         var libraryRoot = Path.Combine(_root, "direct-library");
