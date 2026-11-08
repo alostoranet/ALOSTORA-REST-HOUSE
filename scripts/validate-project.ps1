@@ -49,6 +49,8 @@ $requiredRoutes = @(
     '/api/customer-settings',
     '/api/admin/customer-settings',
     '/api/admin/series',
+    '/api/admin/series/{seriesId}/direct-videos',
+    '/api/admin/series/{seriesId}/direct-videos/{videoId}',
     '/api/admin/series/{seriesId}/preview',
     '/api/admin/series/{seriesId}/link-detected',
     '/api/admin/library/retain-root',
@@ -71,6 +73,27 @@ foreach ($route in $requiredRoutes) {
     if (-not $app.Contains($route)) { throw ("Missing API route: " + $route) }
 }
 Write-Host ("PASS: all {0} required management API routes are present." -f $requiredRoutes.Count)
+
+# Direct videos in a series without seasons must support listing, adding, and unlinking
+# without deleting the original library item or allowing duplicate placement.
+if ($app -notmatch 'MapGet\("/api/admin/series/\{seriesId\}/direct-videos"' -or
+    $app -notmatch 'MapPost\("/api/admin/series/\{seriesId\}/direct-videos"' -or
+    $app -notmatch 'MapDelete\("/api/admin/series/\{seriesId\}/direct-videos/\{videoId\}"' -or
+    $series -notmatch 'public IReadOnlyList<DirectVideoRecord> ListDirectVideos\(' -or
+    $series -notmatch 'public void UnlinkDirectVideo\(' -or
+    $code -notmatch 'AddDirectVideo_Click' -or
+    $code -notmatch 'UnlinkDirectVideo_Click' -or
+    $xaml -notmatch 'DirectVideoManagementPanel') {
+    throw "Direct-video series management is missing a UI action, API route, or catalog service method."
+}
+$wpfSmokePath = Join-Path $root "tests/Alostora.RestHouse.WpfSmokeTest/Program.cs"
+$wpfSmoke = Get-Content $wpfSmokePath -Raw
+if ($wpfSmoke -notmatch 'Repeated editor open/close smoke test failed' -or
+    $wpfSmoke -notmatch 'cycle < 3' -or
+    $wpfSmoke -notmatch 'SeriesEditorExpander') {
+    throw "The repeated editor open/close regression smoke test is missing."
+}
+Write-Host "PASS: direct-video management and repeated editor reopen regression checks are present."
 
 # Flat episode discovery must use the series folder directly, without creating or borrowing a hidden season.
 if ($xaml -notmatch 'SeriesEpisodeCandidatesGrid' -or
