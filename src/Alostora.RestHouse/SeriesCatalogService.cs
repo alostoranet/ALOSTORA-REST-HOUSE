@@ -166,6 +166,24 @@ public sealed class SeriesCatalogService
             if (Convert.ToInt32(exists.ExecuteScalar()) == 0) throw new KeyNotFoundException("المسلسل المحدد غير موجود.");
         }
 
+        using (var existingPlacement = c.CreateCommand())
+        {
+            existingPlacement.Transaction = transaction;
+            existingPlacement.CommandText = """
+                SELECT SeriesId FROM SeriesEpisodes se
+                JOIN SeriesSeasons ss ON ss.SeasonId=se.SeasonId
+                WHERE se.VideoId=$video
+                UNION ALL
+                SELECT SeriesId FROM SeriesDirectVideos WHERE VideoId=$video
+                LIMIT 1
+                """;
+            existingPlacement.Parameters.AddWithValue("$video", videoId);
+            var existingSeriesId = existingPlacement.ExecuteScalar() as string;
+            if (!string.IsNullOrWhiteSpace(existingSeriesId) &&
+                !string.Equals(existingSeriesId, seriesId, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("الفيديو مربوط بالفعل بمسلسل آخر. افصل ارتباطه أولاً قبل نقله.");
+        }
+
         if (seasonId.HasValue)
         {
             if (episodeNumber is null or < 1 or > 10000) throw new ArgumentOutOfRangeException(nameof(episodeNumber), "رقم الحلقة أو الفيديو داخل الموسم/الجزء غير صحيح.");
