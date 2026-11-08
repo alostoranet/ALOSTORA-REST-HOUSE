@@ -677,6 +677,13 @@ public partial class App : Application
     return Results.Ok(series.GetCatalog(files,meta,allowedSeriesIds,IsLocal(c)?null:publicCatalog.GetPublishedVideoIds()));
    });
    _server.MapGet("/api/admin/series",(HttpContext c,SeriesCatalogService series)=>{ if(!IsAdmin(c)) return Results.NotFound(); return Results.Ok(series.ListSeries()); });
+   _server.MapPost("/api/admin/series/{seriesId}/mark-new",(HttpContext c,string seriesId,SeriesCatalogService series)=>
+   {
+    if(!IsAdmin(c)) return Results.NotFound();
+    if(string.IsNullOrWhiteSpace(seriesId)||seriesId.Length>80) return Results.BadRequest(new{error="معرّف المسلسل غير صالح"});
+    try { series.MarkSeriesAsNew(seriesId); return Results.Ok(new{updated=true,message="تم تمييز المسلسل كجديد وسيظهر في قسم الجديد لمدة 14 يوماً"}); }
+    catch(KeyNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
+   });
    _server.MapDelete("/api/admin/series/{seriesId}",(HttpContext c,string seriesId,SeriesCatalogService series)=>
    {
     if(!IsAdmin(c)) return Results.NotFound();
