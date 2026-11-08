@@ -1788,6 +1788,7 @@ public partial class MainWindow : Window
         var isParts = type == "Parts";
         var isNone = type == "None";
         SeasonManagementPanel.Visibility = isNone ? Visibility.Collapsed : Visibility.Visible;
+        DirectVideoManagementPanel.Visibility = isNone ? Visibility.Visible : Visibility.Collapsed;
         SeasonSectionTitle.Text = isParts ? "الأجزاء" : "المواسم";
         AddSeasonButton.Content = isParts ? "إضافة الجزء" : "إضافة الموسم";
         if (SeasonNumberBox is not null) SeasonNumberBox.ToolTip = isParts ? "رقم الجزء" : "رقم الموسم";
@@ -1931,6 +1932,7 @@ public partial class MainWindow : Window
 
             // Loading an existing series must never create, rename, or reuse a season.
             await LoadSeasonsAsync(s.SeriesId);
+            await LoadDirectVideosAsync(s.SeriesId);
             if (!string.IsNullOrWhiteSpace(s.FolderPath) && Directory.Exists(s.FolderPath))
                 await LoadSeriesEpisodeCandidatesAsync(s.SeriesId);
             else
@@ -2102,6 +2104,64 @@ public partial class MainWindow : Window
         }
     }
 
+    private async System.Threading.Tasks.Task LoadDirectVideosAsync(string seriesId)
+    {
+        try
+        {
+            var rows = await _http.GetFromJsonAsync<DirectVideoAdmin[]>("/api/admin/series/" + Uri.EscapeDataString(seriesId) + "/direct-videos") ?? Array.Empty<DirectVideoAdmin>();
+            DirectVideosGrid.ItemsSource = rows;
+            DirectVideoPicker.ItemsSource = _videos.Where(x => string.IsNullOrWhiteSpace(x.LinkedSeriesId)).ToArray();
+            DirectVideoPicker.SelectedIndex = -1;
+            SeriesStatusText.Text = rows.Length == 0 ? "لا توجد فيديوهات مباشرة مرتبطة بهذا المسلسل بعد. اختر فيديو من المكتبة لإضافته." : $"تم تحميل {rows.Length} فيديو مباشر للمسلسل.";
+        }
+        catch (Exception ex)
+        {
+            DirectVideosGrid.ItemsSource = null;
+            SeriesStatusText.Text = "تعذر تحميل فيديوهات المسلسل المباشرة: " + ex.Message;
+        }
+    }
+
+    private async void RefreshDirectVideos_Click(object sender, RoutedEventArgs e)
+    {
+        if (SeriesPicker.SelectedItem is not SeriesAdmin series) { SeriesStatusText.Text = "حدد المسلسل أولاً."; return; }
+        await LoadVideosAsync();
+        await LoadDirectVideosAsync(series.SeriesId);
+    }
+
+    private async void AddDirectVideo_Click(object sender, RoutedEventArgs e)
+    {
+        if (SeriesPicker.SelectedItem is not SeriesAdmin series) { SeriesStatusText.Text = "حدد المسلسل الذي تريد إضافة الفيديو إليه أولاً."; return; }
+        if (DirectVideoPicker.SelectedItem is not AdminVideo video) { SeriesStatusText.Text = "اختر فيديو غير مربوط من المكتبة أولاً."; return; }
+        try
+        {
+            var response = await _http.PostAsJsonAsync("/api/admin/series/" + Uri.EscapeDataString(series.SeriesId) + "/direct-videos", new { videoId = video.Id, title = video.Title });
+            if (!response.IsSuccessStatusCode)
+            {
+                SeriesStatusText.Text = "تعذرت إضافة الفيديو مباشرة: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            await LoadVideosAsync();
+            await LoadDirectVideosAsync(series.SeriesId);
+            SeriesStatusText.Text = $"تمت إضافة «{video.Title}» مباشرة إلى «{series.Title}» دون إنشاء موسم أو جزء.";
+        }
+        catch (Exception ex) { SeriesStatusText.Text = "تعذرت إضافة الفيديو المباشر: " + ex.Message; }
+    }
+
+    private async void UnlinkDirectVideo_Click(object sender, RoutedEventArgs e)
+    {
+        if (SeriesPicker.SelectedItem is not SeriesAdmin series || DirectVideosGrid.SelectedItem is not DirectVideoAdmin video)
+        { SeriesStatusText.Text = "حدد الفيديو المباشر الذي تريد فك ربطه أولاً."; return; }
+        if (MessageBox.Show($"سيتم فك ربط «{video.Title}» من المسلسل فقط، ولن يُحذف ملف الفيديو. هل تريد المتابعة؟", "فك ربط فيديو", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        try
+        {
+            var response = await _http.DeleteAsync("/api/admin/series/" + Uri.EscapeDataString(series.SeriesId) + "/direct-videos/" + Uri.EscapeDataString(video.VideoId));
+            if (!response.IsSuccessStatusCode) { SeriesStatusText.Text = "تعذر فك الربط: " + await response.Content.ReadAsStringAsync(); return; }
+            await LoadVideosAsync();
+            await LoadDirectVideosAsync(series.SeriesId);
+            SeriesStatusText.Text = "تم فك ربط الفيديو من المسلسل، والملف الأصلي ما زال محفوظاً في المكتبة.";
+        }
+        catch (Exception ex) { SeriesStatusText.Text = "تعذر فك ربط الفيديو: " + ex.Message; }
+    }
     private async System.Threading.Tasks.Task LoadSeasonsAsync(string seriesId)
     {
         try
@@ -3766,6 +3826,12 @@ public partial class MainWindow : Window
         public int? RuntimeMinutes { get; set; }
         public string? ReleaseDate { get; set; }
         public string? Provider { get; set; }
+    }
+
+    private sealed class DirectVideoAdmin
+    {
+        public string VideoId { get; set; } = "";
+        public string Title { get; set; } = "";
     }
 
     private sealed class AdminVideo
