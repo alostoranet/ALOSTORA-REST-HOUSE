@@ -78,23 +78,33 @@ internal static class Program
                     try
                     {
                         saveVerified = window.IsVisible;
-                        var editor = window.FindName("SeriesEditorExpander") as Expander
-                            ?? throw new InvalidOperationException("The series editor container was not found.");
                         var openEditor = typeof(MainWindow).GetMethod(
                             "OpenDedicatedEditor",
                             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
                             ?? throw new InvalidOperationException("The dedicated editor opener was not found.");
 
-                        // Exercise the exact user path: open, close, and reopen the same
-                        // detached WPF editor repeatedly without restarting the app.
-                        for (var cycle = 0; cycle < 3; cycle++)
+                        // Exercise every dedicated form used by the management pages.
+                        // Reopen each one repeatedly to catch stale-parent/closed-window state.
+                        var editors = new[]
                         {
-                            openEditor.Invoke(window, new object?[] { editor, "Series editor reopen smoke test" });
-                            var editorWindow = app.Windows.OfType<Window>().FirstOrDefault(w => !ReferenceEquals(w, window) && w.IsVisible)
-                                ?? throw new InvalidOperationException($"Editor window did not open on cycle {cycle + 1}.");
-                            editorWindow.Close();
-                            if (editor.Content is null)
-                                throw new InvalidOperationException($"Editor content was not restored after cycle {cycle + 1}.");
+                            ("SeriesEditorExpander", "Series editor"),
+                            ("CategoryEditorExpander", "Category editor"),
+                            ("SeasonEditorExpander", "Season editor"),
+                            ("EpisodeEditorExpander", "Episode editor")
+                        };
+                        foreach (var (name, title) in editors)
+                        {
+                            var editor = window.FindName(name) as Expander
+                                ?? throw new InvalidOperationException($"The {title} container was not found.");
+                            for (var cycle = 0; cycle < 3; cycle++)
+                            {
+                                openEditor.Invoke(window, new object?[] { editor, title + " reopen smoke test" });
+                                var editorWindow = app.Windows.OfType<Window>().FirstOrDefault(w => !ReferenceEquals(w, window) && w.IsVisible)
+                                    ?? throw new InvalidOperationException($"{title} did not open on cycle {cycle + 1}.");
+                                editorWindow.Close();
+                                if (editor.Content is null)
+                                    throw new InvalidOperationException($"{title} content was not restored after cycle {cycle + 1}.");
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -120,7 +130,7 @@ internal static class Program
 
             if (!saveVerified)
                 throw new InvalidOperationException("The visible management window failed to save the external live URL.");
-            Console.WriteLine("PASS: the visible management window loaded, saved settings, and the series editor opened/closed/reopened three times without losing its form.");
+            Console.WriteLine("PASS: the visible management window loaded, saved settings, and the series, category, season, and episode editors each opened/closed/reopened three times without losing their forms.");
             return 0;
         }
         catch (Exception ex)
