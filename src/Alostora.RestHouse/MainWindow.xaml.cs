@@ -1928,6 +1928,8 @@ public partial class MainWindow : Window
         var title = MovieTitleBox.Text.Trim();
         var filePath = MovieFilePathBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(title)) { MovieStatusText.Text = "اكتب اسم الفيلم أولاً."; return; }
+        if (title.Length > 160 || MovieDescriptionBox.Text.Length > 2000 || MovieGenreBox.Text.Length > 80)
+        { MovieStatusText.Text = "تحقق من طول الاسم أو الوصف أو التصنيف؛ اختصر النص ثم أعد الحفظ."; return; }
         if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) { MovieStatusText.Text = "اختر ملف فيديو موجوداً للفيلم."; return; }
         int? year = null;
         if (!string.IsNullOrWhiteSpace(MovieYearBox.Text))
@@ -2003,7 +2005,7 @@ public partial class MainWindow : Window
             MoviesPicker.SelectedItem = (MoviesPicker.ItemsSource as AdminVideo[])?.FirstOrDefault(v => v.Id == existing.Id);
             _pendingMoviePosterPath = null;
             if (string.IsNullOrWhiteSpace(MovieStatusText.Text) || MovieStatusText.Text.StartsWith("جارٍ"))
-                MovieStatusText.Text = $"تم حفظ الفيلم «{title}» بنجاح. الملف الأصلي محفوظ في مكانه.";
+                MovieStatusText.Text = $"تم حفظ الفيلم «{title}» بنجاح. الحالة: {(MoviePublishBox.IsChecked == true ? "منشور للعميل" : "مسودة غير ظاهرة للعميل")}. الملف الأصلي محفوظ في مكانه.";
             CloseDedicatedEditor();
         }
         catch (Exception ex)
