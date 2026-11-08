@@ -22,6 +22,23 @@ public sealed class SeriesCatalogServiceTests : IDisposable
     }
 
     [Fact]
+    public void MarkSeriesAsNewRefreshesUpdatedUtc()
+    {
+        using (var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = _databasePath }.ToString()))
+        {
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "UPDATE SeriesCatalog SET UpdatedUtc='2000-01-01T00:00:00.0000000Z' WHERE SeriesId='series-test'";
+            command.ExecuteNonQuery();
+        }
+
+        _series.MarkSeriesAsNew("series-test");
+
+        var series = Assert.Single(_series.ListSeries());
+        Assert.True(DateTime.Parse(series.UpdatedUtc) > DateTime.Parse("2000-01-01T00:00:00.0000000Z"));
+    }
+
+    [Fact]
     public void PublicSeriesCatalogOmitsEpisodesWhoseVideosAreNotPublished()
     {
         var libraryRoot = Path.Combine(_root, "public-library");
