@@ -772,17 +772,30 @@ public partial class MainWindow : Window
 
     private void OpenDedicatedEditor(Expander editor, string title)
     {
-        if (_activeEditorWindow is not null)
+        // If an editor window is already open, bring it forward instead of treating
+        // a temporarily detached Expander.Content as a second open operation.
+        if (_activeEditorWindow is { IsVisible: true } activeWindow)
         {
-            _activeEditorWindow.Activate();
-            SeriesStatusText.Text = "أغلق نافذة الإدارة المفتوحة أولاً، ثم افتح نافذة الإضافة أو التعديل المطلوبة.";
+            activeWindow.Activate();
             return;
         }
+
+        // Recover the editor body if a previous window was closed while its content
+        // was still parented by the old window's Border.
+        if (editor.Content is null && ReferenceEquals(editor, _activeEditorExpander) && _activeEditorContent is not null)
+        {
+            _activeEditorContent = DetachEditorVisual(_activeEditorContent);
+            editor.Content = _activeEditorContent;
+            _activeEditorWindow = null;
+            _activeEditorExpander = null;
+        }
+
         if (editor.Content is null)
         {
-            SeriesStatusText.Text = "نافذة الإدارة المطلوبة مفتوحة بالفعل أو يجري تجهيزها.";
+            SeriesStatusText.Text = "تعذر استعادة نموذج الإدارة. أغلق صفحة الإدارة وافتحها مجدداً.";
             return;
         }
+
         _activeEditorExpander = editor;
         _activeEditorContent = editor.Content;
         editor.Content = null;
@@ -824,22 +837,40 @@ public partial class MainWindow : Window
         _activeEditorWindow = window;
         window.Closed += (_, _) =>
         {
-            if (window.Content is ScrollViewer editorScrollViewer) editorScrollViewer.Content = null;
-            window.Content = null;
-            var closedEditor = _activeEditorExpander;
-            if (closedEditor is not null)
+            // Detach the original form from every visual parent before putting it
+            // back into its Expander. This is essential for reopening it repeatedly.
+            var restoredContent = DetachEditorVisual(_activeEditorContent);
+            if (ReferenceEquals(_activeEditorExpander, editor) && restoredContent is not null)
             {
-                closedEditor.Content = _activeEditorContent;
-                closedEditor.IsExpanded = false;
-                // Preserve the selected series/episode after closing its editor.
+                editor.Content = restoredContent;
+                editor.IsExpanded = false;
             }
+
             _activeEditorWindow = null;
             _activeEditorExpander = null;
             _activeEditorContent = null;
         };
-        // Keep the management page responsive while the dedicated editor is open.
+
         window.Show();
         window.Activate();
+    }
+
+    private static object? DetachEditorVisual(object? content)
+    {
+        if (content is null) return null;
+        if (content is Border border)
+        {
+            var child = border.Child;
+            border.Child = null;
+            return child;
+        }
+        if (content is ScrollViewer scrollViewer)
+        {
+            var child = scrollViewer.Content;
+            scrollViewer.Content = null;
+            return child;
+        }
+        return content;
     }
 
     private void CloseDedicatedEditor() => _activeEditorWindow?.Close();
