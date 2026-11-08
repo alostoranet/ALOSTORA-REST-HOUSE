@@ -990,7 +990,7 @@ function renderCatalogPage(){
   const matchedSeries=sorted(seriesItems.filter(x=>x.isPublished===true));
   addResults('المسلسلات والبرامج',matchedSeries.map(show=>catalogCard(
    show.title,[show.year,show.genre].filter(Boolean).join(' • ')||'مسلسل أو برنامج',show.posterPath,
-   ()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title}),null,show
+   ()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title}),isRecentlyAdded(show.updatedUtc)?'جديد':null,show
   )));
   const linkedVideoIds=new Set();
   const directResults=[],episodeResults=[];
@@ -1074,7 +1074,7 @@ function renderCatalogPage(){
    const grid=document.createElement('div');grid.className='catalog-grid';
    for(const show of shows){
     const seasons=show.seasons||[];
-    grid.append(catalogCard(show.title,'',show.posterPath,()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title})));
+    grid.append(catalogCard(show.title,'',show.posterPath,()=>navigateCatalog({type:'series',seriesId:show.seriesId,title:show.title}),isRecentlyAdded(show.updatedUtc)?'جديد':null));
    }
    if(shows.length)content.append(grid);else content.append(catalogEmpty('لا توجد مسلسلات منشورة في هذا القسم بعد.'));
   }else{
