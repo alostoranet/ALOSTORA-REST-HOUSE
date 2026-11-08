@@ -839,7 +839,13 @@ public partial class MainWindow : Window
         {
             // Detach the original form from every visual parent before putting it
             // back into its Expander. This is essential for reopening it repeatedly.
-            var restoredContent = DetachEditorVisual(_activeEditorContent);
+            // Release the form from the temporary Border/ScrollViewer before
+            // restoring it to the Expander; otherwise WPF keeps it parented and
+            // the next open attempt sees a null Content or throws a parent error.
+            editorFrame.Child = null;
+            editorScrollViewer.Content = null;
+            window.Content = null;
+            var restoredContent = _activeEditorContent;
             if (ReferenceEquals(_activeEditorExpander, editor) && restoredContent is not null)
             {
                 editor.Content = restoredContent;
