@@ -2610,6 +2610,30 @@ public partial class MainWindow : Window
         catch (Exception ex) { SeriesStatusText.Text = "تعذر حفظ المسلسل: " + ex.Message; }
     }
 
+    private async void MarkSelectedSeriesNew_Click(object sender, RoutedEventArgs e)
+    {
+        if (SeriesPicker.SelectedItem is not SeriesAdmin selected)
+        {
+            SeriesStatusText.Text = "حدد المسلسل الذي تريد تمييزه كجديد أولاً.";
+            return;
+        }
+        try
+        {
+            var response = await _http.PostAsync("/api/admin/series/" + Uri.EscapeDataString(selected.SeriesId) + "/mark-new", null);
+            if (!response.IsSuccessStatusCode)
+            {
+                SeriesStatusText.Text = "تعذر تمييز المسلسل كجديد: " + await response.Content.ReadAsStringAsync();
+                return;
+            }
+            SeriesStatusText.Text = "تم تمييز «" + selected.Title + "» كمسلسل جديد. سيظهر في قسم الجديد لدى العملاء لمدة 14 يوماً.";
+            await LoadSeriesAsync();
+        }
+        catch (Exception ex)
+        {
+            SeriesStatusText.Text = "تعذر تمييز المسلسل كجديد: " + ex.Message;
+        }
+    }
+
     private async void DeleteSeries_Click(object sender, RoutedEventArgs e)
     {
         if (SeriesPicker.SelectedItem is not SeriesAdmin series)
