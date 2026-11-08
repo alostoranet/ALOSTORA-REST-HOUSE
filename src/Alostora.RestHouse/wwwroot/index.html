@@ -812,7 +812,7 @@ function customerRoutePath(pages){
   else if(type==='main')parts.push('sections',encodeURIComponent(page.categoryId||''));
   else if(type==='category')parts.push('category',encodeURIComponent(page.categoryId||''));
   else if(type==='series')parts.push('series',encodeURIComponent(page.seriesId||''));
-  else if(type==='season')parts.push('series',encodeURIComponent(page.seriesId||''),'season',encodeURIComponent(page.seasonId||''));
+  else if(type==='season')parts.push('season',encodeURIComponent(page.seasonId||''));
   else if(type==='player'&&page.videoId)parts.push('watch',encodeURIComponent(page.videoId));
   else if(type==='continue')parts.push('continue');
  }
@@ -827,6 +827,7 @@ function syncCustomerRoute(push=true){
 function routePagesFromPath(path){
  const parts=path.split('/').filter(Boolean);
  if(parts[0]!=='rest-house')return null;
+ if(parts[1]==='contact')return {contact:true};
  const pages=[{type:'home',title:'الرئيسية'}];
  let i=1;
  while(i<parts.length){
@@ -855,6 +856,7 @@ function routePagesFromPath(path){
  return pages;
 }
 function applyCustomerRoute(pages){
+ if(pages?.contact){goCatalogHome();showCustomerView('contact');return true;}
  if(!Array.isArray(pages)||!pages.length)return false;
  if(catalogPage.type==='player'&&pages[pages.length-1]?.type!=='player'){
   playbackGeneration++;flushProgress();if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
@@ -1348,7 +1350,7 @@ function goCatalogHome(){
  document.querySelector('#customerOverview').hidden=customerSettings.showWelcome===false;
  renderCatalogPage();syncCustomerRoute(false);
 }
-function openCustomerContact(){goCatalogHome();document.querySelector('#sharedAudioPlayer')?.pause();showCustomerView('contact');}
+function openCustomerContact(){goCatalogHome();document.querySelector('#sharedAudioPlayer')?.pause();showCustomerView('contact');history.pushState({alostoraCustomerPages:{contact:true}},'','/rest-house/contact');}
 document.querySelector('#contactNav').addEventListener('click',openCustomerContact);
 document.querySelector('#contactCta').addEventListener('click',openCustomerContact);
 async function copyFooterPhoneNumber(){
