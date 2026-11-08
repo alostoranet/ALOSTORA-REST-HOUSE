@@ -803,20 +803,87 @@ function catalogRow(title,detail,onClick){
  const arrow=document.createElement('span');arrow.className='catalog-list-arrow';arrow.textContent='‹';
  row.append(copy,arrow);row.addEventListener('click',onClick);return row;
 }
+function customerRoutePath(pages){
+ const parts=['rest-house'];
+ for(const page of pages){
+  if(!page)continue;
+  const type=page.type||'home';
+  if(type==='home')parts.push('home');
+  else if(type==='main')parts.push('sections',encodeURIComponent(page.categoryId||''));
+  else if(type==='category')parts.push('category',encodeURIComponent(page.categoryId||''));
+  else if(type==='series')parts.push('series',encodeURIComponent(page.seriesId||''));
+  else if(type==='season')parts.push('series',encodeURIComponent(page.seriesId||''),'season',encodeURIComponent(page.seasonId||''));
+  else if(type==='player'&&page.videoId)parts.push('watch',encodeURIComponent(page.videoId));
+  else if(type==='continue')parts.push('continue');
+ }
+ return '/'+parts.join('/');
+}
+function syncCustomerRoute(push=true){
+ const pages=[...catalogStack,catalogPage];
+ const path=customerRoutePath(pages);
+ if(push)history.pushState({alostoraCustomerPages:pages},'',path);
+ else history.replaceState({alostoraCustomerPages:pages},'',path);
+}
+function routePagesFromPath(path){
+ const parts=path.split('/').filter(Boolean);
+ if(parts[0]!=='rest-house')return null;
+ const pages=[{type:'home',title:'الرئيسية'}];
+ let i=1;
+ while(i<parts.length){
+  const key=parts[i++];
+  if(key==='home')continue;
+  if(key==='sections'||key==='category'){
+   const id=decodeURIComponent(parts[i++]||'');
+   const item=categories.find(x=>String(x.categoryId)===id);if(!item)return null;
+   pages.push({type:key==='sections'?'main':'category',categoryId:item.categoryId,title:item.title});
+  }else if(key==='series'){
+   const id=decodeURIComponent(parts[i++]||'');
+   const show=seriesItems.find(x=>String(x.seriesId)===id);if(!show)return null;
+   pages.push({type:'series',seriesId:show.seriesId,title:show.title});
+   if(parts[i]==='season'){
+    i++;const seasonId=decodeURIComponent(parts[i++]||'');
+    const season=(show.seasons||[]).find(x=>String(x.seasonId)===seasonId);if(!season)return null;
+    pages.push({type:'season',seriesId:show.seriesId,seasonId:season.seasonId,title:season.title||('الموسم '+season.seasonNumber)});
+   }
+  }else if(key==='watch'){
+   const id=decodeURIComponent(parts[i++]||'');
+   const item=items.find(x=>String(x.id)===id);if(!item)return null;
+   pages.push({type:'player',videoId:item.id,title:item.title});
+  }else if(key==='continue')pages.push({type:'continue',title:'متابعة المشاهدة'});
+  else return null;
+ }
+ return pages;
+}
+function applyCustomerRoute(pages){
+ if(!Array.isArray(pages)||!pages.length)return false;
+ if(catalogPage.type==='player'&&pages[pages.length-1]?.type!=='player'){
+  playbackGeneration++;flushProgress();if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
+  player.pause();player.onerror=null;player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;
+ }
+ catalogStack=pages.slice(0,-1);catalogPage=pages[pages.length-1];
+ document.querySelector('#catalogView').hidden=false;
+ showCustomerView('home');
+ renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});
+ const last=catalogPage;
+ if(last.type==='player'&&last.videoId){
+  const item=items.find(x=>String(x.id)===String(last.videoId));
+  if(item)play(item,false);
+ }
+ return true;
+}
 function navigateCatalog(page,push=true){
  if(push)catalogStack.push(catalogPage);
- catalogPage=page;renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});
+ catalogPage=page;renderCatalogPage();syncCustomerRoute(push);window.scrollTo({top:0,behavior:'auto'});
 }
 function goCatalogBack(){
  if(!catalogStack.length)return;
- if(catalogPage.type==='player'){
-  playbackGeneration++;
-  flushProgress();
-  if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
-  player.pause();player.onerror=null;player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;
- }
- catalogPage=catalogStack.pop();renderCatalogPage();window.scrollTo({top:0,behavior:'auto'});
+ if(history.state?.alostoraCustomerPages){history.back();return;}
+ catalogPage=catalogStack.pop();renderCatalogPage();syncCustomerRoute(false);window.scrollTo({top:0,behavior:'auto'});
 }
+window.addEventListener('popstate',event=>{
+ const pages=event.state?.alostoraCustomerPages||routePagesFromPath(location.pathname);
+ if(pages)applyCustomerRoute(pages);
+});
 function renderCatalogPage(){
  const content=document.querySelector('#catalogContent'),back=document.querySelector('#catalogBack'),crumb=document.querySelector('#catalogBreadcrumb');
  const pageHead=document.querySelector('#catalogPageHead'),toolbar=document.querySelector('#catalogToolbar'),continueSection=document.querySelector('#continueSection'),message=document.querySelector('#message');
@@ -1066,11 +1133,11 @@ async function startTranscodedPlayback(item,audioIndex,generation,saved){
  }
  throw new Error('استغرق تحويل الفيديو وقتاً أطول من المتوقع. يمكنك المحاولة مرة أخرى.');
 }
-async function play(item){
+async function play(item,navigate=true){
  if(!item||!item.id)return;
  // Use the canonical local media endpoint if a catalog item omitted its playback URL.
  if(typeof item.url!=='string'||!item.url.trim())item={...item,url:'/media/'+encodeURIComponent(item.id)};
- navigateCatalog({type:'player',title:item.title});
+ if(navigate!==false)navigateCatalog({type:'player',videoId:item.id,title:item.title});
  const playerSection=document.querySelector('#playerSection');
  playerSection.hidden=false;playerSection.style.display='block';
  playerSection.scrollIntoView({behavior:'smooth',block:'start'});
@@ -1227,7 +1294,7 @@ async function load(){try{
  const all=document.createElement('option');all.value='';all.textContent='كل الأقسام';select.append(all);
  for(const main of categories.filter(x=>x.parentId==null&&x.isPublished)){const option=document.createElement('option');option.value=main.categoryId;option.textContent=main.title;select.append(option);}
  for(const sub of categories.filter(x=>x.parentId!=null&&x.isPublished)){const parent=categories.find(x=>x.categoryId===sub.parentId);const option=document.createElement('option');option.value=sub.categoryId;option.textContent=(parent?parent.title+' / ':'')+sub.title;select.append(option);}
- render();await loadProgress();await loadDownloads();
+ render();const initialRoute=history.state?.alostoraCustomerPages||routePagesFromPath(location.pathname);if(initialRoute)applyCustomerRoute(initialRoute);else{renderCatalogPage();syncCustomerRoute(false);}await loadProgress();await loadDownloads();
  }catch(error){const status=document.querySelector('#message');status.textContent=error.message||'تعذر الاتصال بالسيرفر أو تحميل بيانات المكتبة.';status.hidden=false;document.querySelector('#continueEmpty').textContent='تعذر تحميل سجل المشاهدة.';}}
 async function loadBrandProfile(){
  try{
@@ -1271,7 +1338,7 @@ function goCatalogHome(){
   playbackGeneration++;flushProgress();if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
   player.pause();player.onerror=null;player.removeAttribute('src');player.load();activeVideo=null;loadedVideoId=null;
  }
- catalogStack=[];catalogPage={type:'home'};activeMediaKind='all';
+ catalogStack=[];catalogPage={type:'home',title:'الرئيسية'};activeMediaKind='all';
  const categoryFilter=document.querySelector('#categoryFilter');if(categoryFilter)categoryFilter.value='';
  document.querySelectorAll('.media-tab').forEach(x=>x.classList.remove('active'));
  document.querySelector('#mediaLibrary').hidden=true;
@@ -1279,7 +1346,7 @@ function goCatalogHome(){
  document.querySelector('#catalogToolbar').hidden=false;
  document.querySelector('#welcomePanel').hidden=customerSettings.showWelcome===false;
  document.querySelector('#customerOverview').hidden=customerSettings.showWelcome===false;
- renderCatalogPage();
+ renderCatalogPage();syncCustomerRoute(false);
 }
 function openCustomerContact(){goCatalogHome();document.querySelector('#sharedAudioPlayer')?.pause();showCustomerView('contact');}
 document.querySelector('#contactNav').addEventListener('click',openCustomerContact);
