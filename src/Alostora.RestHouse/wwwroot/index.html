@@ -856,7 +856,7 @@ function routePagesFromPath(path){
  return pages;
 }
 function applyCustomerRoute(pages){
- if(pages?.contact){goCatalogHome();showCustomerView('contact');return true;}
+ if(pages?.contact){catalogStack=[];catalogPage={type:'home',title:'الرئيسية'};showCustomerView('contact');history.replaceState({alostoraCustomerPages:{contact:true}},'','/rest-house/contact');return true;}
  if(!Array.isArray(pages)||!pages.length)return false;
  if(catalogPage.type==='player'&&pages[pages.length-1]?.type!=='player'){
   playbackGeneration++;flushProgress();if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
@@ -1319,7 +1319,7 @@ async function loadBrandProfile(){
 }
 document.querySelector('#catalogBack').addEventListener('click',goCatalogBack);
 document.querySelector('#headerBackNav').addEventListener('click',()=>{
- if(!document.querySelector('#contactView').hidden){showCustomerView('home');return;}
+ if(!document.querySelector('#contactView').hidden){showCustomerView('home');goCatalogHome();return;}
  if(catalogStack.length)goCatalogBack();else goCatalogHome();
 });
 function showCustomerView(view){
