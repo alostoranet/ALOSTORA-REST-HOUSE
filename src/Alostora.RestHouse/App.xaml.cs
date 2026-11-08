@@ -26,6 +26,7 @@ public sealed record UnregisterLibraryFolderRequest(string FolderPath);
 public sealed record DetectedEpisodeLink(string VideoId, int EpisodeNumber, string? Title, bool Selected, string? FilePath = null);
 public sealed record LinkDetectedEpisodesRequest(List<DetectedEpisodeLink> Episodes);
 public sealed record RelinkEpisodeRequest(string VideoId);
+public sealed record SaveDirectVideoRequest(string VideoId, string? Title);
 public sealed record UpdateEpisodeRequest(int EpisodeNumber, string? Title);
 public sealed record PreparePlaybackRequest(int? AudioStreamIndex);
 
@@ -781,6 +782,27 @@ public partial class App : Application
      }
      catch(Exception ex) when(ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
      {return Results.BadRequest(new{error="تعذر تسجيل الملفات المحددة وربطها: "+ex.Message});}
+    });
+    _server.MapGet("/api/admin/series/{seriesId}/direct-videos",(HttpContext c,string seriesId,SeriesCatalogService series,LibraryService files)=>
+    {
+     if(!IsAdmin(c)) return Results.NotFound();
+     if(series.GetSeries(seriesId) is null) return Results.NotFound(new{error="المسلسل غير موجود"});
+     var library=files.List().ToDictionary(x=>x.Id,StringComparer.OrdinalIgnoreCase);
+     return Results.Ok(series.ListDirectVideos(seriesId).Select(x=>new { videoId=x.VideoId,title=string.IsNullOrWhiteSpace(x.Title)&&library.TryGetValue(x.VideoId,out var video)?video.Title:x.Title }));
+    });
+    _server.MapPost("/api/admin/series/{seriesId}/direct-videos",(HttpContext c,string seriesId,SaveDirectVideoRequest request,SeriesCatalogService series,LibraryService files)=>
+    {
+     if(!IsAdmin(c)) return Results.NotFound();
+     if(string.IsNullOrWhiteSpace(request.VideoId)||request.VideoId.Length>160||(request.Title?.Length??0)>160||files.Resolve(request.VideoId) is null) return Results.BadRequest(new{error="اختر ملف فيديو صحيحاً من المكتبة."});
+     if(series.GetSeries(seriesId) is null) return Results.NotFound(new{error="المسلسل غير موجود"});
+     try { series.SetVideoPlacement(seriesId,null,request.VideoId,null,request.Title); return Results.Ok(new{linked=true}); }
+     catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="هذا الفيديو مربوط مسبقاً أو تعذر ربطه."}); }
+    });
+    _server.MapDelete("/api/admin/series/{seriesId}/direct-videos/{videoId}",(HttpContext c,string seriesId,string videoId,SeriesCatalogService series)=>
+    {
+     if(!IsAdmin(c)) return Results.NotFound();
+     try { series.UnlinkDirectVideo(seriesId,videoId); return Results.Ok(new{unlinked=true,message="تم فك ربط الفيديو فقط، ولم يتم حذف الملف الأصلي."}); }
+     catch(KeyNotFoundException ex) { return Results.NotFound(new{error=ex.Message}); }
     });
 _server.MapGet("/api/admin/seasons",(HttpContext c,string seriesId,SeriesCatalogService series)=>{ if(!IsAdmin(c)) return Results.NotFound(); return Results.Ok(series.ListSeasons(seriesId)); });
    _server.MapPost("/api/admin/seasons",(HttpContext c,SaveSeasonRequest request,SeriesCatalogService series)=>{
