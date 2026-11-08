@@ -41,6 +41,8 @@ public sealed class AnnouncementService
         var clean = Clean(value) with { UpdatedUtc = DateTime.UtcNow };
         if (clean.Title.Length > 120 || clean.Message.Length > 1000)
             throw new ArgumentException("العنوان بحد أقصى 120 حرفاً والتنبيه بحد أقصى 1000 حرف.");
+        if (clean.IsActive && string.IsNullOrWhiteSpace(clean.Message))
+            throw new ArgumentException("اكتب نص الإعلان قبل تشغيل الشريط.");
         lock (_gate)
         {
             var temp = _path + ".tmp";
