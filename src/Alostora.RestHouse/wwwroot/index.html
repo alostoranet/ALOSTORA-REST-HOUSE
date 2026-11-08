@@ -82,6 +82,21 @@ header.is-inner-page #headerBackNav{background:linear-gradient(135deg,#203d55,#1
  .announcement-banner #announcementMessage,.announcement-banner .announcement-copy{font-size:12px;padding:4px 14px;line-height:1.5}
 }
 
+/* Compact three-column catalogue on phones; keep desktop rails unchanged. */
+@media(max-width:600px){
+ main{padding:14px 10px 26px}
+ .catalog-grid{display:flex;flex-wrap:wrap;gap:9px;overflow-x:visible;overflow-y:visible;scroll-snap-type:none;padding:3px 0 12px}
+ .catalog-grid>.catalog-card{flex:0 0 calc((100% - 18px)/3);width:calc((100% - 18px)/3);min-width:0;scroll-snap-align:none;padding:5px;gap:5px;border-radius:10px}
+ .catalog-grid>.catalog-empty{flex:0 0 100%;width:100%}
+ .catalog-grid .catalog-open-button{gap:5px}
+ .catalog-grid .catalog-card img.catalog-poster,.catalog-grid .catalog-card .catalog-poster,.catalog-grid .catalog-card .poster-empty{aspect-ratio:4/5;border-radius:8px;box-shadow:0 3px 9px #0003}
+ .catalog-grid .catalog-card h3{font-size:clamp(11px,3.1vw,14px);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+ .catalog-grid .catalog-card small{font-size:10px;line-height:1.35}
+ .catalog-grid .catalog-card .catalog-card-badge{font-size:9px;padding:2px 6px}
+ .new-arrivals-grid{display:flex;flex-wrap:wrap;gap:9px;overflow:visible;scroll-snap-type:none;padding:2px 0 10px}
+ .new-arrivals-grid>.catalog-card{flex:0 0 calc((100% - 18px)/3);width:calc((100% - 18px)/3);min-width:0;padding:5px;gap:5px}
+ .new-arrivals .catalog-card h3{font-size:clamp(11px,3.1vw,14px)}
+}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 .customer-ads{max-width:1280px;margin:13px auto 0;padding:0 14px}
 .customer-ads[hidden]{display:none!important}
