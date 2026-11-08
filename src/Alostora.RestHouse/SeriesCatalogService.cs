@@ -6,6 +6,7 @@ namespace Alostora.RestHouse;
 public sealed record SeriesRecord(string SeriesId, string Title, string Description, int? Year, string Genre, string? PosterPath, string? FolderPath, string? CategoryId, string Section, bool IsPublished, string OrganizationType, string UpdatedUtc);
 public sealed record SeasonRecord(long SeasonId, string SeriesId, int SeasonNumber, string Title, string? FolderPath);
 public sealed record EpisodeRecord(long EpisodeId, long SeasonId, string VideoId, int EpisodeNumber, string Title, string? PosterPath = null);
+public sealed record DirectVideoRecord(string VideoId, string Title);
 public sealed record MissingEpisodeRecord(long EpisodeId, string SeriesId, string SeriesTitle, int SeasonNumber, int EpisodeNumber, string Title, string VideoId);
 public sealed record SaveSeriesRequest(string SeriesId, string Title, string? Description, int? Year, string? Genre, string? PosterPath, string? FolderPath = null, string? Section = null, bool IsPublished = false, string? CategoryId = null, string? OrganizationType = "Seasons");
 public sealed record VideoPlacementRecord(string SeriesId, long? SeasonId, int? EpisodeNumber, string? Title);
@@ -213,6 +214,27 @@ public sealed class SeriesCatalogService
         transaction.Commit();
     }
 
+    public IReadOnlyList<DirectVideoRecord> ListDirectVideos(string seriesId)
+    {
+        using var c = Open();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "SELECT VideoId, Title FROM SeriesDirectVideos WHERE SeriesId=$series ORDER BY COALESCE(EpisodeNumber,2147483647), Title COLLATE NOCASE";
+        cmd.Parameters.AddWithValue("$series", seriesId);
+        using var r = cmd.ExecuteReader();
+        var rows = new List<DirectVideoRecord>();
+        while (r.Read()) rows.Add(new DirectVideoRecord(r.GetString(0), r.GetString(1)));
+        return rows;
+    }
+
+    public void UnlinkDirectVideo(string seriesId, string videoId)
+    {
+        using var c = Open();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "DELETE FROM SeriesDirectVideos WHERE SeriesId=$series AND VideoId=$video";
+        cmd.Parameters.AddWithValue("$series", seriesId);
+        cmd.Parameters.AddWithValue("$video", videoId);
+        if (cmd.ExecuteNonQuery() == 0) throw new KeyNotFoundException("الفيديو غير مربوط مباشرة بهذا المسلسل.");
+    }
     public IReadOnlyList<int> ListDirectEpisodeNumbers(string seriesId)
     {
         using var c = Open();
