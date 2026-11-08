@@ -795,6 +795,7 @@ public partial class App : Application
      if(!IsAdmin(c)) return Results.NotFound();
      if(string.IsNullOrWhiteSpace(request.VideoId)||request.VideoId.Length>160||(request.Title?.Length??0)>160||files.Resolve(request.VideoId) is null) return Results.BadRequest(new{error="اختر ملف فيديو صحيحاً من المكتبة."});
      if(series.GetSeries(seriesId) is null) return Results.NotFound(new{error="المسلسل غير موجود"});
+     if(series.GetVideoPlacement(request.VideoId) is not null) return Results.Conflict(new{error="هذا الفيديو مرتبط بالفعل بمسلسل أو موسم. فك ارتباطه أولاً إذا أردت نقله."});
      try { series.SetVideoPlacement(seriesId,null,request.VideoId,null,request.Title); return Results.Ok(new{linked=true}); }
      catch(Microsoft.Data.Sqlite.SqliteException) { return Results.Conflict(new{error="هذا الفيديو مربوط مسبقاً أو تعذر ربطه."}); }
     });
