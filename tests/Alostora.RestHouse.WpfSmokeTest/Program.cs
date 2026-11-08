@@ -131,13 +131,13 @@ internal static class Program
             app.Run(window);
 
             if (!saveVerified)
-                throw new InvalidOperationException("The visible management window failed to save the external live URL.");
-            Console.WriteLine("PASS: the visible management window loaded, saved settings, and the series, category, season, episode, and movie editors each opened/closed/reopened three times without losing their forms.");
+                throw new InvalidOperationException("The visible management window failed to save customer settings and the optional external direct-link URL.");
+            Console.WriteLine("PASS: the visible management window loaded and saved customer settings; the optional external direct-link URL was stored; and the series, category, season, episode, and movie editors each opened/closed/reopened three times without losing their forms.");
             return 0;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine("FAIL: the visible WPF management/live URL smoke test failed.");
+            Console.Error.WriteLine("FAIL: the visible WPF management/customer settings smoke test failed.");
             Console.Error.WriteLine(ex);
             return 1;
         }
