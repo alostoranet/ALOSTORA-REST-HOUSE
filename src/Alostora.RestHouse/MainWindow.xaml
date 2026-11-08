@@ -281,7 +281,24 @@
 <WrapPanel Margin="0,3,0,14"><Button Content="حفظ بيانات المسلسل" Click="SaveSeries_Click" Background="#C93640" Foreground="White" FontWeight="Bold" Padding="12,9" BorderThickness="0" Margin="0,0,6,0"/><Button Content="حذف المسلسل وبياناته" Click="DeleteSeries_Click" Background="#FCE8E8" Foreground="#9F2630" Padding="12,9" BorderThickness="0"/></WrapPanel></StackPanel></Expander>
 
 </StackPanel></ScrollViewer></TabItem>
-<TabItem Header="المواسم والحلقات"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
+<TabItem Header="🎬 إدارة الأفلام"><ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10"><StackPanel>
+<TextBlock Text="إدارة الأفلام" FontSize="19" FontWeight="Bold" Foreground="#142D4A" Margin="0,0,0,10"/>
+<TextBlock Text="أضف فيلماً واحداً باختيار ملفه فقط. لا تُضاف بقية ملفات المجلد تلقائياً، ولا توجد مواسم أو أجزاء أو حلقات في هذا القسم." Foreground="#64748B" TextWrapping="Wrap" Margin="0,0,0,10"/>
+<WrapPanel Margin="0,0,0,8"><Button Content="إضافة فيلم" Click="NewMovie_Click" Padding="12,8" Margin="0,0,6,0" Background="#C93640" Foreground="White"/><Button Content="تعديل الفيلم المحدد" Click="EditSelectedMovie_Click" Padding="10,7" Margin="0,0,6,0"/><Button Content="حذف الفيلم المحدد" Click="DeleteMovie_Click" Padding="10,7" Background="#FCE8E8" Foreground="#9F2630"/></WrapPanel>
+<DataGrid x:Name="MoviesPicker" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" CanUserAddRows="False" Height="190" Margin="4,4,4,10"><DataGrid.Columns><DataGridTextColumn Header="اسم الفيلم" Binding="{Binding Title}" Width="*"/><DataGridTextColumn Header="السنة" Binding="{Binding Year}" Width="65"/><DataGridTextColumn Header="التصنيف" Binding="{Binding Genre}" Width="110"/><DataGridTextColumn Header="القسم" Binding="{Binding CategoryTitle}" Width="120"/><DataGridTextColumn Header="النشر" Binding="{Binding PublishStatus}" Width="75"/></DataGrid.Columns></DataGrid>
+<Expander x:Name="MovieEditorExpander" Visibility="Collapsed" Header="بيانات الفيلم" IsExpanded="False" Background="#F7FAFD" Padding="16" Margin="4,8,4,12" BorderBrush="#C7D4E2" BorderThickness="1.5"><StackPanel>
+<TextBlock Text="اسم الفيلم (مطلوب)"/><TextBox x:Name="MovieTitleBox" Margin="0,4,0,9"/>
+<TextBlock Text="ملف الفيديو (مطلوب)"/><DockPanel Margin="0,4,0,9"><Button DockPanel.Dock="Left" Content="اختيار ملف الفيلم" Click="ChooseMovieFile_Click" Padding="10,7" Margin="0,0,6,0"/><TextBox x:Name="MovieFilePathBox" IsReadOnly="True" FlowDirection="LeftToRight"/></DockPanel>
+<TextBlock Text="الوصف (اختياري)"/><TextBox x:Name="MovieDescriptionBox" Margin="0,4,0,9" Height="58" AcceptsReturn="True" TextWrapping="Wrap"/>
+<Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions><StackPanel Grid.Column="0" Margin="0,0,6,8"><TextBlock Text="السنة (اختياري)"/><TextBox x:Name="MovieYearBox" Margin="0,4,0,0"/></StackPanel><StackPanel Grid.Column="1" Margin="6,0,0,8"><TextBlock Text="التصنيف (اختياري)"/><TextBox x:Name="MovieGenreBox" Margin="0,4,0,0"/></StackPanel></Grid>
+<TextBlock Text="قسم العرض للعميل (اختياري)"/><ComboBox x:Name="MovieCategoryPicker" DisplayMemberPath="Title" SelectedValuePath="CategoryId" Padding="8" Margin="0,4,0,8"/>
+<CheckBox x:Name="MoviePublishBox" Content="نشر الفيلم في واجهة العميل" IsChecked="False" Margin="0,0,0,9" Foreground="#16834A" FontWeight="Bold"/>
+<WrapPanel Margin="0,0,0,8"><Button Content="اختيار صورة الغلاف (اختياري)" Click="ChooseMoviePoster_Click" Padding="10,7" Margin="0,0,8,0"/><TextBlock x:Name="MoviePosterStatusText" Text="يمكن ترك الغلاف فارغاً." Foreground="#64748B" VerticalAlignment="Center"/></WrapPanel>
+<WrapPanel><Button Content="حفظ الفيلم" Click="SaveMovie_Click" Background="#C93640" Foreground="White" Padding="13,9" Margin="0,0,6,0"/><Button Content="إلغاء" Click="CancelMovieEditor_Click" Padding="12,9"/></WrapPanel>
+<TextBlock x:Name="MovieStatusText" Text="أدخل اسم الفيلم واختر ملف الفيديو ثم احفظ." Foreground="#64748B" TextWrapping="Wrap" Margin="0,10,0,0"/>
+</StackPanel></Expander>
+<TextBlock x:Name="MoviesListStatusText" Text="الأفلام المحفوظة ستظهر هنا." Foreground="#64748B" Margin="4,6,4,0"/>
+</StackPanel></ScrollViewer></TabItem><TabItem Header="المواسم والحلقات"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
 <StackPanel x:Name="DirectVideoManagementPanel" Visibility="Collapsed">
 <TextBlock Text="فيديوهات المسلسل المباشرة — بدون مواسم أو أجزاء" FontSize="17" FontWeight="Bold" Foreground="#142D4A" Margin="0,12,0,8"/>
 <TextBlock Text="اختر فيديو من المكتبة لإضافته مباشرة إلى هذا المسلسل. لن يتم إنشاء موسم أو جزء، ولن يتم حذف ملف الفيديو الأصلي عند فك الربط." Foreground="#64748B" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"/>
