@@ -1387,7 +1387,9 @@ document.querySelector('#customerMessageForm').addEventListener('submit',async e
    showAppToast(error.message||'حدث خطأ أثناء الإرسال. حاول مرة أخرى.','error');}
  finally{button.disabled=false;button.textContent='إرسال الرسالة للإدارة';}
 });
-refreshCustomerMessageReplies();\nsetInterval(refreshCustomerMessageReplies,12000);\nlet appToastTimer=null;
+refreshCustomerMessageReplies();
+setInterval(refreshCustomerMessageReplies,12000);
+let appToastTimer=null;
 function showAppToast(message,kind='success'){
  const toast=document.querySelector('#appToast');
  if(!toast)return;
