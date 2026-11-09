@@ -367,9 +367,10 @@ public partial class App : Application
    });
    _server.MapPost("/api/messages",(CreateCustomerMessageRequest request,CustomerMessageService messages)=>{
     var allowed=new[]{"طلب مسلسل","الإبلاغ عن مشكلة","اقتراح","بلاغ شعار أو علامة تجارية","أخرى"};
-    if(request is null||!allowed.Contains(request.Category)||string.IsNullOrWhiteSpace(request.Title)||request.Title.Trim().Length<3||request.Title.Length>120||string.IsNullOrWhiteSpace(request.Details)||request.Details.Trim().Length<8||request.Details.Length>2500||(request.Contact?.Length??0)>100||(request.ViewerId?.Length??0)>100)
-     return Results.BadRequest(new{error="تحقق من نوع الرسالة والعنوان والتفاصيل. الحد الأقصى للتفاصيل 2500 حرف."});
-    var id=messages.Create(request);
+    if(request is null||!allowed.Contains(request.Category)||string.IsNullOrWhiteSpace(request.Details)||request.Details.Trim().Length<8||request.Details.Length>2500||(request.Contact?.Length??0)>100||(request.ViewerId?.Length??0)>100)
+     return Results.BadRequest(new{error="تحقق من نوع الرسالة والتفاصيل. الحد الأقصى للتفاصيل 2500 حرف."});
+    var normalized=request with { Title=request.Category.Trim() };
+    var id=messages.Create(normalized);
     return Results.Ok(new{sent=true,id,message="وصلت رسالتك إلى إدارة استراحة الأسطورة، شكراً لتواصلك."});
    });
    _server.MapGet("/api/messages/{id:long}",(long id,string? viewerId,CustomerMessageService messages)=>
