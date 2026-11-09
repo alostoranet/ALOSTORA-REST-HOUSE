@@ -37,6 +37,7 @@ $requiredRoutes = @(
     '/api/profile',
     '/api/admin/series',
     '/api/admin/seasons',
+    '/api/admin/register-files',
     '/api/admin/register-selected-files',
     '/api/admin/scan-folder',
     '/api/admin/metadata',
@@ -159,6 +160,14 @@ Write-Host "PASS: category deletion safely detaches and unpublishes content whil
 
 $libraryServicePath = Join-Path $root "src/Alostora.RestHouse/LibraryService.cs"
 $libraryService = Get-Content $libraryServicePath -Raw
+
+if ($xaml -notmatch 'Click="AddVideoFiles_Click"' -or
+    $code -notmatch 'PostAsJsonAsync\("/api/admin/register-files"' -or
+    $app -notmatch 'MapPost\("/api/admin/register-files"' -or
+    $libraryService -notmatch 'public int RegisterFiles\(') {
+    throw "Direct multi-file import is not fully wired from the Windows admin button to the local library service."
+}
+Write-Host "PASS: direct multi-file import button, API route, and library service are connected."
 $libraryFolderTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/LibraryServiceFolderTests.cs"
 if ($libraryService -notmatch 'public IReadOnlyList<LibraryFolderInfo> ListFolders\(' -or
     $libraryService -notmatch 'public string CreateFolder\(' -or
