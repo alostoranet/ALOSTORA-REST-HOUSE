@@ -91,6 +91,27 @@ public sealed class LibraryServiceRegistrationTests : IDisposable
     }
 
     [Fact]
+    public void RegisterFilesRejectsEmptyVideoFileBeforePersistingSelection()
+    {
+        var libraryRoot = Path.Combine(_root, "library");
+        var sourceFolder = Path.Combine(_root, "source");
+        Directory.CreateDirectory(sourceFolder);
+
+        var validPath = Path.Combine(sourceFolder, "valid.mp4");
+        var emptyPath = Path.Combine(sourceFolder, "empty.mp4");
+        File.WriteAllBytes(validPath, new byte[] { 1, 2, 3 });
+        File.WriteAllBytes(emptyPath, Array.Empty<byte>());
+
+        using var library = new LibraryService(libraryRoot, _databasePath);
+
+        Assert.Throws<InvalidOperationException>(() => library.RegisterFiles(new[] { validPath, emptyPath }));
+        Assert.Empty(library.List());
+        Assert.True(File.Exists(validPath));
+        Assert.True(File.Exists(emptyPath));
+        Assert.Equal(0, new FileInfo(emptyPath).Length);
+    }
+
+    [Fact]
     public void RegisterFilesRejectsEmptySelection()
     {
         using var library = new LibraryService(Path.Combine(_root, "library"), _databasePath);

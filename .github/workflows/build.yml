@@ -2,7 +2,7 @@ name: Build Windows application
 
 on:
   push:
-    branches: [main, work/no-live-full-audit-20261104]
+    branches: [main, work/no-live-full-audit-20261104, fix/pr26-reject-empty-video-import-20261109]
   pull_request:
     branches: [main]
   workflow_dispatch:
