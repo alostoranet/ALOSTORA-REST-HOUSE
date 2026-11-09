@@ -492,7 +492,7 @@ button.secondary:hover,.watched-card button:hover,.download-remove:hover,.custom
 <select id="customerMessageCategory" required aria-label="نوع الرسالة">
 <option value="طلب مسلسل">طلب مسلسل أو فيلم</option><option value="الإبلاغ عن مشكلة">الإبلاغ عن مشكلة</option><option value="اقتراح">اقتراح أو ملاحظة</option><option value="بلاغ شعار أو علامة تجارية">بلاغ عن شعار أو علامة تجارية</option><option value="أخرى">موضوع آخر</option>
 </select>
-<input id="customerMessageTitle" type="text" maxlength="120" minlength="3" required placeholder="عنوان الرسالة">
+
 <textarea id="customerMessageDetails" maxlength="2500" minlength="8" required placeholder="اكتب تفاصيل طلبك أو المشكلة..."></textarea>
 <input id="customerMessageContact" type="text" maxlength="100" placeholder="رقم تواصل أو اسم (اختياري)">
 <button id="customerMessageSend" type="submit">إرسال الرسالة للإدارة</button>
@@ -1367,12 +1367,12 @@ document.querySelector('#customerMessageForm').addEventListener('submit',async e
  const button=document.querySelector('#customerMessageSend'),feedback=document.querySelector('#contactFeedback');
  const payload={
   category:document.querySelector('#customerMessageCategory').value,
-  title:document.querySelector('#customerMessageTitle').value.trim(),
+  title:document.querySelector('#customerMessageCategory').value,
   details:document.querySelector('#customerMessageDetails').value.trim(),
   contact:document.querySelector('#customerMessageContact').value.trim()||null,
   viewerId:viewerId||null
  };
- if(payload.title.length<3||payload.details.length<8){feedback.textContent='اكتب عنواناً وتفاصيل كافية للرسالة.';return;}
+ if(payload.details.length<8){feedback.textContent='اكتب تفاصيل كافية للرسالة.';return;}
  button.disabled=true;button.textContent='جارٍ إرسال الرسالة...';feedback.textContent='';
  try{
   const response=await fetch('/api/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
