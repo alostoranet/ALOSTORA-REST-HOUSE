@@ -498,6 +498,11 @@ button.secondary:hover,.watched-card button:hover,.download-remove:hover,.custom
 <button id="customerMessageSend" type="submit">إرسال الرسالة للإدارة</button>
 </form>
 <p id="contactFeedback" role="status" aria-live="polite"></p>
+<section id="customerMessageReplies" aria-live="polite" style="margin-top:18px;padding:14px;border:1px solid #36516a;border-radius:13px;background:#10253a">
+<h3 style="margin:0 0 6px;color:#ead7ad">متابعة رسائلك وردود الإدارة</h3>
+<p style="margin:0 0 10px;color:#b9c6d2;font-size:13px">ستظهر هنا ردود الإدارة على رسائلك، مع رقم كل رسالة. لا تحتاج إلى تسجيل دخول أو فتح صفحة أخرى.</p>
+<div id="customerMessageRepliesList"><p style="margin:0;color:#b9c6d2;font-size:13px">ستظهر رسائلك التي ترسلها من هذا المتصفح هنا.</p></div>
+</section>
 </section><div id="appToast" class="app-toast" role="status" aria-live="polite"></div></main>
 <div class="footer-contact-wrap"><button id="contactCta" class="footer-contact-button" type="button"><span aria-hidden="true">✉</span> تواصل مع الإدارة للطلب والاستفسار</button></div>
 <footer class="developer-credit"><span class="credit-pair"><span class="developer-label"><span class="developer-icon" aria-hidden="true">✦</span> تصميم وبرمجة الاستراحة :</span></span><strong>م/ أبو عبيدة محمد النظاري</strong><a href="https://wa.me/967777824918" target="_blank" rel="noopener noreferrer" aria-label="تواصل عبر واتساب على الرقم 777824918"><span class="whatsapp-mark" aria-hidden="true">◉</span><bdi dir="ltr">777824918</bdi></a><button id="copyFooterPhone" class="copy-phone" type="button" aria-label="نسخ رقم التواصل">نسخ</button></footer>
@@ -1320,6 +1325,43 @@ document.querySelector('#applyAudio').addEventListener('click',async()=>{
  if(generation!==playbackGeneration)return;
  try{await startTranscodedPlayback(item,selected,generation,saved);}catch(ex){if(generation===playbackGeneration)document.querySelector('#playbackHint').textContent='تعذر تغيير المسار الصوتي: '+ex.message;}
 });
+const customerMessageIdsKey='alostora-customer-message-ids';
+function getCustomerMessageIds(){
+ try{
+  const values=JSON.parse(localStorage.getItem(customerMessageIdsKey)||'[]');
+  return [...new Set(values.map(Number).filter(id=>Number.isSafeInteger(id)&&id>0))].slice(-30);
+ }catch{return [];}
+}
+function rememberCustomerMessageId(id){
+ const values=getCustomerMessageIds();values.push(Number(id));
+ try{localStorage.setItem(customerMessageIdsKey,JSON.stringify([...new Set(values)].slice(-30)));}catch{}
+}
+async function refreshCustomerMessageReplies(){
+ const host=document.querySelector('#customerMessageRepliesList');if(!host)return;
+ const ids=getCustomerMessageIds();
+ if(!ids.length){host.innerHTML='<p style="margin:0;color:#b9c6d2;font-size:13px">ستظهر رسائلك التي ترسلها من هذا المتصفح هنا.</p>';return;}
+ const cards=[];
+ for(const id of ids){
+  try{
+   const query=new URLSearchParams({viewerId});
+   const response=await fetch('/api/messages/'+id+'?'+query.toString(),{cache:'no-store'});
+   if(!response.ok)continue;
+   const item=await response.json();
+   const card=document.createElement('article');
+   card.style.cssText='padding:11px;margin:9px 0;border:1px solid #36516a;border-radius:10px;background:#172f46';
+   const heading=document.createElement('strong');heading.textContent='رقم رسالتك: #'+item.id;heading.style.color='#ead7ad';card.append(heading);
+   const title=document.createElement('p');title.textContent=item.title||'رسالة العميل';title.style.cssText='margin:5px 0;color:#f7f5ef';card.append(title);
+   const reply=document.createElement('p');
+   reply.textContent=item.adminReply?'رد الإدارة: '+item.adminReply:'لم يصل رد الإدارة بعد. سيتم تحديث الحالة تلقائياً.';
+   reply.style.cssText='margin:6px 0 0;padding:9px;border-radius:8px;background:#0d2031;color:'+(item.adminReply?'#d7f3df':'#b9c6d2')+';white-space:pre-wrap';
+   card.append(reply);
+   if(item.adminReplyUtc){const date=document.createElement('small');date.textContent='تاريخ الرد: '+new Date(item.adminReplyUtc).toLocaleString('ar');date.style.color='#91a5b8';card.append(date);}
+   cards.push(card);
+  }catch{}
+ }
+ host.replaceChildren(...cards);
+ if(!cards.length){const note=document.createElement('p');note.textContent='لم نتمكن من تحميل رسائلك حالياً. تأكد من اتصالك ثم حاول التحديث.';note.style.color='#b9c6d2';host.append(note);}
+}
 document.querySelector('#customerMessageForm').addEventListener('submit',async event=>{
  event.preventDefault();
  const button=document.querySelector('#customerMessageSend'),feedback=document.querySelector('#contactFeedback');
@@ -1337,13 +1379,15 @@ document.querySelector('#customerMessageForm').addEventListener('submit',async e
   const result=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(result.error||'تعذر إرسال الرسالة.');
   document.querySelector('#customerMessageForm').reset();
-  feedback.textContent=result.message||'تم إرسال رسالتك بنجاح.';
+  rememberCustomerMessageId(result.id);
+  feedback.textContent=(result.message||'تم إرسال رسالتك بنجاح.')+' رقم رسالتك: #'+result.id;
+  await refreshCustomerMessageReplies();
    showAppToast(result.message||'تم إرسال رسالتك بنجاح.','success');
  }catch(error){feedback.textContent=error.message||'حدث خطأ أثناء الإرسال. حاول مرة أخرى.';
    showAppToast(error.message||'حدث خطأ أثناء الإرسال. حاول مرة أخرى.','error');}
  finally{button.disabled=false;button.textContent='إرسال الرسالة للإدارة';}
 });
-let appToastTimer=null;
+refreshCustomerMessageReplies();\nsetInterval(refreshCustomerMessageReplies,12000);\nlet appToastTimer=null;
 function showAppToast(message,kind='success'){
  const toast=document.querySelector('#appToast');
  if(!toast)return;
