@@ -630,8 +630,9 @@ public sealed class LibraryService : IDisposable
 
         foreach (var path in selected)
         {
-            if (!File.Exists(path) || !ContentTypes.ContainsKey(Path.GetExtension(path)))
-                throw new InvalidOperationException("أحد الملفات المحددة غير موجود أو صيغته غير مدعومة: " + Path.GetFileName(path));
+            var info = new FileInfo(path);
+            if (!info.Exists || !ContentTypes.ContainsKey(Path.GetExtension(path)) || info.Length == 0)
+                throw new InvalidOperationException("أحد الملفات المحددة فارغ أو غير موجود أو صيغته غير مدعومة: " + Path.GetFileName(path));
         }
 
         using (var connection = new SqliteConnection(_connectionString))
