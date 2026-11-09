@@ -16,6 +16,7 @@ namespace Alostora.RestHouse;
 
 public sealed record BulkLibraryRequest(List<string> Ids);
 public sealed record CustomerMessageStatusRequest(string Status);
+public sealed record CustomerMessageReplyRequest(string Reply);
 public sealed record UpdateSeasonFolderRequest(string? FolderPath);
 public sealed record ScanFolderRequest(string FolderPath);
 public sealed record AddMediaLibraryRootRequest(string Kind, string FolderPath);
@@ -371,8 +372,22 @@ public partial class App : Application
     var id=messages.Create(request);
     return Results.Ok(new{sent=true,id,message="وصلت رسالتك إلى إدارة استراحة الأسطورة، شكراً لتواصلك."});
    });
+   _server.MapGet("/api/messages/{id:long}",(long id,string? viewerId,CustomerMessageService messages)=>
+   {
+    if(string.IsNullOrWhiteSpace(viewerId)||viewerId.Length>100)return Results.NotFound();
+    var item=messages.GetForViewer(id,viewerId);
+    return item is null?Results.NotFound():Results.Ok(new{id=item.Id,title=item.Title,details=item.Details,createdUtc=item.CreatedUtc,adminReply=item.AdminReply,adminReplyUtc=item.AdminReplyUtc});
+   });
    _server.MapGet("/api/admin/messages",(HttpContext c,CustomerMessageService messages)=>
     IsAdmin(c)?Results.Ok(messages.List()):Results.NotFound());
+   _server.MapPost("/api/admin/messages/{id:long}/reply",(HttpContext c,long id,CustomerMessageReplyRequest request,CustomerMessageService messages)=>
+   {
+    if(!IsAdmin(c))return Results.NotFound();
+    if(request is null||string.IsNullOrWhiteSpace(request.Reply)||request.Reply.Trim().Length>2500)
+     return Results.BadRequest(new{error="اكتب الرد، وبحد أقصى 2500 حرف."});
+    try{return messages.SetAdminReply(id,request.Reply)?Results.Ok(new{saved=true}):Results.NotFound(new{error="الرسالة غير موجودة."});}
+    catch(ArgumentException ex){return Results.BadRequest(new{error=ex.Message});}
+   });
    _server.MapPost("/api/admin/messages/{id:long}/status",(HttpContext c,long id,CustomerMessageStatusRequest request,CustomerMessageService messages)=>{
     if(!IsAdmin(c))return Results.NotFound();
     if(request.Status is not ("جديد" or "قيد المتابعة" or "تمت المعالجة"))return Results.BadRequest(new{error="حالة الرسالة غير صالحة"});
