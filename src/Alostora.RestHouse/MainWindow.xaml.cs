@@ -3799,6 +3799,66 @@ public partial class MainWindow : Window
             FontSize = 11,
             Margin = new Thickness(0, 0, 0, 12)
         });
+        root.Children.Add(new TextBlock
+        {
+            Text = "رد الإدارة الذي سيظهر للعميل في صفحة الرسائل",
+            FontWeight = FontWeights.Bold,
+            Margin = new Thickness(0, 8, 0, 5)
+        });
+        var replyBox = new TextBox
+        {
+            Text = message.AdminReply ?? "",
+            TextWrapping = TextWrapping.Wrap,
+            AcceptsReturn = true,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Height = 92,
+            MaxLength = 2500,
+            Padding = new Thickness(10),
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        root.Children.Add(replyBox);
+        var sendReply = new Button
+        {
+            Content = string.IsNullOrWhiteSpace(message.AdminReply) ? "إرسال الرد للعميل" : "تحديث الرد وإرساله",
+            Padding = new Thickness(16, 8, 16, 8),
+            Margin = new Thickness(0, 0, 0, 12),
+            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(28, 112, 92)),
+            Foreground = System.Windows.Media.Brushes.White,
+            FontWeight = FontWeights.Bold
+        };
+        sendReply.Click += async (_, _) =>
+        {
+            var replyText = replyBox.Text.Trim();
+            if (replyText.Length == 0)
+            {
+                MessageBox.Show("اكتب الرد أولاً.", "الرد على العميل", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            try
+            {
+                sendReply.IsEnabled = false;
+                sendReply.Content = "جارٍ إرسال الرد...";
+                var response = await _http.PostAsJsonAsync($"/api/admin/messages/{message.Id}/reply", new { reply = replyText });
+                if (!response.IsSuccessStatusCode)
+                {
+                    MessageBox.Show("تعذر إرسال الرد: " + await response.Content.ReadAsStringAsync(), "الرد على العميل", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                CustomerMessageStatusText.Text = $"تم إرسال ردك على الرسالة رقم {message.Id}. سيظهر للعميل في صفحة الرسائل.";
+                await LoadCustomerMessagesAsync();
+                MessageBox.Show($"تم إرسال الرد على الرسالة رقم {message.Id} بنجاح.", "الرد على العميل", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("تعذر إرسال الرد: " + ex.Message, "الرد على العميل", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            finally
+            {
+                sendReply.IsEnabled = true;
+                sendReply.Content = "إرسال الرد للعميل";
+            }
+        };
+        root.Children.Add(sendReply);
         root.Children.Add(new TextBlock { Text = "حالة الرسالة", FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 5) });
         var statusPicker = new ComboBox
         {
@@ -3919,6 +3979,8 @@ public partial class MainWindow : Window
         public string Status { get; set; } = "";
         public string CreatedUtc { get; set; } = "";
         public string UpdatedUtc { get; set; } = "";
+        public string? AdminReply { get; set; }
+        public string? AdminReplyUtc { get; set; }
     }
 
     private sealed class MediaToolStatus
