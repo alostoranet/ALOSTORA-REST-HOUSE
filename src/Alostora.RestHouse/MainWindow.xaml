@@ -392,6 +392,7 @@
 <DataGridTextColumn Header="النوع" Binding="{Binding Category}" Width="110"/>
 <DataGridTextColumn Header="العنوان" Binding="{Binding Title}" Width="*"/>
 <DataGridTextColumn Header="الحالة" Binding="{Binding Status}" Width="100"/>
+<DataGridTextColumn Header="رد الإدارة" Binding="{Binding AdminReply}" Width="160"/>
 <DataGridTextColumn Header="التاريخ" Binding="{Binding CreatedUtc}" Width="150"/>
 </DataGrid.Columns></DataGrid>
 <TextBlock Text="اضغط على أي رسالة في الجدول لفتح تفاصيلها في نافذة منبثقة وإدارة حالتها." Foreground="#64748B" FontSize="12" Margin="0,8,0,0"/>
