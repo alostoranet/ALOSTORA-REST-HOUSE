@@ -43,10 +43,15 @@ public sealed class CustomerMessageService
 
     private static void EnsureColumn(SqliteConnection connection,string name,string definition)
     {
-        using var check=connection.CreateCommand();
-        check.CommandText="PRAGMA table_info(CustomerMessages)";
-        using var reader=check.ExecuteReader();
-        while(reader.Read()) if(string.Equals(reader.GetString(1),name,StringComparison.OrdinalIgnoreCase)) return;
+        var exists=false;
+        using(var check=connection.CreateCommand())
+        {
+            check.CommandText="PRAGMA table_info(CustomerMessages)";
+            using var reader=check.ExecuteReader();
+            while(reader.Read())
+                if(string.Equals(reader.GetString(1),name,StringComparison.OrdinalIgnoreCase)){exists=true;break;}
+        }
+        if(exists)return;
         using var alter=connection.CreateCommand();
         alter.CommandText=$"ALTER TABLE CustomerMessages ADD COLUMN {name} {definition}";
         alter.ExecuteNonQuery();
