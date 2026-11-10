@@ -324,9 +324,9 @@ public partial class App : Application
     var contentType=c.Request.ContentType?.Split(';')[0].Trim().ToLowerInvariant();
     var ext=contentType switch{"image/jpeg"=>".jpg","image/png"=>".png","image/webp"=>".webp",_=>null};
     if(ext is null)return Results.BadRequest(new{error="الصيغ المسموحة JPG وPNG وWEBP فقط"});
-    await using var ms=new MemoryStream();await c.Request.Body.CopyToAsync(ms);
-    if(ms.Length==0||ms.Length>5_242_880)return Results.BadRequest(new{error="حجم الصورة يجب ألا يتجاوز 5 ميجابايت"});
-    var bytes=ms.ToArray();
+    var bytes=await BoundedImageUploadReader.ReadAsync(c.Request.Body,5_242_880,c.RequestAborted);
+    if(bytes is null)return Results.StatusCode(413);
+    if(bytes.Length==0)return Results.BadRequest(new{error="ملف الصورة فارغ."});
     var valid=contentType switch{
      "image/jpeg"=>bytes.Length>=3&&bytes[0]==0xFF&&bytes[1]==0xD8&&bytes[2]==0xFF,
      "image/png"=>bytes.Length>=8&&bytes.Take(8).SequenceEqual(new byte[]{137,80,78,71,13,10,26,10}),
@@ -392,7 +392,9 @@ public partial class App : Application
     if(c.Request.ContentLength is > 5_242_880)return Results.StatusCode(413);
     var type=c.Request.ContentType?.Split(';')[0].Trim().ToLowerInvariant();var ext=type switch{"image/jpeg"=>".jpg","image/png"=>".png","image/webp"=>".webp",_=>null};
     if(ext is null)return Results.BadRequest(new{error="الصيغ المسموحة JPG وPNG وWEBP"});
-    await using var ms=new MemoryStream();await c.Request.Body.CopyToAsync(ms);var bytes=ms.ToArray();
+    var bytes=await BoundedImageUploadReader.ReadAsync(c.Request.Body,5_242_880,c.RequestAborted);
+    if(bytes is null)return Results.StatusCode(413);
+    if(bytes.Length==0)return Results.BadRequest(new{error="ملف الصورة فارغ."});
     var valid=type switch{"image/jpeg"=>bytes.Length>=3&&bytes[0]==255&&bytes[1]==216&&bytes[2]==255,"image/png"=>bytes.Length>=8&&bytes.Take(8).SequenceEqual(new byte[]{137,80,78,71,13,10,26,10}),"image/webp"=>bytes.Length>=12&&System.Text.Encoding.ASCII.GetString(bytes,0,4)=="RIFF"&&System.Text.Encoding.ASCII.GetString(bytes,8,4)=="WEBP",_=>false};
     if(!valid||bytes.Length==0||bytes.Length>5_242_880)return Results.BadRequest(new{error="الصورة غير صالحة أو تجاوزت 5 ميجابايت"});
     var fileName="category-"+id+"-"+Guid.NewGuid().ToString("N")+ext;await File.WriteAllBytesAsync(Path.Combine(posters,fileName),bytes);
@@ -721,9 +723,9 @@ public partial class App : Application
     var contentType=c.Request.ContentType?.Split(';')[0].Trim().ToLowerInvariant();
     var ext=contentType switch {"image/jpeg"=>".jpg","image/png"=>".png","image/webp"=>".webp",_=>null};
     if(ext is null) return Results.BadRequest(new{error="الصيغ المسموحة JPG وPNG وWEBP فقط"});
-    await using var ms=new MemoryStream(); await c.Request.Body.CopyToAsync(ms);
-    if(ms.Length==0||ms.Length>5_242_880) return Results.BadRequest(new{error="حجم الصورة يجب ألا يتجاوز 5 ميجابايت"});
-    var bytes=ms.ToArray();
+    var bytes=await BoundedImageUploadReader.ReadAsync(c.Request.Body,5_242_880,c.RequestAborted);
+    if(bytes is null)return Results.StatusCode(413);
+    if(bytes.Length==0)return Results.BadRequest(new{error="ملف الصورة فارغ."});
     var valid=contentType switch {
      "image/jpeg"=>bytes.Length>=3&&bytes[0]==0xFF&&bytes[1]==0xD8&&bytes[2]==0xFF,
      "image/png"=>bytes.Length>=8&&bytes.Take(8).SequenceEqual(new byte[]{137,80,78,71,13,10,26,10}),
@@ -746,9 +748,9 @@ public partial class App : Application
     var contentType=c.Request.ContentType?.Split(';')[0].Trim().ToLowerInvariant();
     var ext=contentType switch {"image/jpeg"=>".jpg","image/png"=>".png","image/webp"=>".webp",_=>null};
     if(ext is null) return Results.BadRequest(new{error="الصيغ المسموحة JPG وPNG وWEBP فقط"});
-    await using var ms=new MemoryStream(); await c.Request.Body.CopyToAsync(ms);
-    if(ms.Length==0||ms.Length>5_242_880) return Results.BadRequest(new{error="حجم الصورة يجب ألا يتجاوز 5 ميجابايت"});
-    var bytes=ms.ToArray();
+    var bytes=await BoundedImageUploadReader.ReadAsync(c.Request.Body,5_242_880,c.RequestAborted);
+    if(bytes is null)return Results.StatusCode(413);
+    if(bytes.Length==0)return Results.BadRequest(new{error="ملف الصورة فارغ."});
     var valid=contentType switch {
      "image/jpeg"=>bytes.Length>=3&&bytes[0]==0xFF&&bytes[1]==0xD8&&bytes[2]==0xFF,
      "image/png"=>bytes.Length>=8&&bytes.Take(8).SequenceEqual(new byte[]{137,80,78,71,13,10,26,10}),
