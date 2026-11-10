@@ -420,12 +420,10 @@ foreach ($testName in @("ReadsPayloadAtExactLimit", "RejectsOversizedPayloadWith
     if (-not $uploadReaderTests.Contains($testName)) { throw ("Missing bounded image upload test: " + $testName) }
 }
 foreach ($route in @("/api/admin/profile/logo", "/api/admin/catalog-categories/{id}/poster", "/api/admin/poster/{videoId}", "/api/admin/series-poster/{seriesId}")) {
-    $marker = '_server.MapPost("' + $route + '"'
-    $start = $app.IndexOf($marker, [StringComparison]::Ordinal)
-    if ($start -lt 0) { throw ("Image upload route is missing: " + $route) }
-    $end = $app.IndexOf('});', $start, [StringComparison]::Ordinal)
-    if ($end -lt 0) { throw ("Image upload route is incomplete: " + $route) }
-    $routeBody = $app.Substring($start, $end - $start)
+    $routePattern = '(?ms)_server\.MapPost\("' + [regex]::Escape($route) + '".*?^\s*\}\);'
+    $routeMatch = [regex]::Match($app, $routePattern)
+    if (-not $routeMatch.Success) { throw ("Image upload route is missing or incomplete: " + $route) }
+    $routeBody = $routeMatch.Value
     if ($routeBody -notmatch 'BoundedImageUploadReader\.ReadAsync' -or $routeBody -match 'CopyToAsync\(ms\)') {
         throw ("Image upload route does not use bounded streaming: " + $route)
     }
