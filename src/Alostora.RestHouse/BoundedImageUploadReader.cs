@@ -17,7 +17,7 @@ public static class BoundedImageUploadReader
         if (maximumBytes <= 0)
             throw new ArgumentOutOfRangeException(nameof(maximumBytes));
 
-        using var buffer = new MemoryStream(Math.Min(maximumBytes, 64 * 1024));
+        using var buffer = new MemoryStream(maximumBytes);
         var chunk = new byte[64 * 1024];
 
         while (true)
