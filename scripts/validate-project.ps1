@@ -406,3 +406,28 @@ if ($customerAds -notmatch 'MaximumImageBytes' -or
     throw "Customer image ad gallery validation, administration, customer display, or regression tests are incomplete."
 }
 Write-Host "PASS: local customer image ad gallery is validated, admin-managed, and covered by regression tests."
+
+
+# All local logo and poster uploads must enforce the 5 MiB cap while streaming,
+# including chunked requests without Content-Length.
+$uploadReaderPath = Join-Path $root "src/Alostora.RestHouse/BoundedImageUploadReader.cs"
+$uploadReaderTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/BoundedImageUploadReaderTests.cs"
+if (-not (Test-Path $uploadReaderPath) -or -not (Test-Path $uploadReaderTestsPath)) {
+    throw "Bounded image upload reader or its regression tests are missing."
+}
+$uploadReaderTests = Get-Content -LiteralPath $uploadReaderTestsPath -Raw
+foreach ($testName in @("ReadsPayloadAtExactLimit", "RejectsOversizedPayloadWithoutReadingRemainder", "ReturnsEmptyPayloadForEmptyStream", "RejectsNonPositiveLimit")) {
+    if (-not $uploadReaderTests.Contains($testName)) { throw ("Missing bounded image upload test: " + $testName) }
+}
+foreach ($route in @("/api/admin/profile/logo", "/api/admin/catalog-categories/{id}/poster", "/api/admin/poster/{videoId}", "/api/admin/series-poster/{seriesId}")) {
+    $marker = '_server.MapPost("' + $route + '"'
+    $start = $app.IndexOf($marker, [StringComparison]::Ordinal)
+    if ($start -lt 0) { throw ("Image upload route is missing: " + $route) }
+    $end = $app.IndexOf('});', $start, [StringComparison]::Ordinal)
+    if ($end -lt 0) { throw ("Image upload route is incomplete: " + $route) }
+    $routeBody = $app.Substring($start, $end - $start)
+    if ($routeBody -notmatch 'BoundedImageUploadReader\.ReadAsync' -or $routeBody -match 'CopyToAsync\(ms\)') {
+        throw ("Image upload route does not use bounded streaming: " + $route)
+    }
+}
+Write-Host "PASS: all local logo and poster uploads enforce the streaming 5 MiB limit."
