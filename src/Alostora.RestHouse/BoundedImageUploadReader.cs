@@ -17,7 +17,8 @@ public static class BoundedImageUploadReader
         if (maximumBytes <= 0)
             throw new ArgumentOutOfRangeException(nameof(maximumBytes));
 
-        using var buffer = new MemoryStream(maximumBytes);
+        // Avoid reserving the full upload limit for empty or small requests.
+        using var buffer = new MemoryStream(Math.Min(maximumBytes, 64 * 1024));
         var chunk = new byte[64 * 1024];
 
         while (true)
@@ -35,7 +36,21 @@ public static class BoundedImageUploadReader
             if (buffer.Length + read > maximumBytes)
                 return null;
 
-            await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+            // Grow geometrically, but never let MemoryStream reserve more than
+            // the configured payload limit.
+            var requiredCapacity = checked((int)buffer.Length + read);
+            if (requiredCapacity > buffer.Capacity)
+            {
+                var doubledCapacity = buffer.Capacity > maximumBytes / 2
+                    ? maximumBytes
+                    : buffer.Capacity * 2;
+                buffer.Capacity = Math.Min(
+                    maximumBytes,
+                    Math.Max(requiredCapacity, doubledCapacity));
+            }
+
+            await buffer.WriteAsync(
+                chunk.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
         }
     }
 }
