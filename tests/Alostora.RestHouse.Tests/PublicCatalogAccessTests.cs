@@ -176,6 +176,30 @@ public sealed class PublicCatalogAccessTests : IDisposable
     }
 
     [Fact]
+    public void RegisterSelectedFilesRejectsEmptyFilesWithoutRegisteringAnySelection()
+    {
+        var libraryRoot = Path.Combine(_root, "library");
+        var externalFolder = Path.Combine(_root, "selected-empty-folder");
+        Directory.CreateDirectory(externalFolder);
+        var validPath = Path.Combine(externalFolder, "valid.mp4");
+        var emptyPath = Path.Combine(externalFolder, "empty.mp4");
+        var validBytes = new byte[] { 1, 2, 3, 4 };
+        File.WriteAllBytes(validPath, validBytes);
+        File.WriteAllBytes(emptyPath, Array.Empty<byte>());
+
+        using var library = new LibraryService(libraryRoot, _databasePath);
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            library.RegisterSelectedFiles(externalFolder, new[] { validPath, emptyPath }));
+
+        Assert.Contains("فارغة", error.Message);
+        Assert.Empty(library.List());
+        Assert.True(File.Exists(validPath));
+        Assert.True(File.Exists(emptyPath));
+        Assert.Equal(validBytes, File.ReadAllBytes(validPath));
+        Assert.Empty(File.ReadAllBytes(emptyPath));
+    }
+
+    [Fact]
     public void MetadataListPreservesCategoryAndPublicationFields()
     {
         CreateRootAndMovieCategory();
