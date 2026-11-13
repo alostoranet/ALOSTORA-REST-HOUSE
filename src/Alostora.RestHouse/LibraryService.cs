@@ -464,8 +464,8 @@ public sealed class LibraryService : IDisposable
         {
             var relative = Path.GetRelativePath(root, path);
             if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
-                !File.Exists(path) || !ContentTypes.ContainsKey(Path.GetExtension(path)))
-                throw new InvalidOperationException("توجد ملفات خارج المجلد المحدد أو ليست ملفات فيديو صالحة.");
+                !File.Exists(path) || !ContentTypes.ContainsKey(Path.GetExtension(path)) || new FileInfo(path).Length == 0)
+                throw new InvalidOperationException("توجد ملفات خارج المجلد المحدد أو ليست ملفات فيديو صالحة أو فارغة.");
         }
 
         var allFiles = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
