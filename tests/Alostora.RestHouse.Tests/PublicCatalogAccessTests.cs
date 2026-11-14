@@ -236,6 +236,31 @@ public sealed class PublicCatalogAccessTests : IDisposable
     }
 
     [Fact]
+    public void RegisterSelectedFilesDoesNotExcludeEmptyUnselectedFilesInsideLibraryRoot()
+    {
+        var libraryRoot = Path.Combine(_root, "library-with-empty-placeholder");
+        Directory.CreateDirectory(libraryRoot);
+        var selectedPath = Path.Combine(libraryRoot, "selected.mp4");
+        var emptyPath = Path.Combine(libraryRoot, "empty-placeholder.mp4");
+        File.WriteAllBytes(selectedPath, new byte[] { 1, 2, 3 });
+        File.WriteAllBytes(emptyPath, Array.Empty<byte>());
+
+        using (var library = new LibraryService(libraryRoot, _databasePath))
+        {
+            Assert.Equal(1, library.RegisterSelectedFiles(libraryRoot, new[] { selectedPath }));
+            Assert.Single(library.List());
+            Assert.DoesNotContain(library.List(), x => x.FileName == "empty-placeholder.mp4");
+        }
+
+        var completedBytes = new byte[] { 7, 8, 9 };
+        File.WriteAllBytes(emptyPath, completedBytes);
+
+        using var rescanned = new LibraryService(libraryRoot, _databasePath);
+        Assert.Contains(rescanned.List(), x => x.FileName == "empty-placeholder.mp4");
+        Assert.Equal(completedBytes, File.ReadAllBytes(emptyPath));
+    }
+
+    [Fact]
     public void MetadataListPreservesCategoryAndPublicationFields()
     {
         CreateRootAndMovieCategory();
