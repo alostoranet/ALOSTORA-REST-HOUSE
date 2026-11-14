@@ -176,6 +176,91 @@ public sealed class PublicCatalogAccessTests : IDisposable
     }
 
     [Fact]
+    public void RegisterSelectedFilesRejectsEmptyFilesWithoutRegisteringAnySelection()
+    {
+        var libraryRoot = Path.Combine(_root, "library");
+        var externalFolder = Path.Combine(_root, "selected-empty-folder");
+        Directory.CreateDirectory(externalFolder);
+        var validPath = Path.Combine(externalFolder, "valid.mp4");
+        var emptyPath = Path.Combine(externalFolder, "empty.mp4");
+        var validBytes = new byte[] { 1, 2, 3, 4 };
+        File.WriteAllBytes(validPath, validBytes);
+        File.WriteAllBytes(emptyPath, Array.Empty<byte>());
+
+        using var library = new LibraryService(libraryRoot, _databasePath);
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            library.RegisterSelectedFiles(externalFolder, new[] { validPath, emptyPath }));
+
+        Assert.Contains("فارغة", error.Message);
+        Assert.Empty(library.List());
+        Assert.True(File.Exists(validPath));
+        Assert.True(File.Exists(emptyPath));
+        Assert.Equal(validBytes, File.ReadAllBytes(validPath));
+        Assert.Empty(File.ReadAllBytes(emptyPath));
+    }
+
+    [Fact]
+    public void PreviewAndFolderRegistrationSkipEmptyVideoFilesFromLibraryAndExternalRoots()
+    {
+        var libraryRoot = Path.Combine(_root, "library");
+        var externalFolder = Path.Combine(_root, "external-scan");
+        Directory.CreateDirectory(libraryRoot);
+        Directory.CreateDirectory(externalFolder);
+
+        var rootValidPath = Path.Combine(libraryRoot, "root-valid.mp4");
+        var rootEmptyPath = Path.Combine(libraryRoot, "root-empty.mp4");
+        var externalValidPath = Path.Combine(externalFolder, "external-valid.mp4");
+        var externalEmptyPath = Path.Combine(externalFolder, "external-empty.mp4");
+        var validBytes = new byte[] { 5, 6, 7, 8 };
+        File.WriteAllBytes(rootValidPath, validBytes);
+        File.WriteAllBytes(rootEmptyPath, Array.Empty<byte>());
+        File.WriteAllBytes(externalValidPath, validBytes);
+        File.WriteAllBytes(externalEmptyPath, Array.Empty<byte>());
+
+        using var library = new LibraryService(libraryRoot, _databasePath);
+        var candidates = library.PreviewFolder(externalFolder);
+        Assert.Equal("external-valid.mp4", Assert.Single(candidates).FileName);
+        Assert.Equal(1, library.RegisterFolder(libraryRoot));
+        Assert.Equal(1, library.RegisterFolder(externalFolder));
+
+        var listed = library.List();
+        Assert.Equal(2, listed.Count);
+        Assert.Contains(listed, x => x.FileName == "root-valid.mp4");
+        Assert.Contains(listed, x => x.FileName == "external-valid.mp4");
+        Assert.DoesNotContain(listed, x => x.FileName == "root-empty.mp4");
+        Assert.DoesNotContain(listed, x => x.FileName == "external-empty.mp4");
+        Assert.True(File.Exists(rootEmptyPath));
+        Assert.True(File.Exists(externalEmptyPath));
+        Assert.Empty(File.ReadAllBytes(rootEmptyPath));
+        Assert.Empty(File.ReadAllBytes(externalEmptyPath));
+    }
+
+    [Fact]
+    public void RegisterSelectedFilesDoesNotExcludeEmptyUnselectedFilesInsideLibraryRoot()
+    {
+        var libraryRoot = Path.Combine(_root, "library-with-empty-placeholder");
+        Directory.CreateDirectory(libraryRoot);
+        var selectedPath = Path.Combine(libraryRoot, "selected.mp4");
+        var emptyPath = Path.Combine(libraryRoot, "empty-placeholder.mp4");
+        File.WriteAllBytes(selectedPath, new byte[] { 1, 2, 3 });
+        File.WriteAllBytes(emptyPath, Array.Empty<byte>());
+
+        using (var library = new LibraryService(libraryRoot, _databasePath))
+        {
+            Assert.Equal(1, library.RegisterSelectedFiles(libraryRoot, new[] { selectedPath }));
+            Assert.Single(library.List());
+            Assert.DoesNotContain(library.List(), x => x.FileName == "empty-placeholder.mp4");
+        }
+
+        var completedBytes = new byte[] { 7, 8, 9 };
+        File.WriteAllBytes(emptyPath, completedBytes);
+
+        using var rescanned = new LibraryService(libraryRoot, _databasePath);
+        Assert.Contains(rescanned.List(), x => x.FileName == "empty-placeholder.mp4");
+        Assert.Equal(completedBytes, File.ReadAllBytes(emptyPath));
+    }
+
+    [Fact]
     public void MetadataListPreservesCategoryAndPublicationFields()
     {
         CreateRootAndMovieCategory();

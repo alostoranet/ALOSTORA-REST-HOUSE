@@ -434,6 +434,20 @@ public sealed class LibraryService : IDisposable
             return _resolved!.TryGetValue(id, out var video) ? video : null;
     }
 
+    private static bool IsNonEmptyVideoFile(string path)
+    {
+        if (!ContentTypes.ContainsKey(Path.GetExtension(path))) return false;
+        try
+        {
+            var info = new FileInfo(path);
+            return info.Exists && info.Length > 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public IReadOnlyList<VideoFileCandidate> PreviewFolder(string folderPath)
     {
         if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
@@ -442,11 +456,11 @@ public sealed class LibraryService : IDisposable
         var files = new List<VideoFileCandidate>();
         foreach (var path in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
         {
-            if (!ContentTypes.ContainsKey(Path.GetExtension(path))) continue;
+            if (!IsNonEmptyVideoFile(path)) continue;
             try
             {
                 var info = new FileInfo(path);
-                if (info.Exists) files.Add(new VideoFileCandidate(Path.GetFullPath(path), info.Name, info.Length));
+                files.Add(new VideoFileCandidate(Path.GetFullPath(path), info.Name, info.Length));
             }
             catch { }
         }
@@ -464,12 +478,12 @@ public sealed class LibraryService : IDisposable
         {
             var relative = Path.GetRelativePath(root, path);
             if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
-                !File.Exists(path) || !ContentTypes.ContainsKey(Path.GetExtension(path)))
-                throw new InvalidOperationException("توجد ملفات خارج المجلد المحدد أو ليست ملفات فيديو صالحة.");
+                !IsNonEmptyVideoFile(path))
+                throw new InvalidOperationException("توجد ملفات خارج المجلد المحدد أو ليست ملفات فيديو صالحة أو فارغة.");
         }
 
         var allFiles = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
-            .Where(path => ContentTypes.ContainsKey(Path.GetExtension(path)))
+            .Where(IsNonEmptyVideoFile)
             .Select(Path.GetFullPath).ToArray();
         var selectedSet = new HashSet<string>(selected, StringComparer.OrdinalIgnoreCase);
         using (var connection = new SqliteConnection(_connectionString))
@@ -633,7 +647,7 @@ public sealed class LibraryService : IDisposable
         {
             Invalidate();
             return Directory.EnumerateFiles(full, "*.*", SearchOption.AllDirectories)
-                .Count(path => ContentTypes.ContainsKey(Path.GetExtension(path)));
+                .Count(IsNonEmptyVideoFile);
         }
 
         using (var connection = new SqliteConnection(_connectionString))
@@ -649,7 +663,7 @@ public sealed class LibraryService : IDisposable
         AddWatcher(full);
         Invalidate();
         return Directory.EnumerateFiles(full, "*.*", SearchOption.AllDirectories)
-            .Count(path => ContentTypes.ContainsKey(Path.GetExtension(path)));
+            .Count(IsNonEmptyVideoFile);
     }
 
     private bool IsInsideRoot(string path)
@@ -730,7 +744,8 @@ public sealed class LibraryService : IDisposable
 
                 foreach (var path in paths)
                 {
-                    if (!ContentTypes.TryGetValue(Path.GetExtension(path), out var contentType))
+                    if (!IsNonEmptyVideoFile(path) ||
+                        !ContentTypes.TryGetValue(Path.GetExtension(path), out var contentType))
                         continue;
                     var fullPath = Path.GetFullPath(path);
                     if (!seen.Add(fullPath)) continue;
@@ -756,7 +771,8 @@ public sealed class LibraryService : IDisposable
                 selectedReader.Close();
                 foreach (var selectedFile in selectedFiles)
                 {
-                    if (!File.Exists(selectedFile.Path) || !ContentTypes.TryGetValue(Path.GetExtension(selectedFile.Path), out var contentType)) continue;
+                    if (!IsNonEmptyVideoFile(selectedFile.Path) ||
+                        !ContentTypes.TryGetValue(Path.GetExtension(selectedFile.Path), out var contentType)) continue;
                     var fullPath = Path.GetFullPath(selectedFile.Path);
                     if (!seen.Add(fullPath) || excludedIds.Contains(selectedFile.Id)) continue;
                     var file = new FileInfo(fullPath);
