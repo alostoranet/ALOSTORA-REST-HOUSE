@@ -483,7 +483,7 @@ public sealed class LibraryService : IDisposable
         }
 
         var allFiles = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
-            .Where(path => ContentTypes.ContainsKey(Path.GetExtension(path)))
+            .Where(IsNonEmptyVideoFile)
             .Select(Path.GetFullPath).ToArray();
         var selectedSet = new HashSet<string>(selected, StringComparer.OrdinalIgnoreCase);
         using (var connection = new SqliteConnection(_connectionString))
