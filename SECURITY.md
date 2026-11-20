@@ -16,7 +16,7 @@ Report suspected vulnerabilities privately to the repository owner through GitHu
 
 ## Deployment security notes
 
-- Keep the Windows firewall rule for TCP 8096 limited to Private networks. Do not expose the viewer port to Public networks or the internet.
+- Keep the Windows firewall rule for TCP 8097 limited to Private networks. Do not expose the viewer port to Public networks or the internet.
 - Remote administration must use HTTPS on TCP 8443 with a certificate trusted by administrator devices. Do not share the PFX file or its password.
 - Keep Supabase service-role keys and other secret keys out of the repository, application binaries, browser code, and logs. The publishable key is public by design.
 - Run the application under a Windows account with only the permissions it needs.
