@@ -19,14 +19,18 @@ if ($missing.Count -gt 0) {
 }
 Write-Host ("PASS: all {0} XAML event handlers are implemented." -f $events.Count)
 
-# The management window and embedded server must use the same loopback endpoint.
+# The management window, embedded server, and security guidance must use the same LAN port.
 if ($code -notmatch 'http://127\.0\.0\.1:8097' -or $app -notmatch 'ListenAnyIP\(8097\)') {
     throw "Management client/server port configuration is inconsistent."
+}
+$security = Get-Content -LiteralPath (Join-Path $root "SECURITY.md") -Raw
+if ($security -notmatch 'Windows firewall rule for TCP 8097' -or $security -match 'Windows firewall rule for TCP 8096') {
+    throw "Security policy firewall port must match the local viewer port 8097."
 }
 if ($app -notmatch 'ListenAnyIP\(8443,listen=>listen\.UseHttps' -or $app -notmatch 'ALOSTORA_HTTPS_CERT_PATH') {
     throw "Remote administration must use the optional dedicated HTTPS listener."
 }
-Write-Host "PASS: management client and embedded server port configuration match."
+Write-Host "PASS: management client, embedded server, and security guidance use the correct ports."
 
 # Check that key management routes used by the UI exist in the embedded API.
 $requiredRoutes = @(
