@@ -344,6 +344,14 @@ if ($xaml -notmatch 'Content="الحذف النهائي معطّل حفاظاً 
 }
 Write-Host "PASS: permanent video deletion is disabled in the UI and no destructive library endpoint is exposed."
 
+$libraryServicePath = Join-Path $root "src/Alostora.RestHouse/LibraryService.cs"
+$libraryService = Get-Content -LiteralPath $libraryServicePath -Raw
+if ($libraryService -match '(?m)^\s*public\s+void\s+DeleteFile\s*\(' -or
+    $libraryService -match 'File\.Delete\(video\.FullPath\)') {
+    throw "LibraryService must not expose a physical video deletion path."
+}
+Write-Host "PASS: LibraryService has no physical video deletion method."
+
 # The local catalog only supports a top-level Group and one level of content subcategories.
 $categoryServicePath = Join-Path $root "src/Alostora.RestHouse/CatalogCategoryService.cs"
 $categoryTestsPath = Join-Path $root "tests/Alostora.RestHouse.Tests/CatalogCategoryServiceTests.cs"
