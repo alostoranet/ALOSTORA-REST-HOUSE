@@ -175,7 +175,6 @@ if (string.IsNullOrWhiteSpace(seriesId))
             removeDirect.CommandText = "DELETE FROM SeriesDirectVideos WHERE VideoId=$video";
             removeDirect.Parameters.AddWithValue("$video", videoId);
             removeDirect.ExecuteNonQuery();
-            transaction.Commit();
             return;
         }
 
