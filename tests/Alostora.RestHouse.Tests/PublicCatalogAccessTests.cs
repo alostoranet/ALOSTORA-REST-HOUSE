@@ -176,6 +176,86 @@ public sealed class PublicCatalogAccessTests : IDisposable
     }
 
     [Fact]
+    public void SaveVideoMetadataAndPlacementRollsBackMetadataWhenEpisodeNumberConflicts()
+    {
+        var libraryRoot = Path.Combine(_root, "atomic-library");
+        Directory.CreateDirectory(libraryRoot);
+        var firstPath = Path.Combine(libraryRoot, "first.mp4");
+        var secondPath = Path.Combine(libraryRoot, "second.mp4");
+        File.WriteAllBytes(firstPath, new byte[] { 1, 2, 3 });
+        File.WriteAllBytes(secondPath, new byte[] { 4, 5, 6 });
+
+        using var library = new LibraryService(libraryRoot, _databasePath);
+        var videos = library.List().ToDictionary(x => x.FileName);
+        _series.SaveSeries(new SaveSeriesRequest(
+            "series-atomic", "مسلسل ذري", "", 2026, "", null, IsPublished: false));
+        var seasonId = _series.AddSeason(new SaveSeasonRequest("series-atomic", 1, "الموسم الأول"));
+        _series.AddEpisode(new SaveEpisodeRequest(seasonId, videos["first.mp4"].Id, 1, "الحلقة الأولى"));
+
+        _metadata.Save(new SaveVideoMetadataRequest(
+            VideoId: videos["second.mp4"].Id,
+            Title: "العنوان القديم",
+            Description: "",
+            Year: null,
+            Genre: "",
+            Kind: "Series",
+            PosterPath: null,
+            IsPublished: false));
+
+        var update = new SaveVideoMetadataRequest(
+            VideoId: videos["second.mp4"].Id,
+            Title: "العنوان الجديد",
+            Description: "",
+            Year: null,
+            Genre: "",
+            Kind: "Series",
+            PosterPath: null,
+            IsPublished: false);
+
+        Assert.Throws<SqliteException>(() => _series.SaveVideoMetadataAndPlacement(
+            _metadata, update, "series-atomic", seasonId, 1, "الحلقة الثانية"));
+
+        Assert.Equal("العنوان القديم", _metadata.Get(videos["second.mp4"].Id)?.Title);
+        Assert.Null(_series.GetVideoPlacement(videos["second.mp4"].Id));
+        Assert.Single(_series.ListEpisodes(seasonId));
+    }
+
+    [Fact]
+    public void SaveVideoMetadataAndPlacementCommitsMetadataAndEpisodeLinkTogether()
+    {
+        var libraryRoot = Path.Combine(_root, "atomic-success-library");
+        Directory.CreateDirectory(libraryRoot);
+        var videoPath = Path.Combine(libraryRoot, "episode.mp4");
+        File.WriteAllBytes(videoPath, new byte[] { 7, 8, 9 });
+
+        using var library = new LibraryService(libraryRoot, _databasePath);
+        var video = Assert.Single(library.List());
+        _series.SaveSeries(new SaveSeriesRequest(
+            "series-atomic-success", "مسلسل ذري", "", 2026, "", null, IsPublished: false));
+        var seasonId = _series.AddSeason(new SaveSeasonRequest("series-atomic-success", 1, "الموسم الأول"));
+        var metadata = new SaveVideoMetadataRequest(
+            VideoId: video.Id,
+            Title: "الحلقة المحفوظة",
+            Description: "",
+            Year: 2026,
+            Genre: "",
+            Kind: "Series",
+            PosterPath: null,
+            IsPublished: false);
+
+        _series.SaveVideoMetadataAndPlacement(
+            _metadata, metadata, "series-atomic-success", seasonId, 2, "الحلقة الثانية");
+
+        Assert.Equal("الحلقة المحفوظة", _metadata.Get(video.Id)?.Title);
+        var placement = _series.GetVideoPlacement(video.Id);
+        Assert.NotNull(placement);
+        Assert.Equal("series-atomic-success", placement.SeriesId);
+        Assert.Equal(seasonId, placement.SeasonId);
+        Assert.Equal(2, placement.EpisodeNumber);
+        Assert.Equal("الحلقة الثانية", placement.Title);
+    }
+
+    [Fact]
     public void MetadataListPreservesCategoryAndPublicationFields()
     {
         CreateRootAndMovieCategory();
