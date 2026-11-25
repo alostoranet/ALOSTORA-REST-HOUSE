@@ -706,8 +706,7 @@ public partial class App : Application
     else if(request.SeasonId is not null)return Results.BadRequest(new{error="اختر المسلسل قبل اختيار الموسم أو الجزء."});
     try
     {
-     meta.Save(request);
-     series.SetVideoPlacement(request.SeriesId,request.SeasonId,request.VideoId,request.EpisodeNumber,request.EpisodeTitle??request.Title);
+     series.SaveVideoMetadataAndPlacement(meta,request,request.SeriesId,request.SeasonId,request.EpisodeNumber,request.EpisodeTitle??request.Title);
      return Results.Ok(new{saved=true});
     }
     catch(Microsoft.Data.Sqlite.SqliteException){return Results.Conflict(new{error="تعذر ربط الفيديو: قد يكون رقم الحلقة مستخدماً بالفعل في هذا الموسم أو الجزء."});}

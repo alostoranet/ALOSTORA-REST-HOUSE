@@ -127,7 +127,15 @@ public sealed class VideoMetadataService
     {
         using var c = new SqliteConnection(_connectionString);
         c.Open();
+        using var transaction = c.BeginTransaction();
+        Save(c, transaction, x);
+        transaction.Commit();
+    }
+
+    internal void Save(SqliteConnection c, SqliteTransaction transaction, SaveVideoMetadataRequest x)
+    {
         using var cmd = c.CreateCommand();
+        cmd.Transaction = transaction;
         cmd.CommandText = """
             INSERT INTO VideoMetadata(
               VideoId,Title,Description,Year,Genre,Kind,PosterPath,

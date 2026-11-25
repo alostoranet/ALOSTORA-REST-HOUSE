@@ -130,10 +130,39 @@ public sealed class SeriesCatalogService
             r.IsDBNull(2) ? null : r.GetInt32(2), r.IsDBNull(3) ? null : r.GetString(3)) : null;
     }
 
+    public void SaveVideoMetadataAndPlacement(
+        VideoMetadataService metadata,
+        SaveVideoMetadataRequest metadataRequest,
+        string? seriesId,
+        long? seasonId,
+        int? episodeNumber,
+        string? title)
+    {
+        ArgumentNullException.ThrowIfNull(metadata);
+        using var c = Open();
+        using var transaction = c.BeginTransaction();
+        metadata.Save(c, transaction, metadataRequest);
+        SetVideoPlacement(c, transaction, seriesId, seasonId, metadataRequest.VideoId, episodeNumber, title);
+        transaction.Commit();
+    }
+
     public void SetVideoPlacement(string? seriesId, long? seasonId, string videoId, int? episodeNumber, string? title)
     {
         using var c = Open();
         using var transaction = c.BeginTransaction();
+        SetVideoPlacement(c, transaction, seriesId, seasonId, videoId, episodeNumber, title);
+        transaction.Commit();
+    }
+
+    private static void SetVideoPlacement(
+        SqliteConnection c,
+        SqliteTransaction transaction,
+        string? seriesId,
+        long? seasonId,
+        string videoId,
+        int? episodeNumber,
+        string? title)
+    {
         if (string.IsNullOrWhiteSpace(seriesId))
         {
             using var removeEpisode = c.CreateCommand();
@@ -146,7 +175,6 @@ public sealed class SeriesCatalogService
             removeDirect.CommandText = "DELETE FROM SeriesDirectVideos WHERE VideoId=$video";
             removeDirect.Parameters.AddWithValue("$video", videoId);
             removeDirect.ExecuteNonQuery();
-            transaction.Commit();
             return;
         }
 
@@ -203,7 +231,6 @@ public sealed class SeriesCatalogService
             direct.Parameters.AddWithValue("$title", title?.Trim() ?? "");
             direct.ExecuteNonQuery();
         }
-        transaction.Commit();
     }
 
     public long AddSeason(SaveSeasonRequest x)
