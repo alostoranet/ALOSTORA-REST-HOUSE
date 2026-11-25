@@ -163,7 +163,7 @@ public sealed class SeriesCatalogService
         int? episodeNumber,
         string? title)
     {
-if (string.IsNullOrWhiteSpace(seriesId))
+        if (string.IsNullOrWhiteSpace(seriesId))
         {
             using var removeEpisode = c.CreateCommand();
             removeEpisode.Transaction = transaction;
