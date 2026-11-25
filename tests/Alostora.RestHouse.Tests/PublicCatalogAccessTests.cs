@@ -256,6 +256,38 @@ public sealed class PublicCatalogAccessTests : IDisposable
     }
 
     [Fact]
+    public void SaveVideoMetadataAndPlacementWithoutSeriesSavesMetadataAndClearsPreviousPlacement()
+    {
+        var libraryRoot = Path.Combine(_root, "atomic-unlink-library");
+        Directory.CreateDirectory(libraryRoot);
+        var videoPath = Path.Combine(libraryRoot, "video.mp4");
+        File.WriteAllBytes(videoPath, new byte[] { 1, 3, 5 });
+
+        using var library = new LibraryService(libraryRoot, _databasePath);
+        var video = Assert.Single(library.List());
+        _series.SaveSeries(new SaveSeriesRequest(
+            "series-atomic-unlink", "مسلسل سابق", "", 2026, "", null, IsPublished: false));
+        var seasonId = _series.AddSeason(new SaveSeasonRequest("series-atomic-unlink", 1, "الموسم الأول"));
+        _series.AddEpisode(new SaveEpisodeRequest(seasonId, video.Id, 1, "الحلقة السابقة"));
+
+        var metadata = new SaveVideoMetadataRequest(
+            VideoId: video.Id,
+            Title: "فيلم مستقل",
+            Description: "",
+            Year: 2026,
+            Genre: "",
+            Kind: "Movie",
+            PosterPath: null,
+            IsPublished: false);
+
+        _series.SaveVideoMetadataAndPlacement(_metadata, metadata, null, null, null, "فيلم مستقل");
+
+        Assert.Equal("فيلم مستقل", _metadata.Get(video.Id)?.Title);
+        Assert.Null(_series.GetVideoPlacement(video.Id));
+        Assert.Empty(_series.ListEpisodes(seasonId));
+    }
+
+    [Fact]
     public void MetadataListPreservesCategoryAndPublicationFields()
     {
         CreateRootAndMovieCategory();
